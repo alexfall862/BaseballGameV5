@@ -1,0 +1,6 @@
+class CoachInput():
+    pass
+
+
+
+
