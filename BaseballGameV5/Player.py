@@ -101,7 +101,7 @@ class Player():
         self.runs = 0
 
     def __repr__(self):
-        return f"{self.__dict__}\n" #Ability:{self.ability1} Ability:{self.ability2}\n"
+        return f"{self.lineup}: {self.firstname} {self.lastname}" # f"{self.__dict__}\n"
 
     def to_dict(self):
         return {
@@ -191,15 +191,15 @@ class Player():
             "injurystate": self.injurystate
             }
 
-class CreatePitch():
-    def __init__(self, pitchname, ovr, pacc, pcntrl, pbrk, consist):
-        self.name = pitchname
-        self.ovr = ovr
-        self.pacc = pacc
-        self.pcntrl = pcntrl
-        self.pbrk = pbrk
-        self.consist = consist
-    def __repr__(self):
-        return f"{self.__dict__}"
+    class CreatePitch():
+        def __init__(self, pitchname, ovr, pacc, pcntrl, pbrk, consist):
+            self.name = pitchname
+            self.ovr = ovr
+            self.pacc = pacc
+            self.pcntrl = pcntrl
+            self.pbrk = pbrk
+            self.consist = consist
+        def __repr__(self):
+            return f"{self.__dict__}"
     
 

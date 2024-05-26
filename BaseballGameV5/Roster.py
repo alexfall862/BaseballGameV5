@@ -1,10 +1,10 @@
 import json
-import Player 
+from Player import Player as p 
 import os 
 
 class Roster():
     def __init__(self, teamname):
-        self.roster = Roster.LoadRoster(teamname)
+        self.playerlist = Roster.LoadRoster(teamname)
 
     def LoadRoster(teamname):
         directory = f'..\\Rosters'
@@ -12,8 +12,8 @@ class Roster():
         for fname in os.listdir(directory):
             if keyword in fname:
                 #print(fname, "has the keyword")
-                Roster.Load(directory+f"\\"+fname)
-                break
+                return Roster.Load(directory+f"\\"+fname)
+                 
 
     def Load(directoryjson):
         with open(str(directoryjson)) as f:
@@ -22,7 +22,7 @@ class Roster():
         roster = []
         for player in data:
             roster.append(
-                Player.Player (
+                p (
                         player['id'],
                         player['ptype'],
                         player['firstname'],
@@ -55,11 +55,11 @@ class Roster():
                         player['pgencontrol'],
                         player['pickoff'],
                         player['psequencing'],
-                        Player.CreatePitch(player['pitch1']['name'], player['pitch1']['ovr'], player['pitch1']['pacc'], player['pitch1']['pcntrl'], player['pitch1']['pbrk'], player['pitch1']['consist']),
-                        Player.CreatePitch(player['pitch2']['name'], player['pitch2']['ovr'], player['pitch2']['pacc'], player['pitch2']['pcntrl'], player['pitch2']['pbrk'], player['pitch2']['consist']),
-                        Player.CreatePitch(player['pitch3']['name'], player['pitch3']['ovr'], player['pitch3']['pacc'], player['pitch3']['pcntrl'], player['pitch3']['pbrk'], player['pitch3']['consist']),
-                        Player.CreatePitch(player['pitch4']['name'], player['pitch4']['ovr'], player['pitch4']['pacc'], player['pitch4']['pcntrl'], player['pitch4']['pbrk'], player['pitch4']['consist']),
-                        Player.CreatePitch(player['pitch5']['name'], player['pitch5']['ovr'], player['pitch5']['pacc'], player['pitch5']['pcntrl'], player['pitch5']['pbrk'], player['pitch5']['consist']),
+                        p.CreatePitch(player['pitch1']['name'], player['pitch1']['ovr'], player['pitch1']['pacc'], player['pitch1']['pcntrl'], player['pitch1']['pbrk'], player['pitch1']['consist']),
+                        p.CreatePitch(player['pitch2']['name'], player['pitch2']['ovr'], player['pitch2']['pacc'], player['pitch2']['pcntrl'], player['pitch2']['pbrk'], player['pitch2']['consist']),
+                        p.CreatePitch(player['pitch3']['name'], player['pitch3']['ovr'], player['pitch3']['pacc'], player['pitch3']['pcntrl'], player['pitch3']['pbrk'], player['pitch3']['consist']),
+                        p.CreatePitch(player['pitch4']['name'], player['pitch4']['ovr'], player['pitch4']['pacc'], player['pitch4']['pcntrl'], player['pitch4']['pbrk'], player['pitch4']['consist']),
+                        p.CreatePitch(player['pitch5']['name'], player['pitch5']['ovr'], player['pitch5']['pacc'], player['pitch5']['pcntrl'], player['pitch5']['pbrk'], player['pitch5']['consist']),
                         
                         player['team'],
                         player['level'],
@@ -84,7 +84,8 @@ class Roster():
                         player['energy']
                     )
                )
-        return(roster)    
+
+        return roster     
 
     def savejson(directoryjson, listofplayers):
         filestring = str(directoryjson+"lineup"+".json")

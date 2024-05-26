@@ -15,6 +15,9 @@ games = b.Batch(directory, rules)
 for game in games.listofgames:
     currentgame = Game.Game(game)
     print(currentgame)
+    currentgame.RunGame()
+    
+
 
 
 
