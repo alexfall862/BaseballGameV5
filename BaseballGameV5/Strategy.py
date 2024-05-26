@@ -16,9 +16,9 @@ class Strategy():
         keyword = "_" + teamname + "_strat.csv"
         for fname in os.listdir(directory):
             if keyword in fname:
-                print(fname, "has the keyword")
+                #print(fname, "has the keyword")
                 strategy = Strategy.pullStrategy(directory+fname)
-                print(strategy)
+                #print(strategy)
                 return strategy[0]
 
     def pullStrategy(directory):

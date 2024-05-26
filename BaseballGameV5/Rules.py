@@ -16,9 +16,9 @@ class Rules():
         keyword = "_" + ruletype + "_.csv"
         for fname in os.listdir(directory):
             if keyword in fname:
-                print(fname, "has the keyword")
+                #print(fname, "has the keyword")
                 rules = Rules.pullrules(directory+fname)
-                print(rules)
+                #print(rules)
                 return rules[0]
 
     def pullrules(directory):
