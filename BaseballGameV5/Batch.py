@@ -4,7 +4,6 @@ from email.charset import Charset
 class Batch():
     def __init__(self, directory, rules):
         self.directory = directory + "\\games.csv"
-        self.rules = rules
         self.listofgames = Batch.pullgames(self.directory)
 
     def pullgames(directory):

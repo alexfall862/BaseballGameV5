@@ -1,153 +1,177 @@
-import json
-
-#Need to add Height, Weight, Batting Handedness
-
 class Player():
-    def __init__(self, id, ptype, firstname, lastname, fullname, age, 
+    def __init__(self, pid, ptype, firstname, lastname, handedness, armangle, injuryrisk, durability,
                  contact, power, discipline, eye, 
                  basereaction, baserunning, speed, 
                  throwpower, throwacc, fieldcatch, fieldreact, fieldspot, 
                  catchframe, catchsequence, 
-                 overall, batovr, fieldovr, catchovr, athovr,
-                 pendurance, pthrowpower, pgencontrol, pickoff, psequencing, 
-                 pitch1ovr, pitch1pacc, pitch1pcntrl, pitch1pbrk, pitch1consist,
-                 pitch2ovr, pitch2pacc, pitch2pcntrl, pitch2pbrk, pitch2consist,
-                 pitch3ovr, pitch3pacc, pitch3pcntrl, pitch3pbrk, pitch3consist,
-                 pitch4ovr, pitch4pacc, pitch4pcntrl, pitch4pbrk, pitch4consist,
-                 pitch5ovr, pitch5pacc, pitch5pcntrl, pitch5pbrk, pitch5consist,
-                 team, level, displayoverall
+                 pendurance, pthrowpower, pgencontrol, pickoff, psequencing, pitch1, pitch2, pitch3, pitch4, pitch5,
+                 team, level,
+                 sp_rating, rp_rating, c_rating, fb_rating, sb_rating, tb_rating, ss_rating, lf_rating, cf_rating, rf_rating, dh_rating,
+                 battingorder, pitchingorder, lineup,
+                 injurystate, energy
                  ): 
-        self.id = id
+        
+        self.id = pid
         self.ptype = ptype
         self.firstname = firstname
         self.lastname = lastname
-        self.fullname = fullname
-        self.age = age
+
+        self.handedness = handedness
+        self.armangle = armangle
+        self.injuryrisk = injuryrisk
+        self.durability = durability
+
         self.contact = contact
         self.power = power
         self.discipline = discipline
         self.eye = eye
+
         self.basereaction = basereaction
         self.baserunning = baserunning
         self.speed = speed
+
         self.throwpower = throwpower
         self.throwacc = throwacc
         self.fieldcatch = fieldcatch
         self.fieldreact = fieldreact
         self.fieldspot = fieldspot
+
         self.catchframe = catchframe
-        self.catchsequence = catchsequence       
-        self.overall = overall
-        self.batovr = batovr
-        self.fieldovr = fieldovr
-        self.catchovr = catchovr
-        self.athovr = athovr
+        self.catchsequence = catchsequence
+        
         self.pendurance = pendurance
         self.pthrowpower = pthrowpower
         self.pgencontrol = pgencontrol
         self.pickoff = pickoff
         self.psequencing = psequencing
-        self.pitch1ovr = pitch1ovr
-        self.pitch1pacc = pitch1pacc
-        self.pitch1pcntrl = pitch1pcntrl
-        self.pitch1pbrk = pitch1pbrk
-        self.pitch1consist = pitch1consist
-        self.pitch2ovr = pitch2ovr
-        self.pitch2pacc = pitch2pacc
-        self.pitch2pcntrl = pitch2pcntrl
-        self.pitch2pbrk = pitch2pbrk
-        self.pitch2consist = pitch2consist        
-        self.pitch3ovr = pitch3ovr
-        self.pitch3pacc = pitch3pacc
-        self.pitch3pcntrl = pitch3pcntrl
-        self.pitch3pbrk = pitch3pbrk
-        self.pitch3consist = pitch3consist
-        self.pitch4ovr = pitch4ovr
-        self.pitch4pacc = pitch4pacc
-        self.pitch4pcntrl = pitch4pcntrl
-        self.pitch4pbrk = pitch4pbrk
-        self.pitch4consist = pitch4consist
-        self.pitch5ovr = pitch5ovr
-        self.pitch5pacc = pitch5pacc
-        self.pitch5pcntrl = pitch5pcntrl
-        self.pitch5pbrk = pitch5pbrk
-        self.pitch5consist = pitch5consist
-        self.team = team or None
-        self.level = level or None
-        self.displayoverall = displayoverall or None
+        self.pitch1 = pitch1
+        self.pitch2 = pitch2
+        self.pitch3 = pitch3
+        self.pitch4 = pitch4
+        self.pitch5 = pitch5
+        
+        self.team = team
+        self.level = level
+
+        self.sp_rating = sp_rating
+        self.rp_rating = rp_rating
+        self.c_rating = c_rating
+        self.fb_rating = fb_rating
+        self.sb_rating = sb_rating
+        self.tb_rating = tb_rating
+        self.ss_rating = ss_rating
+        self.lf_rating = lf_rating
+        self.cf_rating = cf_rating
+        self.rf_rating = rf_rating
+        self.dh_rating = dh_rating
+        
+        self.battingorder = battingorder
+        self.pitchingorder = pitchingorder
+        self.lineup = lineup
+
+        self.injurystate = injurystate
+        self.energy = energy
+
     def __repr__(self):
-        return f"{self.__dict__}\n"
+        return f"{self.__dict__}\n" #Ability:{self.ability1} Ability:{self.ability2}\n"
+
+    def to_dict(self):
+        return {
+            "id":self.id,
+            "ptype":self.ptype,
+            "firstname":self.firstname,
+            "lastname":self.lastname,
+            "handedness":self.handedness,
+            "arm angle":self.armangle,
+            "injury risk":self.injuryrisk,
+            "durability":self.durability,
+            "contact": self.contact,
+            "power": self.power,
+            "discipline": self.discipline,
+            "eye": self.eye,
+            "basereaction": self.basereaction,
+            "baserunning": self.baserunning,
+            "speed": self.speed,
+            "throwpower": self.throwpower, 
+            "throwacc": self.throwacc, 
+            "fieldcatch": self.fieldcatch,
+            "fieldreact": self.fieldreact, 
+            "fieldspot": self.fieldspot, 
+            "catchframe": self.catchframe,             
+            "catchsequence": self.catchsequence, 
+            "pendurance": self.pendurance, 
+            "pthrowpower": self.pthrowpower,             
+            "pgencontrol": self.pgencontrol, 
+            "pickoff": self.pickoff, 
+            "psequencing": self.psequencing,
+            "pitch1":{
+                "name":self.pitch1.name,
+                "ovr":self.pitch1.ovr,
+                "pacc": self.pitch1.pacc,
+                "pcntrl": self.pitch1.pcntrl,
+                "pbrk": self.pitch1.pbrk, 
+                "consist": self.pitch1.consist,
+                },
+            "pitch2":{
+                "name":self.pitch2.name,
+                "ovr":self.pitch2.ovr,
+                "pacc": self.pitch2.pacc,
+                "pcntrl": self.pitch2.pcntrl,
+                "pbrk": self.pitch2.pbrk, 
+                "consist": self.pitch2.consist,
+                },
+            "pitch3":{
+                "name":self.pitch3.name,
+                "ovr":self.pitch3.ovr,
+                "pacc": self.pitch3.pacc,
+                "pcntrl": self.pitch3.pcntrl,
+                "pbrk": self.pitch3.pbrk, 
+                "consist": self.pitch3.consist,
+                },
+            "pitch4":{
+                "name":self.pitch4.name,
+                "ovr":self.pitch4.ovr,
+                "pacc": self.pitch4.pacc,
+                "pcntrl": self.pitch4.pcntrl,
+                "pbrk": self.pitch4.pbrk, 
+                "consist": self.pitch4.consist,
+                },
+            "pitch5":{
+                "name":self.pitch5.name,
+                "ovr":self.pitch5.ovr,
+                "pacc": self.pitch5.pacc,
+                "pcntrl": self.pitch5.pcntrl,
+                "pbrk": self.pitch5.pbrk, 
+                "consist": self.pitch5.consist,
+                },                
+            "team":self.team,
+            "level":self.level,
+            "sp_rating": self.sp_rating,
+            "rp_rating": self.rp_rating,
+            "c_rating": self.c_rating,
+            "fb_rating": self.fb_rating,
+            "sb_rating": self.sb_rating,
+            "tb_rating": self.tb_rating,
+            "ss_rating": self.ss_rating,
+            "lf_rating": self.lf_rating,
+            "cf_rating": self.cf_rating,
+            "rf_rating": self.rf_rating,
+            "dh_rating": self.dh_rating,
+            "battingorder": self.battingorder,
+            "pitchingorder": self.pitchingorder,            
+            "lineup": self.lineup,
+            "injurystate": self.injurystate
+            }
+
+class CreatePitch():
+    def __init__(self, pitchname, ovr, pacc, pcntrl, pbrk, consist):
+        self.name = pitchname
+        self.ovr = ovr
+        self.pacc = pacc
+        self.pcntrl = pcntrl
+        self.pbrk = pbrk
+        self.consist = consist
+    def __repr__(self):
+        return f"{self.__dict__}"
     
 
-#loadjson
-def loadjsonroster(directoryjson):
-    roster = []
-    
-    with open(str(directoryjson + ".json")) as f:
-        data=json.load(f)
-
-    for player in data:
-        roster.append(
-            Player(
-                    #don't need all this context info, so can cut that out and just import the direct values - just need to make the class and loader match.
-                    player['id'],
-                    player['ptype'],
-                    player['firstname'],
-                    player['lastname'],
-                    player['fullname'],
-                    player['age'],
-                    player['contact']['display'],
-                    player['power']['display'],
-                    player['discipline']['display'],
-                    player['eye']['display'],
-                    player['basereaction']['display'],
-                    player['baserunning']['display'],
-                    player['speed']['display'],
-                    player['throwpower']['display'],
-                    player['throwacc']['display'],
-                    player['fieldcatch']['display'],
-                    player['fieldreact']['display'],
-                    player['fieldspot']['display'],
-                    player['catchframe']['display'],
-                    player['catchsequence']['display'],                                   
-                    player['overall'],
-                    player['batovr'],
-                    player['fieldovr'],
-                    player['catchovr'],
-                    player['athovr'],
-                    player['pendurance']['display'],
-                    player['pthrowpower']['display'],
-                    player['pgencontrol']['display'],
-                    player['pickoff']['display'],
-                    player['psequencing']['display'],
-                    player['pitch1ovr'],
-                    player['pitch1']['pacc']['display'], 
-                    player['pitch1']['pcntrl']['display'], 
-                    player['pitch1']['pbrk']['display'], 
-                    player['pitch1']['consist']['display'],
-                    player['pitch2ovr'],
-                    player['pitch2']['pacc']['display'], 
-                    player['pitch2']['pcntrl']['display'], 
-                    player['pitch2']['pbrk']['display'], 
-                    player['pitch2']['consist']['display'],
-                    player['pitch3ovr'],
-                    player['pitch3']['pacc']['display'], 
-                    player['pitch3']['pcntrl']['display'], 
-                    player['pitch3']['pbrk']['display'], 
-                    player['pitch3']['consist']['display'],
-                    player['pitch4ovr'],
-                    player['pitch4']['pacc']['display'], 
-                    player['pitch4']['pcntrl']['display'], 
-                    player['pitch4']['pbrk']['display'], 
-                    player['pitch4']['consist']['display'],
-                    player['pitch5ovr'],
-                    player['pitch5']['pacc']['display'], 
-                    player['pitch5']['pcntrl']['display'], 
-                    player['pitch5']['pbrk']['display'], 
-                    player['pitch5']['consist']['display'],
-                    player['team'],
-                    player['level'],
-                    player['displayovr'],
-                )
-           )
-    return(roster)

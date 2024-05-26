@@ -25,7 +25,7 @@
     <Compile Include="Action.py" />
     <Compile Include="Batch.py" />
     <Compile Include="Rules.py" />
-    <Compile Include="CoachInput.py" />
+    <Compile Include="Strategy.py" />
     <Compile Include="Player.py" />
     <Compile Include="Game.py" />
     <Compile Include="Lineup.py" />

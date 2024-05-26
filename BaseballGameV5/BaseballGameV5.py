@@ -9,15 +9,12 @@ import Player as p
 rules = "MLB"
 
 directory = f"..\\Game"
-#print(directory)
 
-k = p.loadjsonroster('TestRoster')
+games = b.Batch(directory, rules)
 
-print(k[0])
+for game in games.listofgames:
+    currentgame = Game.Game(game)
+    print(currentgame)
 
-exit() 
 
-x = b.Batch(directory, rules)
 
-for matchup in x.listofgames:
-    print(Game.Game(matchup))
