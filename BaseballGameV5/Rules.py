@@ -5,8 +5,10 @@ class Rules():
     def __init__(self, ruletype):
         self.ruletype = ruletype
         rulesload = Rules.LoadRules(ruletype)        
-        self.innings = rulesload.get("Innings")        
-        self.outs = rulesload.get("Outs")        
+        self.innings = int(rulesload.get("Innings"))        
+        self.outs = int(rulesload.get("Outs"))
+        self.balls = int(rulesload.get("Balls"))
+        self.strikes = int(rulesload.get("Strikes"))
 
     def __repr__(self):
         return f"{self.ruletype} {self.innings} {self.outs}"

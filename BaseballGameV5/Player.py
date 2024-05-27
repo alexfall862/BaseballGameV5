@@ -101,7 +101,7 @@ class Player():
         self.runs = 0
 
     def __repr__(self):
-        return f"{self.lineup}: {self.firstname} {self.lastname}" # f"{self.__dict__}\n"
+        return f"{self.battingorder}: {self.lineup} {self.firstname} {self.lastname}" # f"{self.__dict__}\n"
 
     def to_dict(self):
         return {
