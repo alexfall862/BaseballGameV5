@@ -1,5 +1,6 @@
 import random
 import InteractionEngine as ie
+import copy
 
 class Action():
     def __init__(self, game):
@@ -9,14 +10,14 @@ class Action():
         NextAtBat(self)
 
     def __repr__(self):
-        return f"{self.game.currentinning:<3}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}"
-        
+        return f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs}"
+
     def PrePitch(self):
         #print(f"other stuff here")
         Action.AtBat(self)
     
     def AtBat(self):
-        print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot} \/\/\/ CAB:{self.game.currentstrikes}/{self.game.currentballs}")
+        print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs}")
         #ie.BatterPitcher(self.game.pitchingteam.currentpitcher, self.game.battingteam.currentbatter)
         outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
         AtBatOutcomeParser(self, outcome)
@@ -29,16 +30,13 @@ class Action():
             HitEval(self)        
 
     def Processing(self):
-        if self.game.outcount > 0:
-            OutProcessor(self)
-        else:
-            pass
-
         #print(self.game.outcount)
         self.game.currentouts += self.game.outcount
         #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
         self.game.battingteam.score += self.game.current_runners_home
-        self.game.actions.append(self)
+        self.game.actions.append([self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs])
+        if self.game.outcount > 0:
+            OutProcessor(self)
 
 def HitEval(self):
     if self.game.is_hit == True:
