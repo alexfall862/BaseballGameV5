@@ -23,6 +23,7 @@
   <ItemGroup>
     <Compile Include="BaseballGameV5.py" />
     <Compile Include="Action.py" />
+    <Compile Include="Baselines.py" />
     <Compile Include="Batch.py" />
     <Compile Include="InteractionEngine.py" />
     <Compile Include="Rules.py" />

@@ -1,6 +1,7 @@
 import Team
 import Rules 
 import Action
+import Baselines
 
 class Game():
     def __init__(self, gamedict):
@@ -27,6 +28,7 @@ class Game():
         self.battingteam = self.awayteam
         self.pitchingteam = self.hometeam
         self.actions = []
+        self.baselines = Baselines.Baselines(gamedict.get("Rules"))
 
     def __repr__(self):
         return f"{str(self.gname)} {str(self.hometeam)} {str(self.awayteam)} {str(self.rules)}"
@@ -39,6 +41,7 @@ class Game():
 
         while self.gamedone == False:
             x = Action.Action(self)
-        print(self.actions)
+        for action in self.actions:
+            print(action)
         #print("DONE")
         #print(listofactions)

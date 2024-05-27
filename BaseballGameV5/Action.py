@@ -9,16 +9,16 @@ class Action():
         Action.Processing(self)
         NextAtBat(self)
 
-    def __repr__(self):
-        return f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs}"
+#    def __repr__(self):
+#        return f"I{self.game.currentinning}{self.game.topofinning}O{self.game.currentouts}HT{self.game.hometeam.name}HS{self.game.hometeam.score}AT{self.game.awayteam.name:<3}AS{self.game.awayteam.score:>2}BT{self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot}PT{self.game.pitchingteam.name}{self.game.pitchingteam.currentbatspot}AB{self.game.currentstrikes}/{self.game.currentballs}"
 
     def PrePitch(self):
         #print(f"other stuff here")
         Action.AtBat(self)
     
     def AtBat(self):
-        print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs}")
-        #ie.BatterPitcher(self.game.pitchingteam.currentpitcher, self.game.battingteam.currentbatter)
+        #print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs}")
+        ie.PitchEvent(self)
         outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
         AtBatOutcomeParser(self, outcome)
         Action.PostPitch(self)
@@ -70,20 +70,20 @@ def WalkEval(self):
             self.game.on_firstbase = self.game.battingteam.currentbatter
         if self.game.on_firstbase != None:
             if self.game.on_secondbase == None:
-                self.game.on_secondbase == self.game.on_firstbase
-                self.game.on_firstbase == self.game.battingteam.currentbatter
+                self.game.on_secondbase = self.game.on_firstbase
+                self.game.on_firstbase = self.game.battingteam.currentbatter
             if self.game.on_secondbase != None:
                 if self.game.on_thirdbase == None:
                     self.game.on_thirdbase = self.game.on_secondbase
                     self.game.on_secondbase = self.game.on_firstbase
-                    self.game.on_firstbase = self.game.currentbatter
+                    self.game.on_firstbase = self.game.battingteam.currentbatter
                 if self.game.on_thirdbase != None:
-                    self.game.current_runners_home.append(self.game.on_thirdbase)
+                    self.game.current_runners_home += 1
                     self.game.on_thirdbase = self.game.on_secondbase
                     self.game.on_secondbase = self.game.on_firstbase
-                    self.game.on_firstbase = self.game.currentbatter
+                    self.game.on_firstbase = self.game.battingteam.currentbatter
     else:
-        pass
+        pass    
   
 def NextAtBat(self):
     if self.game.ab_over == True:
