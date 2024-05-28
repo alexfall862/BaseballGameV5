@@ -18,7 +18,7 @@ class Action():
     
     def AtBat(self):
         #print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs}")
-        ie.PitchEvent(self)
+        print(ie.PitchEvent(self))
         outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
         AtBatOutcomeParser(self, outcome)
         Action.PostPitch(self)

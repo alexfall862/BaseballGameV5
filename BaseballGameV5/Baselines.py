@@ -19,6 +19,13 @@ class Baselines():
         self.toppedodds = float(ltypeload.get("c_toppedodds"))
         self.weakodds = float(ltypeload.get("c_weakodds"))
         self.modexp = float(ltypeload.get("modexp"))
+        self.spread_leftline = 14
+        self.spread_left = 14
+        self.spread_centerleft = 14
+        self.spread_center = 16
+        self.spread_centerright = 14
+        self.spread_right = 14
+        self.spread_rightline = 14
 
     def LoadLeagueType(ruletype):
         directory = f'..\\Baselines\\'
