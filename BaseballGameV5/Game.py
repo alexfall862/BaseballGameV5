@@ -17,7 +17,7 @@ class Game():
         self.on_firstbase = None
         self.on_secondbase = None
         self.on_thirdbase = None
-        self.current_runners_home = 0
+        self.current_runners_home = []
         self.is_walk = False
         self.is_strikeout = False
         self.is_hit = False #temp

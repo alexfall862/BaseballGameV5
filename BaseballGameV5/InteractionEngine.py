@@ -13,7 +13,8 @@ class PitchEvent():
         self.insidecontact = action.game.baselines.insidecontact
         self.pitch, self.pitchlocation = self.choosepitch(action.game.pitchingteam.currentpitcher, action.game.pitchingteam.catcher)
         
-        self.runpitcheval()        
+        self.runpitcheval()
+
 
     def choosepitch(self, pitcher, catcher):
         pitchlist = [

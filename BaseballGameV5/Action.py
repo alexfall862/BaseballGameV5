@@ -1,13 +1,16 @@
 import random
 import InteractionEngine as ie
 import copy
+import FatigueInjury as fi
+import defense as d
 
 class Action():
     def __init__(self, game):
         self.game = game
+        self.outcome = None
         Action.PrePitch(self)        
         Action.Processing(self)
-        NextAtBat(self)
+
 
 #    def __repr__(self):
 #        return f"I{self.game.currentinning}{self.game.topofinning}O{self.game.currentouts}HT{self.game.hometeam.name}HS{self.game.hometeam.score}AT{self.game.awayteam.name:<3}AS{self.game.awayteam.score:>2}BT{self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot}PT{self.game.pitchingteam.name}{self.game.pitchingteam.currentbatspot}AB{self.game.currentstrikes}/{self.game.currentballs}"
@@ -17,10 +20,11 @@ class Action():
         Action.AtBat(self)
     
     def AtBat(self):
-        #print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs}")
-        print(ie.PitchEvent(self))
-        outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
-        AtBatOutcomeParser(self, outcome)
+        self.outcome = ie.PitchEvent(self).outcome
+        #print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}-{self.game.outcount}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs} {self.outcome}")
+        #print(outcome)
+        #outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
+        AtBatOutcomeParser(self)
         Action.PostPitch(self)
         
 
@@ -33,68 +37,78 @@ class Action():
         #print(self.game.outcount)
         self.game.currentouts += self.game.outcount
         #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
-        self.game.battingteam.score += self.game.current_runners_home
-        self.game.actions.append([self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs])
+        self.game.battingteam.score += len(self.game.current_runners_home)
+        self.game.actions.append([self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home)])
+        NextAtBat(self)        
+
         if self.game.outcount > 0:
             OutProcessor(self)
+        #fi.Fatigue()
+        
 
 def HitEval(self):
     if self.game.is_hit == True:
-        #print("Hit Registered")
         if self.game.on_firstbase == None:
             self.game.on_firstbase = self.game.battingteam.currentbatter
-            #print(f"{self.game.on_firstbase} on first")
+            return
         if self.game.on_firstbase != None:
             if self.game.on_secondbase == None:
                 self.game.on_secondbase = self.game.on_firstbase
                 self.game.on_firstbase = self.game.battingteam.currentbatter
-                #print(f"{self.game.on_secondbase} on second, {self.game.on_firstbase} on first.")
+                return
             if self.game.on_secondbase != None:
                 if self.game.on_thirdbase == None:
                     self.game.on_thirdbase = self.game.on_secondbase
                     self.game.on_secondbase = self.game.on_firstbase
                     self.game.on_firstbase = self.game.battingteam.currentbatter
-                    #print(f"{self.game.on_thirdbase} on third, {self.game.on_secondbase} on second, {self.game.on_firstbase} on first.")
+                    return
                 if self.game.on_thirdbase != None:
-                    #print("RUNNERS HOME")
-                    self.game.current_runners_home += 1
+                    self.game.current_runners_home.append(self.game.on_thirdbase)
                     self.game.on_thirdbase = self.game.on_secondbase
                     self.game.on_secondbase = self.game.on_firstbase
                     self.game.on_firstbase = self.game.battingteam.currentbatter
-    else:
-        pass    
-
+                    return
+                
 def WalkEval(self):
     if self.game.is_walk == True or self.game.is_hbp == True:
         if self.game.on_firstbase == None:
             self.game.on_firstbase = self.game.battingteam.currentbatter
+            return
         if self.game.on_firstbase != None:
             if self.game.on_secondbase == None:
                 self.game.on_secondbase = self.game.on_firstbase
                 self.game.on_firstbase = self.game.battingteam.currentbatter
+                return
             if self.game.on_secondbase != None:
                 if self.game.on_thirdbase == None:
                     self.game.on_thirdbase = self.game.on_secondbase
                     self.game.on_secondbase = self.game.on_firstbase
                     self.game.on_firstbase = self.game.battingteam.currentbatter
+                    return
                 if self.game.on_thirdbase != None:
-                    self.game.current_runners_home += 1
+                    self.game.current_runners_home.append(self.game.on_thirdbase)
                     self.game.on_thirdbase = self.game.on_secondbase
                     self.game.on_secondbase = self.game.on_firstbase
                     self.game.on_firstbase = self.game.battingteam.currentbatter
+                    return
+
+        
+
+
     else:
         pass    
   
 def NextAtBat(self):
+    #print(self.game.ab_over)
     if self.game.ab_over == True:
         self.game.currentstrikes = 0
         self.game.currentballs = 0
         self.game.is_hit = False
         self.game.is_walk = False
         self.game.is_strikeout = False
-        self.game.ab_over = 0
-        self.game.outcount = 0
-        self.game.current_runners_home = 0
+        self.game.ab_over = False
+        self.game.current_runners_home = []
+        self.game.battingteam.TickBatter()
     
 
 def CountRunners(self):
@@ -104,23 +118,56 @@ def CountRunners(self):
     countofbases = f+s+t
     return int(countofbases)
 
-def AtBatOutcomeParser(self, outcome):
-    if outcome == 'strike':
-        self.game.currentstrikes += 1
-    elif outcome == 'ball':
-        self.game.currentballs += 1
-    elif outcome == 'contact':
-        self.game.ab_over = True
-        self.game.is_hit = True
-    elif outcome == 'hbp':
-        self.game.is_hbp = True
+def AtBatOutcomeParser(self):
+    if self.outcome[0] == 'Strike':
+        if self.outcome[1] == "Foul":
+            if self.game.currentstrikes == self.game.rules.strikes - 1:
+                pass
+            else:
+                self.game.currentstrikes+=1                      
+            #print(self.game.currentstrikes)
+        else:
+            self.game.currentstrikes+=1
+            #print(self.game.currentstrikes)
+
     if self.game.currentstrikes >= self.game.rules.strikes:
+        #print("working")
         self.game.ab_over = True
         self.game.is_strikeout = True
-        self.game.outcount += 1
-    if self.game.currentballs >= self.game.rules.balls or self.game.is_hbp == True:
+        self.game.outcount+=1
+        
+    if self.outcome[0] == 'Ball':
+        self.game.currentballs +=1
+    
+    if self.game.currentballs >= self.game.rules.balls:
         self.game.ab_over = True
         self.game.is_walk = True
+
+    #print(outcome[1])
+    if self.outcome[1] == ('far left' or 'left' or 'center left' or 'dead center' or 'center right' or 'right' or 'far right'):
+        d.ballmoving(self)
+        self.game.ab_over = True
+        self.game.is_hit = True
+
+
+
+
+    # if outcome == 'strike':
+    #     self.game.currentstrikes += 1
+    # elif outcome == 'ball':
+    #     self.game.currentballs += 1
+    # elif outcome == 'contact':
+    #     self.game.ab_over = True
+    #     self.game.is_hit = True
+    # elif outcome == 'hbp':
+    #     self.game.is_hbp = True
+    # if self.game.currentstrikes >= self.game.rules.strikes:
+    #     self.game.ab_over = True
+    #     self.game.is_strikeout = True
+    #     self.game.outcount += 1
+    # if self.game.currentballs >= self.game.rules.balls or self.game.is_hbp == True:
+    #     self.game.ab_over = True
+    #     self.game.is_walk = True
 
 #GAME STATE
 def GameFinishedCheck(self):
@@ -135,10 +182,10 @@ def WalkoffCheck(self):
 
 def OutProcessor(self):
     WalkoffCheck(self)  
-    if (self.game.currentouts + self.game.outcount) <= self.game.rules.outs-1:
-        self.game.currentouts += self.game.outcount 
+    if (self.game.currentouts) < self.game.rules.outs:
+        #self.game.currentouts += self.game.outcount 
         self.game.outcount = 0
-    elif (self.game.currentouts + self.game.outcount) >= self.game.rules.outs-1:
+    elif (self.game.currentouts + self.game.outcount) >= self.game.rules.outs:
         InningFlip(self)    
 
 def InningFlip(self):
@@ -146,7 +193,6 @@ def InningFlip(self):
     self.game.on_firstbase = None
     self.game.on_secondbase = None
     self.game.on_thirdbase = None
-    self.game.outs = 0
     self.game.currentouts = 0
     self.game.outcount = 0
     if self.game.topofinning == False:

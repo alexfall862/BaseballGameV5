@@ -30,10 +30,24 @@ class Team():
             self.designatedhitter, 
             ], key=lambda x: x.battingorder)
         self.currentbatspot = 1
-        self.currentbatter = self.battinglist[0]
+        self.currentbatter = Team.GrabBatter(self, self.currentbatspot)
         self.currentpitcher = Team.GrabStartingPitcher(self, pitchervalue)
         self.reliefpitchers = Team.GrabReliefPitchers(self)
         self.benchplayers = Team.GrabBenchBats(self)
+    
+    def TickBatter(self):
+        self.TickBatSpot()
+        self.currentbatter = self.GrabBatter(self.currentbatspot)
+
+    def TickBatSpot(self):
+        if self.currentbatspot < 9:
+            self.currentbatspot +=1
+        else:
+            self.currentbatspot = 1
+
+    def GrabBatter(self, currentbatspot):
+        return self.battinglist[(currentbatspot-1)]
+
     def GrabPositionPlayer(self, position):
         return [player for player in self.roster.playerlist if player.lineup==position][0]
        

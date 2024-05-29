@@ -25,6 +25,8 @@
     <Compile Include="Action.py" />
     <Compile Include="Baselines.py" />
     <Compile Include="Batch.py" />
+    <Compile Include="defense.py" />
+    <Compile Include="FatigueInjury.py" />
     <Compile Include="InteractionEngine.py" />
     <Compile Include="Rules.py" />
     <Compile Include="Stats.py" />
