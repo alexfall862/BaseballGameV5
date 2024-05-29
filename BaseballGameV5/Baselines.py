@@ -39,12 +39,12 @@ class Baselines():
             
     def pullbaseline(directory):
         _baselines = []
-        print(directory)
+        #print(directory)
         with open(directory, 'r', newline='') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=',', )
             for row in reader:
                 _baselines.append(row)
-        print(_baselines)
+        #print(_baselines)
         return _baselines
 
 

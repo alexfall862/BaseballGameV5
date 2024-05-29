@@ -34,14 +34,14 @@ class Game():
         return f"{str(self.gname)} {str(self.hometeam)} {str(self.awayteam)} {str(self.rules)}"
     
     def RunGame(self):
-        print(self.hometeam.battinglist)
-        print(self.hometeam.currentpitcher)
-        print(self.awayteam.battinglist)
-        print(self.awayteam.currentpitcher)       
+        #print(self.hometeam.battinglist)
+        #print(self.hometeam.currentpitcher)
+        #print(self.awayteam.battinglist)
+        #print(self.awayteam.currentpitcher)       
 
         while self.gamedone == False:
             x = Action.Action(self)
-        for action in self.actions:
-            print(action)
+        #for action in self.actions:
+            #print(action)
         #print("DONE")
         #print(listofactions)

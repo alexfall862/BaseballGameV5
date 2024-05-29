@@ -96,10 +96,6 @@ class PitchEvent():
             self.outcome = BattedBallEvent(self).outcome
             return self.outcome
     
-    def __repr__(self):
-        return f"{self.outcome}"
-        
-
 class BattedBallEvent():
     def __init__(self, pitchevent):
         self.pitchevent = pitchevent
@@ -180,6 +176,7 @@ class BattedBallEvent():
                 self.weakodds], 
                                k=1)[0]
         #print(f"Final Output: {bbeoutcome[0]} | {direction}")
+        #print([bbeoutcome, direction, self.pitchevent.pitch.name])
         return [bbeoutcome, direction, self.pitchevent.pitch.name]
     
     def direction(self):
@@ -192,6 +189,7 @@ class BattedBallEvent():
         rightline = self.pitchevent.action.game.baselines.spread_rightline
         #print(f"{self.barrelodds}\n{self.solidodds}\n{self.flareodds}\n{self.burnerodds}\n{self.underodds}\n{self.toppedodds}\n{self.weakodds}")
         #print(f"Test: {left}\nTest: {cleft}\nTest: {center}\nTest: {cright}\nTest: {right}\n")     
+
         directionpicker = random.choices(["far left",
                                           "left",
                                           "center left",

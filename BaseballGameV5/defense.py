@@ -126,7 +126,6 @@ directlyat = [
 class ballmoving():
     def __init__(self, gamestate):
         self.gamestate = gamestate
-        print(gamestate.outcome)
         self.specificlocation = None
         self.fieldingdefender = None
         self.fieldingdefenderbackup = None
@@ -135,9 +134,11 @@ class ballmoving():
         self.defensivealignment = defensivealignment
         self.freehit = freehit
         self.directlyat = directlyat
-        
+        #print(self.gamestate.outcome)
+        self.SpecificLocationGeneator()
+
     def SpecificLocationGeneator(self):
-        pass
+        print(f"{self.gamestate.outcome}")
 
     def DefenderCheck(self):
         pass

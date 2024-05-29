@@ -22,7 +22,7 @@ class Action():
     def AtBat(self):
         self.outcome = ie.PitchEvent(self).outcome
         #print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}-{self.game.outcount}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs} {self.outcome}")
-        #print(outcome)
+        #print(self.outcome)
         #outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
         AtBatOutcomeParser(self)
         Action.PostPitch(self)
@@ -144,7 +144,10 @@ def AtBatOutcomeParser(self):
         self.game.is_walk = True
 
     #print(outcome[1])
-    if self.outcome[1] == ('far left' or 'left' or 'center left' or 'dead center' or 'center right' or 'right' or 'far right'):
+    #print(f"input: {self.outcome[1]}")
+    #print(f"{self.outcome[1] in ('far left' or 'left' or 'center left' or 'dead center' or 'center right' or 'right' or 'far right')} | {self.outcome[1]}")
+    if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
+        #print("event fired")
         d.ballmoving(self)
         self.game.ab_over = True
         self.game.is_hit = True
