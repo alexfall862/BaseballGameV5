@@ -41,7 +41,7 @@ class Game():
 
         while self.gamedone == False:
             x = Action.Action(self)
-        #for action in self.actions:
-            #print(action)
+        for action in self.actions:
+            print(action)
         #print("DONE")
         #print(listofactions)

@@ -8,6 +8,7 @@ class Action():
     def __init__(self, game):
         self.game = game
         self.outcome = None
+        self.defensiveoutcome = None
         Action.PrePitch(self)        
         Action.Processing(self)
 
@@ -38,7 +39,7 @@ class Action():
         self.game.currentouts += self.game.outcount
         #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
         self.game.battingteam.score += len(self.game.current_runners_home)
-        self.game.actions.append([self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home)])
+        self.game.actions.append([self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome])
         NextAtBat(self)        
 
         if self.game.outcount > 0:
@@ -148,9 +149,8 @@ def AtBatOutcomeParser(self):
     #print(f"{self.outcome[1] in ('far left' or 'left' or 'center left' or 'dead center' or 'center right' or 'right' or 'far right')} | {self.outcome[1]}")
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
         #print("event fired")
-        d.ballmoving(self)
+        self.defensiveoutcome = d.ballmoving(self).defenseoutcome
         self.game.ab_over = True
-        self.game.is_hit = True
 
 
 

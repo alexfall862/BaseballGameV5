@@ -159,13 +159,13 @@ class BattedBallEvent():
     def diceroll(self):
         direction = self.direction()
         bbeoutcome = random.choices([
-            "Barrel", 
-            "Solid", 
-            "Flare", 
-            "Burner", 
-            "Under", 
-            "Topped", 
-            "Weak"  
+            "barrel", 
+            "solid", 
+            "flare", 
+            "burner", 
+            "under", 
+            "topped", 
+            "weak"  
             ], weights=[
                 self.barrelodds,
                 self.solidodds,

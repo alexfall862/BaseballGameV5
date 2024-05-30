@@ -1,3 +1,5 @@
+import random
+
 weights = {
     "barrel": [ .57, .28, .10, .05, .00, .00, .00, .00, .00],
     "solid":  [ .10, .20, .25, .20, .15, .10, .00, .00, .00],
@@ -9,6 +11,7 @@ weights = {
     }
 
 outcomes = [
+    'homerun',
     'deep_of',
     'middle_of',
     'shallow_of',
@@ -54,7 +57,7 @@ defensivealignment = {
         'deep_of': ['centerfield'], 
         'middle_of': ['centerfield'], 
         'shallow_of':['centerfield'], 
-        'deep_if':['center', 'shortstop', 'secondbase'], 
+        'deep_if':['centerfield', 'shortstop', 'secondbase'], 
         'middle_if':['shortstop', 'secondbase'], 
         'shallow_if':['shortstop', 'secondbase'], 
         'mound': ['pitcher'], 
@@ -76,7 +79,7 @@ defensivealignment = {
         'shallow_of':['rightfield'], 
         'deep_if':['rightfield'], 
         'middle_if':['rightfield'], 
-        'shallow_if':['secondase', 'firstbase'], 
+        'shallow_if':['secondbase', 'firstbase'], 
         'mound': ['firstbase', 'secondbase', 'pitcher'], 
         'catcher': ['catcher']
         },
@@ -135,16 +138,29 @@ class ballmoving():
         self.freehit = freehit
         self.directlyat = directlyat
         #print(self.gamestate.outcome)
-        self.SpecificLocationGeneator()
+        self.defenseoutcome = self.SpecificLocationGenerator()
 
-    def SpecificLocationGeneator(self):
-        print(f"{self.gamestate.outcome}")
+    def SpecificLocationGenerator(self):
+        contacttype = self.gamestate.outcome[0]
+        direction = self.gamestate.outcome[1]
+        weights = self.weights[contacttype]
+        outcomes = self.outcomes
+        depth = random.choices(outcomes, weights, k=1)[0]
+        
+        if depth == 'homerun':
+            self.gamestate.game.is_hit = True
+            return depth
 
-    def DefenderCheck(self):
-        pass
+        defenderlist = defensivealignment[direction][depth]
 
-    def FieldingCheck(self):
-        pass
+        x = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==defenderlist[0]]
+        #print(f"{direction}/{depth} - {x}")
+        
+        if (direction, depth) in freehit:
+            self.gamestate.game.is_hit = True
+        else:
+            #defensive stuff goes here, for now, auto-out
+            self.gamestate.game.outcount+=1
     
-    def GrabFielder(self):
-        pass
+        return (direction, depth, x)
+        
