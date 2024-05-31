@@ -20,8 +20,14 @@ class Game():
         self.current_runners_home = []
         self.is_walk = False
         self.is_strikeout = False
+        self.is_inplay = False
         self.is_hit = False #temp
         self.is_hbp = False
+        self.is_single = False
+        self.is_double = False
+        self.is_triple = False
+        self.is_homerun = False
+        self.is_liveball = False
         self.ab_over = False
         self.topofinning = True
         self.gamedone = False
@@ -41,7 +47,7 @@ class Game():
 
         while self.gamedone == False:
             x = Action.Action(self)
-        for action in self.actions:
-            print(action)
+        #for action in self.actions:
+        #    print(action)
         #print("DONE")
         #print(listofactions)
