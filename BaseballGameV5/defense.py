@@ -260,7 +260,7 @@ class ballmoving():
         return distancefrom
 
     def CatchEval(self, hittype, distance, defenseoutcome):
-        dplayer = defenseoutcome[2]
+        dplayer = defenseoutcome[2][0]
         
         if hittype == 'barrel':
             distance += 2
@@ -288,14 +288,14 @@ class ballmoving():
         else: 
             self.GetToIt(dplayer, time)
          
-    def GetToIt(dplayer, time):
-        react = dplayer.fieldreaction / 50
+    def GetToIt(self, dplayer, time):
+        react = dplayer.fieldreact / 50
         speed = dplayer.speed / 50
         infield = ((react*3)+(speed))/4
         outfield = ((react)+(speed*3))/4 
         
 
-    def CatchAction(playercatch, type):
+    def CatchAction(self, playercatch, type):
         if type == 'direct':
             fieldingmod = playercatch / 50
             errorodds = fieldingmod *fieldingerrorrate
