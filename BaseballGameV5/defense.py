@@ -1,7 +1,7 @@
 import random
 
-weights = {
-    "barrel": [ .57, .28, .10, .05, .00, .00, .00, .00, .00],
+distweights = {
+    "barrel": [ .50, .28, .10, .05, .00, .00, .00, .00, .00],
     "solid":  [ .10, .20, .25, .20, .15, .10, .00, .00, .00],
     "flare":  [ .00, .00, .25, .35, .25, .10, .05, .00, .00],
     "burner": [ .00, .00, .00, .00, .20, .60, .20, .00, .00],
@@ -10,11 +10,7 @@ weights = {
     "weak":   [ .00, .00, .00, .00, .00, .00, .30, .40, .30]
     }
 
-fieldingerrorrate = 0.01
-
-throwingerrorrate = 0.01
-
-outcomes = [
+distoutcomes = [
     'homerun',
     'deep_of',
     'middle_of',
@@ -25,6 +21,26 @@ outcomes = [
     'mound',
     'catcher'
     ]
+
+fieldingweights = {
+    "barrel": [ .25, .28, .10, .05],
+    "solid":  [ .72, .20, .15, .01],
+    "flare":  [ .52, .28, .20, .00],
+    "burner": [ .52, .38, .10, .00],
+    "under":  [ .92, .08, .00, .00],
+    "topped": [ .88, .12, .00, .00],
+    "weak":   [ .88, .12, .00, .00]
+    }
+
+fieldingoutcomes = [
+    'out',
+    'single',
+    'double',
+    'triple'
+    ]
+
+fieldingerrorrate = 0.01
+throwingerrorrate = 0.01
 
 defensivealignment = {
     "far left": {
@@ -186,23 +202,25 @@ class ballmoving():
         self.specificlocation = None
         self.fieldingdefender = None
         self.fieldingdefenderbackup = None
-        self.weights = weights
-        self.outcomes = outcomes
+        self.distweights = distweights
+        self.distoutcomes = distoutcomes
         self.defensivealignment = defensivealignment
-        self.freehit = freehit
-        self.directlyat = directlyat
-        self.onestep = onestepaway
-        self.twostep = twostepaway
-        self.threestep = threestepaway
+        self.fieldingweights = fieldingweights
+        self.fieldingoutcomes = fieldingoutcomes
+        #self.freehit = freehit
+        #self.directlyat = directlyat
+        #self.onestep = onestepaway
+        #self.twostep = twostepaway
+        #self.threestep = threestepaway
         #print(self.gamestate.outcome)
         self.defenseoutcome = self.SpecificLocationGenerator()
         
     def SpecificLocationGenerator(self):
         contacttype = self.gamestate.outcome[0]
         direction = self.gamestate.outcome[1]
-        weights = self.weights[contacttype]
-        outcomes = self.outcomes
-        depth = random.choices(outcomes, weights, k=1)[0]
+        distweights = self.distweights[contacttype]
+        distoutcomes = self.distoutcomes
+        depth = random.choices(distoutcomes, distweights, k=1)[0]
         
         if depth == 'homerun':
             self.gamestate.game.is_hit = True
@@ -215,94 +233,192 @@ class ballmoving():
         primarydefender = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==defenderlist[0]]
         if primarydefender == []:
             primarydefender = [self.gamestate.game.pitchingteam.currentpitcher]
-        
-        if (direction, depth) in freehit:
-            self.gamestate.game.is_hit = True
-            self.gamestate.game.is_inplay = True            
-        else:
-            #defensive stuff goes here, for now, auto-out
-            self.gamestate.game.outcount+=1
 
-        defenseoutcome = (direction, depth, primarydefender)
-        if self.gamestate.game.is_inplay == True:
-            self.CatchAttempt(defenseoutcome)
-    
+        adjusted_weights = self.CatchAttempt(self.fieldingweights, contacttype, depth, primarydefender)
+        batted_ball_outcome =  random.choices(self.fieldingoutcomes, adjusted_weights[0], k=1)[0]
+        
+        throw_outcome = self.ThrowDeterminer(direction, depth, batted_ball_outcome, adjusted_weights[1], primarydefender)
+        
+
+            
+
+
+        defenseoutcome = (contacttype, direction, primarydefender, batted_ball_outcome)
+
+
+
+
         return defenseoutcome
         
-    def CatchAttempt(self, defenseoutcome):
-        hittype = self.gamestate.outcome[0]
-        distance = self.Distance(defenseoutcome)
-        ballmoving.CatchEval(self, hittype, distance, defenseoutcome)
-        
-    def Distance(self, defenseoutcome):
-        direction = defenseoutcome[0]
-        depth = defenseoutcome[1]
-        distance_from = 0
+    def CatchAttempt(self, fieldingweights, contacttype, depth, primarydefender):
+        if depth == 'deep_of':
+            weights = [1, 0]
+        elif depth == 'middle_of':
+            weights = [1, 0]
+        elif depth == 'shallow_of':
+            weights = [1, 0]
+        elif depth == 'deep_if':
+            weights = [.5, .5]
+        elif depth == 'middle_if':
+            weights = [.5, .5]
+        elif depth == 'shallow_if':
+            weights = [.25, .75]
+        elif depth == 'mound':
+            weights = [.25, .75]
+        elif depth == 'catcher':
+            weights = [.1, .9]
 
-        directlyat = [outcome for outcome in self.directlyat if outcome == (direction, depth)]
-        onestep = [outcome for outcome in self.onestep if outcome == (direction, depth)]
-        twostep = [outcome for outcome in self.twostep if outcome == (direction, depth)]
-        threestep = [outcome for outcome in self.threestep if outcome == (direction, depth)]
-        
-        #print(f"Test: {direction} {depth}")
+        air_or_ground = random.choices(['airball', 'groundball'], weights, k=1)[0]
 
-        if len(directlyat)>0:
-            distancefrom = 0
-        elif len(onestep)>0:
-            distancefrom = 1
-        elif len(twostep)>0:
-            distancefrom = 2
-        elif len(threestep)>0:
-            distancefrom = 3
-        else:
-            distancefrom = False
-        
-        return distancefrom
+        return (fieldingweights[contacttype], air_or_ground)
 
-    def CatchEval(self, hittype, distance, defenseoutcome):
-        dplayer = defenseoutcome[2][0]
-        
-        if hittype == 'barrel':
-            distance += 2
-        elif hittype == 'solid':
-            distance += 1
-        # elif hittype == 'flare':
-        #     pass
-        # elif hittype == 'burner':
-        #     pass
-        elif hittype == 'under':
-            distance = min(0, distance-1)
-        # elif hittype == 'topped':
-        #     pass
-        # elif hittype == 'weak':
-        #     pass
-        
-        time = 0
-        while distance > 0:
-            time+=1
-            distance -=1
-        print(f"{hittype} {defenseoutcome} {time} {distance} {self.gamestate.game.battingteam.currentbatter}")
-        
-        if time==0:     
-            self.gamestate.game.is_liveball = self.CatchAction(dplayer.fieldcatch, 'direct')
+    def ThrowDeterminer(self, direction, depth, batted_ball_outcome, air_or_ground, primarydefender):
+        needthrow, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome = self.RunDeterminer(batted_ball_outcome, air_or_ground, primarydefender)
+        print(f"Need? {needthrow} From Batter: {headingtofirst} From 1st: {headingtosecond} From 2nd: {headingtothird} From 3rd: {headingtohome} HOME: {alreadyhome}")
+        if needthrow == True:
+            target = ''
+            if headingtohome == None:
+                print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to home')
+            if headingtothird == None:
+                print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to third')
+            if headingtosecond == None:
+                print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to second')
+            if headingtofirst == None:
+                print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to first')
+            if (batted_ball_outcome== 'out'):
+                if (self.gamestate.game.currentouts == self.gamestate.game.rules.outs-1):
+                    if primarydefender[0].lineup == 'firstbase':
+                        target = 'pitcher'
+                    else: 
+                        target = 'firstbase'
+                elif (self.gamestate.game.currentouts == self.gamestate.game.rules.outs-2 and headingtosecond != None):                    
+                    if primarydefender[0].lineup == 'secondbase':
+                        target = 'shortstop'
+                    else:
+                        target = 'secondbase'
+                    #try for double play
+                elif headingtohome != None:
+                    if primarydefender[0].lineup == 'catcher':
+                        target = 'pitcher'
+                    else:
+                        target = 'catcher'
+                else:
+                    target = 'firstbase'
+            else:
+                target = 'firstbase'
+            print(target)
+            ballcatcher = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==target]
+            if ballcatcher == []:
+                ballcatcher = self.gamestate.game.pitchingteam.currentpitcher
+            else:
+                ballcatcher = ballcatcher[0]
+            #print(f"Ball Catcher: {ballcatcher}")
+            is_in_time, is_error, target = self.Throw_V_Run(primarydefender, ballcatcher, target)
+
+
         else: 
-            self.GetToIt(dplayer, time)
-         
-    def GetToIt(self, dplayer, time):
-        react = dplayer.fieldreact / 50
-        speed = dplayer.speed / 50
-        infield = ((react*3)+(speed))/4
-        outfield = ((react)+(speed*3))/4 
+            pass
+
+        #dostuff
+
+
+        #isout = []
+        #whoout = []
+        #return isout, whoout
+
+    def Throw_V_Run(primarydefender, target):
+        is_in_time = True
+        is_error = False
+        return is_in_time, is_error, target
+
+    def RunDeterminer(self, batted_ball_outcome, air_or_ground, primarydefender):
+        strat = self.gamestate.game.battingteam.strategy
+
+        headingtofirst = None
+        headingtosecond = None
+        headingtothird = None
+        headingtohome = None
+        alreadyhome = []
+      
+        if batted_ball_outcome == 'single':
+            if self.gamestate.game.on_firstbase != None:
+                headingtosecond = self.gamestate.game.on_firstbase
+            if self.gamestate.game.on_secondbase != None:
+                headingtothird = self.gamestate.game.on_secondbase
+            if self.gamestate.game.on_thirdbase != None:
+                headingtohome = self.gamestate.game.on_thirdbase
+        elif batted_ball_outcome == 'double':
+            if self.gamestate.game.on_firstbase != None:
+                headingtothird = self.gamestate.game.on_firstbase
+            if self.gamestate.game.on_secondbase != None:            
+                headingtohome = self.gamestate.game.on_secondbase
+            if self.gamestate.game.on_thirdbase != None:            
+                alreadyhome = alreadyhome.append(self.gamestate.game.on_thirdbase)
+        elif batted_ball_outcome == 'triple':
+            if self.gamestate.game.on_firstbase != None:            
+                headingtohome = self.gamestate.game.on_firstbase
+            if self.gamestate.game.on_secondbase != None:
+                alreadyhome = alreadyhome.append(self.gamestate.game.on_secondbase)
+            if self.gamestate.game.on_thirdbase != None:
+                alreadyhome = alreadyhome.append(self.gamestate.game.on_thirdbase)
+        elif batted_ball_outcome == 'out':
+            if air_or_ground == 'airball':
+                #need to add getting current batter out 
+                if (self.gamestate.game.currentouts + self.gamestate.game.outcount)-1 >= self.gamestate.game.rules.outs:
+                    return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome              
+                if primarydefender[0].throwpower < 40:
+                    if self.gamestate.game.on_secondbase != None:
+                        headingtothird = self.gamestate.game.on_secondbase
+                    if self.gamestate.game.on_thirdbase != None:
+                        headingtohome = self.gamestate.game.on_thirdbase
+                    if primarydefender[0].throwpower <30:
+                        if self.gamestate.game.on_firstbase != None:
+                            headingtosecond = self.gamestate.game.on_firstbase
+                else:
+                    return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome
+
+            elif air_or_ground == 'groundball':
+                if (self.gamestate.game.currentouts + self.gamestate.game.outcount) -1 >= self.gamestate.game.rules.outs:
+                    if self.gamestate.game.currentbatter != None:
+                        headingtofirst = self.gamestate.game.currentbatter
+                    if self.gamestate.game.on_firstbase != None:
+                        headingtosecond = self.gamestate.game.on_firstbase
+                    if self.gamestate.game.on_secondbase != None:
+                        headingtothird = self.gamestate.game.on_secondbase
+                    if self.gamestate.game.on_thirdbase != None:
+                        headingtohome = self.gamestate.game.on_thirdbase
+
+                if self.gamestate.game.on_firstbase != None:
+                    headingtosecond = self.gamestate.game.on_firstbase 
+
+                if self.gamestate.game.on_secondbase != None:
+                    if self.gamestate.game.on_firstbase != None:
+                        headingtothird = self.gamestate.game.on_secondbase
+                    else:
+                        pass
+                if self.gamestate.game.on_thirdbase != None:
+                    if (self.gamestate.game.on_secondbase !=None and self.gamestate.game.on_firstbase !=None):
+                        headingtohome = self.gamestate.game.on_thirdbase
+                    else:                      
+                        pass
+
+        return True, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome
+
+    #def GetToIt(self, dplayer, time):
+    #    react = dplayer.fieldreact / 50
+    #    speed = dplayer.speed / 50
+    #    infield = ((react*3)+(speed))/4
+    #    outfield = ((react)+(speed*3))/4 
         
 
-    def CatchAction(self, playercatch, type):
-        if type == 'direct':
-            fieldingmod = playercatch / 50
-            errorodds = fieldingmod *fieldingerrorrate
-            is_caught = random.choices([True, False], [(1-errorodds), errorodds], k=1)[0]
-            return is_caught
-        if type == 'infield':
-            pass
-        if type == 'outfield':
-            pass
+    #def CatchAction(self, playercatch, type):
+    #    if type == 'direct':
+    #        fieldingmod = playercatch / 50
+    #        errorodds = fieldingmod *fieldingerrorrate
+    #        is_caught = random.choices([True, False], [(1-errorodds), errorodds], k=1)[0]
+    #        return is_caught
+    #    if type == 'infield':
+    #        pass
+    #    if type == 'outfield':
+    #        pass
         
