@@ -8,8 +8,11 @@ class Steals():
         attemptoutcome = self.steal_eval(self.firstbase, self.secondbase, self.thirdbase)
                 
     def steal_eval(self, firstbase, secondbase, thirdbase):
-        
-        pass
-
+        if firstbase == None and secondbase == None and thirdbase == None:
+            pass
+        elif firstbase != None:
+            test = [player for player in self.strategy.playerstrategy if player.id == firstbase.id]
+            print(f"{test}")
+            
 
 

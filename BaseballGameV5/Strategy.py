@@ -7,7 +7,7 @@ class Strategy():
     
     class PlayerStrat():
         def __init__(self, playerstrat):
-            print(playerstrat)
+            #print(playerstrat)
             self.id = playerstrat['id']
             self.stealfreq = playerstrat['stealfreq']
             self.pitchpull = playerstrat['pitchpull']
