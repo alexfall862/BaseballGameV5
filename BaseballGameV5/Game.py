@@ -1,3 +1,4 @@
+from ast import Pass
 import Team
 import Rules 
 import Action
@@ -23,6 +24,7 @@ class Game():
         self.is_inplay = False
         self.is_hit = False #temp
         self.is_hbp = False
+        self.error_count = 0
         self.is_single = False
         self.is_double = False
         self.is_triple = False
