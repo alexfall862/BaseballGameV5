@@ -18,6 +18,9 @@ class Steals():
         if firstbase == None and secondbase == None and thirdbase == None:
             pass
         else:
+            print(f"Baserunner Speed: {self.defense.firstbase.speed}")
+            print(f"Baserunner Baserunning: {self.defense.firstbase.baserunning}")
+            print(f"Baserunner Base reaction: {self.defense.firstbase.basereaction}")
             print(f"Catcher Throw Power: {self.defense.catcher.throwpower}")
             print(f"Catcher Throw Acc:{self.defense.catcher.throwacc}")
             print(f"Catcher Reaction: {self.defense.catcher.fieldreact}")
