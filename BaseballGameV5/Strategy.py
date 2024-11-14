@@ -54,7 +54,7 @@ class Strategy():
     #             return strategy[0]
 
     def Load(directoryjson):
-        print(directoryjson)
+        #print(directoryjson)
         with open(str(directoryjson)) as f:
             data=json.load(f)
 
@@ -65,7 +65,7 @@ class Strategy():
         
         
         for player in temp_playerlist:
-            print(player)
+            #print(player)
             playerstrategy.append(
                     Strategy.PlayerStrat(
                             player                        
