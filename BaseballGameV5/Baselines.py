@@ -19,6 +19,11 @@ class Baselines():
         self.toppedodds = float(ltypeload.get("c_toppedodds"))
         self.weakodds = float(ltypeload.get("c_weakodds"))
         self.modexp = float(ltypeload.get("modexp"))
+        
+        self.steal_success = float(ltypeload.get("steal_success"))
+        self.pickoff_success = float(ltypeload.get("pickoff_success"))	
+        self.error_rate = float(ltypeload.get("error_rate"))
+
         self.spread_leftline = 14
         self.spread_left = 14
         self.spread_centerleft = 14
