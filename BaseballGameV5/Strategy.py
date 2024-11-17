@@ -10,6 +10,7 @@ class Strategy():
             #print(playerstrat)
             self.id = playerstrat['id']
             self.stealfreq = playerstrat['stealfreq']
+            self.pickofffreq = playerstrat['stealfreq']
             self.pitchpull = playerstrat['pitchpull']
             self.plateapproach = playerstrat['plateapproach']
             self.pitchchoices = playerstrat['pitchchoices']

@@ -3,7 +3,8 @@
     "playerstrat": [
       {
         "id": 52697,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -11,7 +12,8 @@
       },
       {
         "id": 53632,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -19,7 +21,8 @@
       },
       {
         "id": 66199,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -27,7 +30,8 @@
       },
       {
         "id": 41649,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -35,7 +39,8 @@
       },
       {
         "id": 55577,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -43,7 +48,8 @@
       },
       {
         "id": 55136,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -51,7 +57,8 @@
       },
       {
         "id": 49781,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -59,7 +66,8 @@
       },
       {
         "id": 55820,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -67,7 +75,8 @@
       },
       {
         "id": 64931,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -75,7 +84,8 @@
       },
       {
         "id": 59060,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -83,7 +93,8 @@
       },
       {
         "id": 67290,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -91,7 +102,8 @@
       },
       {
         "id": 66117,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -99,7 +111,8 @@
       },
       {
         "id": 66634,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -107,7 +120,8 @@
       },
       {
         "id": 54309,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -115,7 +129,8 @@
       },
       {
         "id": 45348,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -123,7 +138,8 @@
       },
       {
         "id": 45784,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -131,7 +147,8 @@
       },
       {
         "id": 40973,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -139,7 +156,8 @@
       },
       {
         "id": 63233,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -147,7 +165,8 @@
       },
       {
         "id": 61452,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -155,7 +174,8 @@
       },
       {
         "id": 49471,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -163,7 +183,8 @@
       },
       {
         "id": 53116,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -171,7 +192,8 @@
       },
       {
         "id": 58531,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchapproach": "normal",
@@ -179,28 +201,32 @@
       },
       {
         "id": 36512,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchchoices": [ 1, 1, 1, 1, 1 ]
       },
       {
         "id": 45707,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchchoices": [ 1, 1, 1, 1, 1 ]
       },
       {
         "id": 39945,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchchoices": [ 1, 1, 1, 1, 1 ]
       },
       {
         "id": 53288,
-        "stealfreq": 100,
+        "stealfreq": 100,        
+        "pickofffreq": 100,
         "pitchpull": 100,
         "plateapproach": "normal",
         "pitchchoices": [ 1, 1, 1, 1, 1 ]

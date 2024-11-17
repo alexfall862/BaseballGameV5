@@ -32,6 +32,12 @@ class Baselines():
         self.spread_right = 14
         self.spread_rightline = 14
 
+    def ErrorEval(self, thrower, catcher):
+        iserror = False
+        isbadthrow = False
+        isdropped = False
+        return iserror, isbadthrow, isdropped
+
     def LoadLeagueType(ruletype):
         directory = f'..\\Baselines\\'
         keyword = "_" + ruletype + "_.csv"
