@@ -28,7 +28,16 @@ class Steals():
             pickofffreqrating = Steals.pull_pickofffreq(self.gamestate.game.pitchingteam.currentpitcher, self.strategy.playerstrategy)
             if pickofffreqrating > diceroll:
                 if firstbase != None:
-                    outcome = Steals.pickoff_math(self.gamestate.game.baselines.pickoff_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.firstbase)
+                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self.gamestate.game.baselines.pickoff_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.firstbase)
+                    if pickoff == True:
+                        if throwerror == True:
+                            pass
+                        elif catcherror == True:
+                            pass
+                    elif pickoff == False:
+                        pass
+
+
                 elif secondbase != None:
                     #attempt pickoff
                     pass
@@ -43,10 +52,11 @@ class Steals():
                     diceroll = np.random.rand()
                     if (stealfreqrating > diceroll):
                         #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
-                        output = Steals.calc_baserunning_math(self.gamestate.game.baselines.steal_success, self.gamestate.game.baselines.error_rate, self.gamestate.game.baselines.pickoff_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.thirdbase)
+                        outcome = Steals.calc_baserunning_math(self.gamestate.game.baselines.steal_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.thirdbase)
                     else:
                         pass
                     #return something
+
 
                 if secondbase != None and thirdbase == None:
                     stealfreqrating = Steals.pull_stealfreq(self.secondbase, self.strategy.playerstrategy)
@@ -55,23 +65,12 @@ class Steals():
                     stealfreqrating = Steals.pull_stealfreq(self.firstbase, self.strategy.playerstrategy)
                     print(f"{stealfreqrating}")
             
-    def pickoff_math(pickoffsuccess, errorrate, baserunner, pitcher, baseman):
-        bmr = (baseman.fieldreact - 50)/50
-        bmc = (baseman.fieldcatch - 50)/50        
-        fieldingmod = ((bmr+bmc)/2)
-        errorodds = (fieldingmod * errorrate)        
+    def pickoff_math(self, pickoffsuccess, baserunner, pitcher, baseman):
         diceroll = np.random.rand()
-        
-        
-        
-        
         
         pickoffmod = (pitcher.pickoff - 50)/50
         pickoffchances = (1+pickoffmod)*50
         
-        
-        
-
         bsp = (baserunner.speed - 50)/50
         bbr = (baserunner.baserunning - 50)/50
         brr = (baserunner.baserunning - 50)/5
@@ -79,15 +78,21 @@ class Steals():
         baserunner_weights = [3, 6]
         baserunner  = ((1+np.average(baserunner_scores, weights=baserunner_weights))*50)+brr
         
+        error_check = self.gamestate.game.baselines.Throw_Catch(pitcher, baseman, "infield")
+        print(f"ERROR_CHECK: {error_check}")
+
+        if error_check[0] or error_check[1] == True:
+            return False, baserunner, error_check[0], error_check[1]
+
         pickoffscore = (pickoffchances / baserunner) * pickoffsuccess
         diceroll = np.random.rand()
         if pickoffscore > diceroll:
-            return True
+            return True, None, error_check[0], error_check[1]
         else: 
-            return False
+            return False, baserunner, error_check[0], error_check[1]
         
 
-    def calc_baserunning_math(stealsuccess, errorrate, pickoffsuccess, baserunner, pitcher, catcher, baseman):
+    def calc_baserunning_math(stealsuccess, baserunner, pitcher, catcher, baseman):
         bsp = (baserunner.speed - 50)/50
         bbr = (baserunner.baserunning - 50)/50
         brr = (baserunner.baserunning - 50)/5
@@ -104,8 +109,6 @@ class Steals():
         battery_weights = [15, 3, 1, 1]
         battery = ((1+np.average(battery_scores, weights=battery_weights))*50)+cfr
 
-
-
         comp_score = baserunner/battery
         steal_outcome_odds = comp_score*stealsuccess
 
@@ -118,11 +121,7 @@ class Steals():
             print(f"STEAL FAILURE: {round(steal_outcome_odds, 2)} {round( diceroll, 2)}")
             return False
         
-        bmr = (baseman.fieldreact - 50)/50
-        bmc = (baseman.fieldcatch - 50)/50
-        
         #NOT FINISHED, NEED TO FIND WAY TO HANDLE ERRORS AND FIGURE OUT WHAT THE OUTPUT NEEDS TO BE (PROBABLY INCLUDE OUTS OR SOMETHING AS WELL AS BASERUNNER SITUATION)
 
-        cta = cta
-        
+       
         

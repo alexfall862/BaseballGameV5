@@ -1,5 +1,6 @@
 import csv 
 import os 
+import numpy as np
 
 class Baselines():
     def __init__(self, leaguetype):
@@ -32,11 +33,43 @@ class Baselines():
         self.spread_right = 14
         self.spread_rightline = 14
 
-    def ErrorEval(self, thrower, catcher):
-        iserror = False
-        isbadthrow = False
-        isdropped = False
-        return iserror, isbadthrow, isdropped
+    def Throw_Catch(self, thrower, catcher, depth):
+        throw = self.ThrowErrorEval(thrower, depth)
+        catch = self.CatchErrorEval(catcher, depth)
+        return throw, catch
+
+    def ThrowErrorEval(self, thrower, depth):
+        diceroll = np.random.rand()
+        tta = (thrower.throwacc - 50)/50
+        ttp = (thrower.throwpower - 50)/50
+        cscores = [tta, ttp]
+        if depth == 'outfield':
+            cweights = [2, 1]
+        elif depth == 'infield':
+            cweights = [1, 0]
+
+        error_rate = 1 - (1+np.average(cscores, weights=cweights))*self.error_rate
+        if error_rate > diceroll:
+            return True 
+        else: 
+            return False
+
+    def CatchErrorEval(self, catcher, depth):
+        diceroll = np.random.rand()
+        cfs = (catcher.fieldspot - 50)/50
+        cfr = (catcher.fieldreaction - 50)/50
+        cfc = (catcher.fieldcatch - 50)/50
+        cscores = [cfs, cfr, cfc]
+        if depth == 'outfield':
+            cweights = [4, 2, 3]
+        elif depth == 'infield':
+            cweights = [1, 2, 3]
+
+        error_rate = 1 - (1+np.average(cscores, weights=cweights))*self.error_rate
+        if error_rate > diceroll:
+            return True 
+        else: 
+            return False
 
     def LoadLeagueType(ruletype):
         directory = f'..\\Baselines\\'
