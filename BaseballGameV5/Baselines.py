@@ -57,7 +57,7 @@ class Baselines():
     def CatchErrorEval(self, catcher, depth):
         diceroll = np.random.rand()
         cfs = (catcher.fieldspot - 50)/50
-        cfr = (catcher.fieldreaction - 50)/50
+        cfr = (catcher.fieldreact - 50)/50
         cfc = (catcher.fieldcatch - 50)/50
         cscores = [cfs, cfr, cfc]
         if depth == 'outfield':

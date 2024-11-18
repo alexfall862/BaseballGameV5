@@ -7,65 +7,180 @@ class Steals():
         self.firstbase = self.gamestate.game.on_firstbase
         self.secondbase = self.gamestate.game.on_secondbase 
         self.thirdbase = self.gamestate.game.on_thirdbase
-        self.strategy =  self.gamestate.game.battingteam.strategy
+        self.runnerstrategy =  self.gamestate.game.battingteam.strategy
+        self.defensestrategy =  self.gamestate.game.pitchingteam.strategy
         self.defense = self.gamestate.game.pitchingteam
-        attemptoutcome = self.steal_eval(self.firstbase, self.secondbase, self.thirdbase)
+        self.skippitch = self.steal_eval(self.firstbase, self.secondbase, self.thirdbase)
                 
     def pull_stealfreq(runner, stratlist):
+        print(f"Running Pull Steal Freq")
         freq = [player.stealfreq for player in stratlist if player.id == runner.id][0]
         return freq     
     
     def pull_pickofffreq(pitcher, stratlist):
+        print(f"Running Pull Pickoff Freq")
         freq = [player.pickofffreq for player in stratlist if player.id == pitcher.id][0]
         return freq     
     
     def steal_eval(self, firstbase, secondbase, thirdbase):
+        print(f"Running Steal Eval")
         if firstbase == None and secondbase == None and thirdbase == None:
-            pass
-        
+            return False
         else:
+            pickofffreqrating = Steals.pull_pickofffreq(self.gamestate.game.pitchingteam.currentpitcher, self.defensestrategy.playerstrategy)
             diceroll = np.random.rand()
-            pickofffreqrating = Steals.pull_pickofffreq(self.gamestate.game.pitchingteam.currentpitcher, self.strategy.playerstrategy)
             if pickofffreqrating > diceroll:
                 if firstbase != None:
-                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self.gamestate.game.baselines.pickoff_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.firstbase)
+                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.firstbase)
                     if pickoff == True:
+                        if throwerror == False and catcherror == False:
+                            self.gamestate.game.on_firstbase = None
+                            self.gamestate.game.outcount+=1
+                            return True
                         if throwerror == True:
-                            pass
+                            if thirdbase != None:
+                                self.gamestate.game.runnershome.current_runners_home.append(thirdbase)
+                                self.gamestate.game.on_thirdbase = None                                
+                            if secondbase != None:
+                                self.gamestate.game.on_thirdbase = self.gamestate.game.on_secondbase
+                                self.gamestate.game.on_secondbase = None
+                            if firstbase != None:
+                                self.gamestate.game.on_secondbase = self.gamestate.game.on_firstbase
+                                self.gamestate.game.on_firstbase = None      
+                            return False
                         elif catcherror == True:
-                            pass
+                            #need to assign error eventually
+                            return False
                     elif pickoff == False:
-                        pass
+                        return False
 
+            diceroll = np.random.rand()
+            if pickofffreqrating > diceroll:
+                if secondbase != None:
+                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, secondbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.secondbase)
+                    if pickoff == True:
+                        if throwerror == False and catcherror == False:
+                            self.gamestate.game.on_secondbase = None
+                            self.gamestate.game.outcount+=1
+                            return True
+                        if throwerror == True:
+                            if thirdbase != None:
+                                self.gamestate.game.runnershome.current_runners_home.append(thirdbase)
+                                self.gamestate.game.on_thirdbase = None                                
+                            if secondbase != None:
+                                self.gamestate.game.on_thirdbase = self.gamestate.game.on_secondbase
+                                self.gamestate.game.on_secondbase = None
+                            if firstbase != None:
+                                self.gamestate.game.on_secondbase = self.gamestate.game.on_firstbase
+                                self.gamestate.game.on_firstbase = None      
+                            return False
+                        elif catcherror == True:
+                            #need to assign error eventually
+                            return False
+                    elif pickoff == False:
+                        return False
 
-                elif secondbase != None:
-                    #attempt pickoff
-                    pass
-                elif thirdbase != None:
-                    pass
-                    #attempt pickoff
+            diceroll = np.random.rand()
+            if pickofffreqrating > diceroll:
+                if thirdbase != None:
+                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.thirdbase)
+                    if pickoff == True:
+                        if throwerror == False and catcherror == False:
+                            self.gamestate.game.on_thirdbase = None
+                            self.gamestate.game.outcount+=1
+                            return True
+                        if throwerror == True:
+                            if thirdbase != None:
+                                self.gamestate.game.runnershome.current_runners_home.append(thirdbase)
+                                self.gamestate.game.on_thirdbase = None                                
+                            if secondbase != None:
+                                self.gamestate.game.on_thirdbase = self.gamestate.game.on_secondbase
+                                self.gamestate.game.on_secondbase = None
+                            if firstbase != None:
+                                self.gamestate.game.on_secondbase = self.gamestate.game.on_firstbase
+                                self.gamestate.game.on_firstbase = None      
+                            return False
+                        elif catcherror == True:
+                            #need to assign error eventually
+                            return False
+                    elif pickoff == False:
+                        return False
+
             else:
                 if thirdbase != None:
                     #get steal frequency setting from player
-                    stealfreqrating = Steals.pull_stealfreq(self.thirdbase, self.strategy.playerstrategy)
+                    stealfreqrating = Steals.pull_stealfreq(self.thirdbase, self.runnerstrategy.playerstrategy)
                     #roll to see likelihood of attempt
                     diceroll = np.random.rand()
                     if (stealfreqrating > diceroll):
                         #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
-                        outcome = Steals.calc_baserunning_math(self.gamestate.game.baselines.steal_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.thirdbase)
+                        outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.thirdbase)
+                        if outcome == True:
+                            self.gamestate.game.already_home.append(thirdbase)
+                            self.gamestate.game.on_thirdbase = None
+                            if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                                if secondbase != None:
+                                    self.gamestate.game.on_thirdbase = secondbase
+                                    self.gamestate.game.on_secondbase = None
+                                if firstbase != None:
+                                    self.gamestate.game.on_secondbase = firstbase
+                                    self.gamestate.game.on_firstbase = None
+                            elif error_check[1] == True:
+                                pass
+                            return True                         
                     else:
-                        pass
-                    #return something
+                        return False
 
-
-                if secondbase != None and thirdbase == None:
-                    stealfreqrating = Steals.pull_stealfreq(self.secondbase, self.strategy.playerstrategy)
-                    print(f"{stealfreqrating}")
-                if firstbase != None and secondbase == None:
-                    stealfreqrating = Steals.pull_stealfreq(self.firstbase, self.strategy.playerstrategy)
-                    print(f"{stealfreqrating}")
+                if secondbase != None:
+                    #get steal frequency setting from player
+                    stealfreqrating = Steals.pull_stealfreq(self.secondbase, self.runnerstrategy.playerstrategy)
+                    #roll to see likelihood of attempt
+                    diceroll = np.random.rand()
+                    if (stealfreqrating > diceroll):
+                        #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
+                        outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, secondbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.secondbase)
+                        if outcome == True:
+                            self.gamestate.game.on_thirdbase = secondbase
+                            self.gamestate.game.on_secondbase = None
+                            if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                                if thirdbase != None:
+                                    self.gamestate.game.current_runners_home.append(thirdbase)
+                                    self.gamestate.game.on_thirdbase = None
+                                if firstbase != None:
+                                    self.gamestate.game.on_secondbase = firstbase
+                                    self.gamestate.game.on_firstbase = None
+                            elif error_check[1] == True:
+                                pass
+                            return True                         
+                    else:
+                        return False
+                    
+                if firstbase != None:
+                    #get steal frequency setting from player
+                    stealfreqrating = Steals.pull_stealfreq(self.firstbase, self.runnerstrategy.playerstrategy)
+                    #roll to see likelihood of attempt
+                    diceroll = np.random.rand()
+                    if (stealfreqrating > diceroll):
+                        #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
+                        outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.firstbase)
+                        if outcome == True:
+                            self.gamestate.game.on_secondbase = firstbase
+                            self.gamestate.game.on_firstbase = None
+                            if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                                if thirdbase != None:
+                                    self.gamestate.game.current_runners_home.append(thirdbase)
+                                    self.gamestate.game.on_thirdbase = None
+                                if secondbase != None:
+                                    self.gamestate.game.on_thirdbase = secondbase
+                                    self.gamestate.game.on_secondbase = None
+                            elif error_check[1] == True:
+                                pass
+                            return True                         
+                    else:
+                        return False
             
     def pickoff_math(self, pickoffsuccess, baserunner, pitcher, baseman):
+        print(f"Running Pickoff Math")
         diceroll = np.random.rand()
         
         pickoffmod = (pitcher.pickoff - 50)/50
@@ -92,7 +207,8 @@ class Steals():
             return False, baserunner, error_check[0], error_check[1]
         
 
-    def calc_baserunning_math(stealsuccess, baserunner, pitcher, catcher, baseman):
+    def calc_baserunning_math(self, stealsuccess, baserunner, pitcher, catcher, baseman):
+        print(f"Running Calc Baserunning Math")
         bsp = (baserunner.speed - 50)/50
         bbr = (baserunner.baserunning - 50)/50
         brr = (baserunner.baserunning - 50)/5
@@ -114,12 +230,14 @@ class Steals():
 
         diceroll = np.random.rand()
         
+        error_check = self.gamestate.game.baselines.Throw_Catch(pitcher, baseman, "infield") 
+        
         if (steal_outcome_odds > diceroll):
             print(f"STEAL SUCCESS: {round(steal_outcome_odds, 2)} {round( diceroll, 2)}")
-            return True
+            return True, error_check
         else:
             print(f"STEAL FAILURE: {round(steal_outcome_odds, 2)} {round( diceroll, 2)}")
-            return False
+            return False, error_check
         
         #NOT FINISHED, NEED TO FIND WAY TO HANDLE ERRORS AND FIGURE OUT WHAT THE OUTPUT NEEDS TO BE (PROBABLY INCLUDE OUTS OR SOMETHING AS WELL AS BASERUNNER SITUATION)
 

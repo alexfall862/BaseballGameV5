@@ -35,6 +35,7 @@ class Game():
         self.gamedone = False
         self.battingteam = self.awayteam
         self.pitchingteam = self.hometeam
+        self.skip_bool = None
         self.actions = []
         self.baselines = Baselines.Baselines(gamedict.get("Rules"))
 

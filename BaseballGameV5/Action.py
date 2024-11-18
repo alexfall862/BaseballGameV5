@@ -20,9 +20,12 @@ class Action():
 
     def PrePitch(self):
         self.game.error_count=0
-        steals.Steals(self)
-        #print(f"other stuff here")
-        Action.AtBat(self)
+        skip = steals.Steals(self).skippitch 
+        if skip == True:
+            self.game.skip_bool = True
+        elif skip == False:
+            self.game.skip_bool = False
+            Action.AtBat(self)
     
     def AtBat(self):
         self.outcome = ie.PitchEvent(self).outcome
@@ -44,7 +47,7 @@ class Action():
         self.game.currentouts += self.game.outcount
         #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
         self.game.battingteam.score += len(self.game.current_runners_home)
-        self.game.actions.append([self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
+        self.game.actions.append([self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
         NextAtBat(self)        
 
         if self.game.outcount > 0:
