@@ -3,6 +3,8 @@ import Team
 import Rules 
 import Action
 import Baselines
+import json 
+import jsonpickle 
 
 class Game():
     def __init__(self, gamedict):
@@ -50,7 +52,13 @@ class Game():
 
         while self.gamedone == False:
             x = Action.Action(self)
+        listofactions = []
         for action in self.actions:
             print(action)
-        #print("DONE")
+            listofactions.append(action)
+            
+        #json_string = listofactions
+        #with open("testoutput.json", "w") as outfile:
+        #    json.dump(json_string, outfile)
+        ##print("DONE")
         #print(listofactions)
