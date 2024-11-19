@@ -4,10 +4,14 @@ import copy
 import FatigueInjury as fi
 import defense as d
 import Steals as steals
+import itertools
 
 
 class Action():
+    counter = 0
     def __init__(self, game):
+        self.id = Action.counter
+        Action.counter+=1
         self.game = game
         self.outcome = None
         self.defensiveoutcome = None
@@ -34,6 +38,31 @@ class Action():
         #outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
         AtBatOutcomeParser(self)
         Action.PostPitch(self)
+
+    def ActionPrint(self):
+        return {
+            "ID": self.id,
+            "Inning": self.game.currentinning,
+            "Inning Half": self.game.topofinning,
+            "Home Team": self.game.hometeam.name,
+            "Home Score": self.game.hometeam.score,
+            "Away Team": self.game.awayteam.name,
+            "Away Score": self.game.awayteam.score,
+            "Ball Count": self.game.currentballs,
+            "Strike Count": self.game.currentstrikes,  
+            "Out Count": self.game.currentouts,   
+            "Outs this Action": self.game.outcount,
+            "Current Home Pitcher": str(self.game.hometeam.currentpitcher),
+            "Current Away Pitcher": str(self.game.awayteam.currentpitcher),
+            "Current Home Batter": str(self.game.hometeam.currentbatter),
+            "Current Away Batter": str(self.game.awayteam.currentbatter),
+            "On First": str(self.game.on_firstbase),
+            "On Second": str(self.game.on_secondbase),
+            "On Third": str(self.game.on_thirdbase),
+            "Home": str(self.game.current_runners_home),        
+            }
+
+
         
 
     def PostPitch(self):
@@ -47,7 +76,7 @@ class Action():
         self.game.currentouts += self.game.outcount
         #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
         self.game.battingteam.score += len(self.game.current_runners_home)
-        self.game.actions.append([self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
+        self.game.actions.append(self.ActionPrint())#[self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
         NextAtBat(self)        
 
         if self.game.outcount > 0:

@@ -1,6 +1,7 @@
 import csv
 from email.charset import Charset
 
+
 class Batch():
     def __init__(self, directory, rules):
         self.directory = directory + "\\games.csv"
