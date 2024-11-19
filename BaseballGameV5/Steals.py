@@ -30,6 +30,8 @@ class Steals():
             pickofffreqrating = Steals.pull_pickofffreq(self.gamestate.game.pitchingteam.currentpitcher, self.defensestrategy.playerstrategy)
             diceroll = np.random.rand()
             if pickofffreqrating > diceroll:
+                self.gamestate.game.is_pickoff = True
+                print(f"PICKOFF STATE: {self.gamestate.counter} {self.gamestate.game.is_pickoff}")
                 if firstbase != None:
                     pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.firstbase)
                     if pickoff == True:
@@ -38,6 +40,7 @@ class Steals():
                             self.gamestate.game.outcount+=1
                             return True
                         if throwerror == True:
+                            self.gamestate.game.errorcount+=1
                             if thirdbase != None:
                                 self.gamestate.game.runnershome.current_runners_home.append(thirdbase)
                                 self.gamestate.game.on_thirdbase = None                                
@@ -49,6 +52,7 @@ class Steals():
                                 self.gamestate.game.on_firstbase = None      
                             return False
                         elif catcherror == True:
+                            self.gamestate.game.errorcount+=1
                             #need to assign error eventually
                             return False
                     elif pickoff == False:
@@ -56,6 +60,8 @@ class Steals():
 
             diceroll = np.random.rand()
             if pickofffreqrating > diceroll:
+                self.gamestate.game.is_pickoff = True
+                print(f"PICKOFF STATE: {self.gamestate.counter} {self.gamestate.game.is_pickoff}")
                 if secondbase != None:
                     pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, secondbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.secondbase)
                     if pickoff == True:
@@ -64,6 +70,7 @@ class Steals():
                             self.gamestate.game.outcount+=1
                             return True
                         if throwerror == True:
+                            self.gamestate.game.errorcount+=1
                             if thirdbase != None:
                                 self.gamestate.game.runnershome.current_runners_home.append(thirdbase)
                                 self.gamestate.game.on_thirdbase = None                                
@@ -75,6 +82,7 @@ class Steals():
                                 self.gamestate.game.on_firstbase = None      
                             return False
                         elif catcherror == True:
+                            self.gamestate.game.errorcount+=1
                             #need to assign error eventually
                             return False
                     elif pickoff == False:
@@ -82,6 +90,8 @@ class Steals():
 
             diceroll = np.random.rand()
             if pickofffreqrating > diceroll:
+                self.gamestate.game.is_pickoff = True
+                print(f"PICKOFF STATE: {self.gamestate.counter} {self.gamestate.game.is_pickoff}")
                 if thirdbase != None:
                     pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.thirdbase)
                     if pickoff == True:
@@ -90,6 +100,7 @@ class Steals():
                             self.gamestate.game.outcount+=1
                             return True
                         if throwerror == True:
+                            self.gamestate.game.errorcount+=1
                             if thirdbase != None:
                                 self.gamestate.game.runnershome.current_runners_home.append(thirdbase)
                                 self.gamestate.game.on_thirdbase = None                                
@@ -101,24 +112,30 @@ class Steals():
                                 self.gamestate.game.on_firstbase = None      
                             return False
                         elif catcherror == True:
+                            self.gamestate.game.errorcount+=1
                             #need to assign error eventually
                             return False
                     elif pickoff == False:
                         return False
 
             else:
+                print(f"############################################################### STEAL FIRED")
+                input()
                 if thirdbase != None:
                     #get steal frequency setting from player
                     stealfreqrating = Steals.pull_stealfreq(self.thirdbase, self.runnerstrategy.playerstrategy)
                     #roll to see likelihood of attempt
                     diceroll = np.random.rand()
                     if (stealfreqrating > diceroll):
+                        self.gamestate.game.is_stealattempt = True
                         #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
                         outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.thirdbase)
                         if outcome == True:
+                            self.gamestate.game.is_stealsuccess = True
                             self.gamestate.game.already_home.append(thirdbase)
                             self.gamestate.game.on_thirdbase = None
                             if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                                self.gamestate.game.errorcount+=1
                                 if secondbase != None:
                                     self.gamestate.game.on_thirdbase = secondbase
                                     self.gamestate.game.on_secondbase = None
@@ -126,6 +143,7 @@ class Steals():
                                     self.gamestate.game.on_secondbase = firstbase
                                     self.gamestate.game.on_firstbase = None
                             elif error_check[1] == True:
+                                self.gamestate.game.errorcount+=1
                                 pass
                             return True                         
                     else:
@@ -137,12 +155,15 @@ class Steals():
                     #roll to see likelihood of attempt
                     diceroll = np.random.rand()
                     if (stealfreqrating > diceroll):
+                        self.gamestate.game.is_stealattempt = True
                         #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
                         outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, secondbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.secondbase)
                         if outcome == True:
+                            self.gamestate.game.is_stealsuccess = True
                             self.gamestate.game.on_thirdbase = secondbase
                             self.gamestate.game.on_secondbase = None
                             if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                                self.gamestate.game.errorcount+=1
                                 if thirdbase != None:
                                     self.gamestate.game.current_runners_home.append(thirdbase)
                                     self.gamestate.game.on_thirdbase = None
@@ -150,6 +171,7 @@ class Steals():
                                     self.gamestate.game.on_secondbase = firstbase
                                     self.gamestate.game.on_firstbase = None
                             elif error_check[1] == True:
+                                self.gamestate.game.errorcount+=1
                                 pass
                             return True                         
                     else:
@@ -161,12 +183,15 @@ class Steals():
                     #roll to see likelihood of attempt
                     diceroll = np.random.rand()
                     if (stealfreqrating > diceroll):
+                        self.gamestate.game.is_stealattempt = True
                         #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
                         outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.firstbase)
                         if outcome == True:
+                            self.gamestate.game.is_stealsuccess = True
                             self.gamestate.game.on_secondbase = firstbase
                             self.gamestate.game.on_firstbase = None
                             if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                                self.gamestate.game.errorcount+=1
                                 if thirdbase != None:
                                     self.gamestate.game.current_runners_home.append(thirdbase)
                                     self.gamestate.game.on_thirdbase = None
@@ -174,6 +199,7 @@ class Steals():
                                     self.gamestate.game.on_thirdbase = secondbase
                                     self.gamestate.game.on_secondbase = None
                             elif error_check[1] == True:
+                                self.gamestate.game.errorcount+=1
                                 pass
                             return True                         
                     else:

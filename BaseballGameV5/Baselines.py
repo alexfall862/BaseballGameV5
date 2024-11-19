@@ -33,6 +33,9 @@ class Baselines():
         self.spread_right = 14
         self.spread_rightline = 14
 
+    def __repr__(self):
+        return f"{self.leaguetype}"
+
     def Throw_Catch(self, thrower, catcher, depth):
         throw = self.ThrowErrorEval(thrower, depth)
         catch = self.CatchErrorEval(catcher, depth)

@@ -4,6 +4,7 @@ import Rules
 import Action
 import Baselines
 import json 
+import csv 
 
 class Game():
     def __init__(self, gamedict):
@@ -22,6 +23,9 @@ class Game():
         self.current_runners_home = []
         self.is_walk = False
         self.is_strikeout = False
+        self.is_pickoff = False
+        self.is_stealattempt = False
+        self.is_stealsuccess = False
         self.is_inplay = False
         self.is_hit = False #temp
         self.is_hbp = False
@@ -54,10 +58,15 @@ class Game():
         Action.Action.counter = 0
         listofactions = []
         for action in self.actions:
-            print(action)
+            #print(action)
             listofactions.append(action)    
         json_string = listofactions
-        with open("testoutput.json", "w") as outfile:
+        with open(f"testoutput_{self.gname}.json", "w") as outfile:
             json.dump(json_string, outfile)
+        
+        with open(f"testoutput_{self.gname}.csv", "w", newline="") as outputfile:
+            dict_writer = csv.DictWriter(outputfile, listofactions[0].keys())
+            dict_writer.writeheader()
+            dict_writer.writerows(listofactions)
         ##print("DONE")
         #print(listofactions)
