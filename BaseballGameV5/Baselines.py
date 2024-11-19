@@ -42,7 +42,7 @@ class Baselines():
         return throw, catch
 
     def ThrowErrorEval(self, thrower, depth):
-        diceroll = np.random.rand()
+        diceroll = np.random.rand() * 100
         tta = (thrower.throwacc - 50)/50
         ttp = (thrower.throwpower - 50)/50
         cscores = [tta, ttp]
@@ -58,7 +58,7 @@ class Baselines():
             return False
 
     def CatchErrorEval(self, catcher, depth):
-        diceroll = np.random.rand()
+        diceroll = np.random.rand() * 100
         cfs = (catcher.fieldspot - 50)/50
         cfr = (catcher.fieldreact - 50)/50
         cfc = (catcher.fieldcatch - 50)/50

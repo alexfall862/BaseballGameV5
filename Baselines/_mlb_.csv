@@ -1,2 +1,2 @@
 OutsideSwing,OutsideContact,InsideSwing,InsideContact,c_barrelodds,c_solidodds,c_flareodds,c_burnerodds,c_underodds,c_toppedodds,c_weakodds,modexp,steal_success,pickoff_success,error_rate
-0.3,0.66,0.65,0.87,7,12,36,39,2.4,3.2,0.4,2,0.1,0.6,0.1
+0.3,0.66,0.65,0.87,7,12,36,39,2.4,3.2,0.4,2,0.65,0.1,0.1
