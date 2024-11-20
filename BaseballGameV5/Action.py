@@ -5,6 +5,7 @@ import FatigueInjury as fi
 import defense as d
 import Steals as steals
 import itertools
+import Stats as stats
 
 
 class Action():
@@ -71,9 +72,9 @@ class Action():
             "Error_Count": self.game.error_count,
             "Is_Liveball": self.game.is_liveball,
             "Is_Single": self.game.is_single,
-            "Is_Double": self.game.is_single,
-            "Is_Triple": self.game.is_single,
-            "Is_Homerun": self.game.is_single,
+            "Is_Double": self.game.is_double,
+            "Is_Triple": self.game.is_triple,
+            "Is_Homerun": self.game.is_homerun,
             "AB_Over": self.game.ab_over,
             "GameDone": self.game.gamedone,
             "Batting Team": str(self.game.battingteam.currentbatter),
@@ -158,6 +159,7 @@ def NextAction(self):
     self.game.is_pickoff = False
     self.game.is_stealattempt = False
     self.game.is_stealsuccess = False
+    self.game.current_runners_home = []
   
 def NextAtBat(self):
     #print(self.game.ab_over)
@@ -230,6 +232,12 @@ def OutProcessor(self):
         InningFlip(self)    
 
 def InningFlip(self):
+    if self.game.topofinning == True:
+        score = self.game.awayteam.score
+    else:
+        score = self.game.hometeam.score
+    self.game.overallresults.append(stats.InningStats(self.game.currentinning, self.game.battingteam.name, score))    
+    
     GameFinishedCheck(self)  
     self.game.on_firstbase = None
     self.game.on_secondbase = None

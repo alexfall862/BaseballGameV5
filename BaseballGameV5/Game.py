@@ -5,6 +5,7 @@ import Action
 import Baselines
 import json 
 import csv 
+import Stats as stats
 
 class Game():
     def __init__(self, gamedict):
@@ -42,6 +43,7 @@ class Game():
         self.pitchingteam = self.hometeam
         self.skip_bool = None
         self.actions = []
+        self.overallresults = []
         self.baselines = Baselines.Baselines(gamedict.get("Rules"))
 
     def __repr__(self):
@@ -57,6 +59,22 @@ class Game():
             x = Action.Action(self)
         Action.Action.counter = 0
         listofactions = []
+        print(self.overallresults)
+        thing = stats.create_score_table(self.overallresults)
+        print(thing)
+        #stats.Inning_Tabulator(self.overallresults)
+        
+        
+
+
+
+
+
+
+
+
+
+
         for action in self.actions:
             #print(action)
             listofactions.append(action)    
