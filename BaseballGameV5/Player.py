@@ -1,3 +1,5 @@
+import Stats 
+
 class Player():
     def __init__(self, pid, ptype, firstname, lastname, handedness, armangle, injuryrisk, durability,
                  contact, power, discipline, eye, 
@@ -100,6 +102,10 @@ class Player():
         self.stealsuccess = 0  
         self.runs = 0
 
+        self.fieldingstats = Stats.FieldingStats(self.id, self.lineup, str(self.firstname + " " + self.lastname))
+        self.battingstats = Stats.BattingStats(self.id, self.lineup, str(self.firstname + " " + self.lastname))
+        self.pitchingstats = Stats.PitchingStats(self.id, self.lineup, str(self.firstname + " " + self.lastname))
+        
     def __repr__(self):
         return f"{self.lineup} {self.firstname} {self.lastname}" # f"{self.__dict__}\n"
 

@@ -64,12 +64,9 @@ class Game():
         print(thing)
         #stats.Inning_Tabulator(self.overallresults)
         
-        
-
-
-
-
-
+        for player in self.hometeam.roster.playerlist:
+            if player.fieldingstats.innings_played > 0:
+                print(player.fieldingstats.pid)
 
 
 

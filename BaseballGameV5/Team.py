@@ -1,5 +1,6 @@
 from Roster import Roster as r
 from Strategy import Strategy as s
+import Player
 import os
 
 class Team():
@@ -108,6 +109,17 @@ class Team():
         
         starterid = find_index(self.battinglist, 'lineup', subbedplayer.lineup)
         self.battinglist[starterid] = sub
+
+    def TickInningsPlayed(self):
+        
+        defenders = [defender for defender in self.battinglist if defender.lineup!="designatedhitter"]
+
+        for defender in defenders:
+            defender.fieldingstats.innings_played += 1/3
+            
+    def TickInningsPitched(self):
+        for defender in self.currentpitcher:
+            defender.pitchingstats.innings_pitched += 1/3
 
 def find_index(objectlist, attribute, targetvalue):
     for index, obj in enumerate(objectlist):

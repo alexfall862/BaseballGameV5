@@ -239,7 +239,8 @@
       "infieldspacing": "normal",
       "bullpencutoff": 50,
       "bullpenpriority": [ 66286, 51439, 52374, 54305, 55204, 44251 ],
-      "emergencypitcher": [ 44251 ]
+      "emergencypitcher": [ 44251 ],
+      "intentional walk list": []
     }
   }
 ]

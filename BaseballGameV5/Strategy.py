@@ -25,6 +25,7 @@ class Strategy():
             self.bullpencutoff = teamstrat['bullpencutoff']
             self.bullpenpriority = teamstrat['bullpenpriority']
             self.emergencypitcher = teamstrat['emergencypitcher']
+            self.walklist = teamstrat['intentional walk list']
 
         def __repr__(self):
             return f"{self.outfieldspacing}/{self.infieldspacing}/{self.bullpencutoff}/{self.bullpenpriority}/{self.emergencypitcher}"            

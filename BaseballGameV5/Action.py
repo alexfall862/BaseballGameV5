@@ -224,6 +224,8 @@ def WalkoffCheck(self):
         self.game.gamedone = True
 
 def OutProcessor(self):
+    self.game.hometeam.TickInningsPlayed()
+    self.game.awayteam.TickInningsPlayed()        
     WalkoffCheck(self)  
     if (self.game.currentouts) < self.game.rules.outs:
         #self.game.currentouts += self.game.outcount 
