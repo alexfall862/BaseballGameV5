@@ -91,7 +91,7 @@ class BattingStats():
         self.position = position
         self.name = name
         self.games_started = 0
-        self.appearances = 0
+        self.game_appearances = 0
         self.at_bats = 0
         self.plate_appearances = 0
         self.runs_scored = 0

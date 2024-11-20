@@ -17,6 +17,7 @@ class Player():
         self.ptype = ptype
         self.firstname = firstname
         self.lastname = lastname
+        self.name = str(firstname + " " + lastname)
 
         self.handedness = handedness
         self.armangle = armangle

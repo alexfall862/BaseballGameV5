@@ -23,7 +23,7 @@ class Baselines():
         
         self.steal_success = float(ltypeload.get("steal_success"))
         self.pickoff_success = float(ltypeload.get("pickoff_success"))	
-        self.error_rate = float(ltypeload.get("error_rate"))
+        self.error_rate = 50000 #float(ltypeload.get("error_rate"))
 
         self.spread_leftline = 14
         self.spread_left = 14
@@ -36,12 +36,18 @@ class Baselines():
     def __repr__(self):
         return f"{self.leaguetype}"
 
-    def Throw_Catch(self, thrower, catcher, depth):
-        throw = self.ThrowErrorEval(thrower, depth)
-        catch = self.CatchErrorEval(catcher, depth)
+    def Throw_Catch(self, thrower, catcher):
+        print("Is this causing it?")
+        if thrower == None:
+            throw = False
+            catch = self.CatchErrorEval(thrower, catcher)
+        else:
+            throw = self.ThrowErrorEval(thrower)
+            catch = self.CatchErrorEval(thrower, catcher)
         return throw, catch
 
-    def ThrowErrorEval(self, thrower, depth):
+    def ThrowErrorEval(self, thrower):
+        depth = self.Depth(thrower)
         diceroll = np.random.rand() * 100
         tta = (thrower.throwacc - 50)/50
         ttp = (thrower.throwpower - 50)/50
@@ -51,13 +57,22 @@ class Baselines():
         elif depth == 'infield':
             cweights = [1, 0]
 
-        error_rate = 1 - (1+np.average(cscores, weights=cweights))*self.error_rate
+        error_rate = (1+np.average(cscores, weights=cweights))*self.error_rate
+        #print(f"BASELINE ERROR FORM CHECK THROW: {error_rate}/{diceroll}")
         if error_rate > diceroll:
             return True 
         else: 
             return False
 
-    def CatchErrorEval(self, catcher, depth):
+    def CatchErrorEval(self, thrower, catcher):
+        if thrower == None:
+            if catcher.lineup == 'leftfield' or catcher.lineup == 'centerfield' or catcher.lineup == 'rightfield':
+                depth = 'outfield'
+            else:
+                depth = 'infield'
+        elif thrower != None:
+            depth = self.Depth(thrower)
+
         diceroll = np.random.rand() * 100
         cfs = (catcher.fieldspot - 50)/50
         cfr = (catcher.fieldreact - 50)/50
@@ -68,11 +83,18 @@ class Baselines():
         elif depth == 'infield':
             cweights = [1, 2, 3]
 
-        error_rate = 1 - (1+np.average(cscores, weights=cweights))*self.error_rate
+        error_rate = (1+np.average(cscores, weights=cweights))*self.error_rate
+        #print(f"BASELINE ERROR FORM CHECK CATCH: {error_rate}/{diceroll}")
         if error_rate > diceroll:
             return True 
         else: 
             return False
+
+    def Depth(self, thrower):
+        if thrower.lineup == 'leftfield' or thrower.lineup == 'centerfield' or thrower.lineup == 'rightfield':
+            return 'outfield'
+        else:
+            return 'infield'
 
     def LoadLeagueType(ruletype):
         directory = f'..\\Baselines\\'

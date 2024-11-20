@@ -41,6 +41,9 @@ class Game():
         self.gamedone = False
         self.battingteam = self.awayteam
         self.pitchingteam = self.hometeam
+        self.batted_ball = None
+        self.air_or_ground = None
+        self.targeted_defender = None
         self.skip_bool = None
         self.actions = []
         self.overallresults = []
@@ -66,11 +69,15 @@ class Game():
         
         for player in self.hometeam.roster.playerlist:
             if player.fieldingstats.innings_played > 0:
-                print(player.fieldingstats.pid)
+                print(f"Defense: {player.fieldingstats.pid}")
 
+        for player in self.hometeam.roster.playerlist:
+            if player.pitchingstats.pitches_thrown > 0:
+                print(f"Pitching: {player.pitchingstats.pid}")
 
-
-
+        for player in self.hometeam.roster.playerlist:
+            if player.battingstats.plate_appearances> 0:
+                print(f"Batting: {player.pitchingstats.pid}")        
 
         for action in self.actions:
             #print(action)

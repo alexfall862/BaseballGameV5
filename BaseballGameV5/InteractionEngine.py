@@ -13,7 +13,8 @@ class PitchEvent():
         self.insidecontact = action.game.baselines.insidecontact
         self.pitch, self.pitchlocation = self.choosepitch(action.game.pitchingteam.currentpitcher, action.game.pitchingteam.catcher)
         
-        self.runpitcheval()
+        self.runpitcheval() 
+        self.pitcher.pitchingstats.pitches_thrown += 1
 
 
     def choosepitch(self, pitcher, catcher):
@@ -37,7 +38,8 @@ class PitchEvent():
         bat_eye_mod = float (self.batter.eye / self.pitch.ovr)
         pitch_eye_mod = float (self.pitch.ovr / self.batter.eye)        
         bat_disc_mod = float (self.batter.discipline / self.pitch.ovr)
-        pitch_disc_mod = float (self.pitch.ovr / self.batter.discipline)        
+        pitch_disc_mod = float (self.pitch.ovr / self.batter.discipline)   
+        self.batter.battingstats.plate_appearances += 1
         if self.pitchlocation == "Inside":
             swing_w = self.insideswing * pitch_disc_mod
             look_w = self.insidelook * bat_disc_mod

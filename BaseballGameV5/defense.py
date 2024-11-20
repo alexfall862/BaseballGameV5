@@ -1,3 +1,4 @@
+from ast import Pass
 import random
 
 distweights = {
@@ -284,19 +285,23 @@ class ballmoving():
         return (fieldingweights[contacttype], air_or_ground)
 
     def ThrowDeterminer(self, direction, depth, batted_ball_outcome, air_or_ground, primarydefender):
-        needthrow, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome = self.RunDeterminer(batted_ball_outcome, air_or_ground, primarydefender)
+        needthrow, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, error_state = self.RunDeterminer(batted_ball_outcome, air_or_ground, primarydefender)
         #self.gamestate.game.current_runners_home = alreadyhome
-        print(f"Need? {needthrow} From Batter: {headingtofirst} From 1st: {headingtosecond} From 2nd: {headingtothird} From 3rd: {headingtohome} HOME: {alreadyhome}")
+        #print(f"Need? {needthrow} From Batter: {headingtofirst} From 1st: {headingtosecond} From 2nd: {headingtothird} From 3rd: {headingtohome} HOME: {alreadyhome}")
         if needthrow == True:
             target = ''
             if headingtohome == None:
-                print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to home')
+                pass
+                #print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to home')
             if headingtothird == None:
-                print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to third')
+                pass 
+                #print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to third')
             if headingtosecond == None:
-                print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to second')
+                pass
+                #print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to second')
             if headingtofirst == None:
-                print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to first')
+                pass
+                #print(f'{batted_ball_outcome} {direction}/{depth} {primarydefender[0]}: no one heading to first')
             if (batted_ball_outcome== 'out'):
                 if (self.gamestate.game.currentouts == self.gamestate.game.rules.outs-1):
                     if primarydefender[0].lineup == 'firstbase':
@@ -340,26 +345,40 @@ class ballmoving():
             elif target == 'shortstop':
                 target_baserunner = headingtosecond
 
+            if (target == 'firstbase' and primarydefender[0].lineup == 'firstbase') or (target == 'secondbase' and primarydefender[0].lineup == 'secondbase') or (target == 'thirdbase' and primarydefender[0].lineup == 'thirdbase') or (target == 'catcher' and primarydefender[0].lineup == 'catcher'):
+                if headingtohome != None:
+                    alreadyhome.append(headingtohome)
+                    headingtohome = None
+                errors = []
+                if error_state != None:
+                    errors.append(error_state)                
+                return [headingtofirst, headingtosecond, headingtothird, alreadyhome], errors 
 
-            is_error, errortype = self.Throw_V_Run(primarydefender, ballcatcher, target, target_baserunner)
+            print(f"DEFENSIVE PLAY: {primarydefender[0].lineup} {target} {ballcatcher.lineup}")
+            post_catch_error, errortype, error_text = self.Throw_V_Run(primarydefender[0], ballcatcher, target, target_baserunner)
             
-            if is_error == True:
+            if post_catch_error == True:
                 headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome = self.ErrorDeterminer(errortype, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, batted_ball_outcome)
 
-                print(f"NEXT LEVEL UP CHECK FOR ERROR: {batted_ball_outcome} {headingtofirst} {headingtosecond} {headingtothird} {headingtohome} {alreadyhome}")    
+                #print(f"NEXT LEVEL UP CHECK FOR ERROR: {batted_ball_outcome} {headingtofirst} {headingtosecond} {headingtothird} {headingtohome} {alreadyhome}")    
             
             #makeshift third base handler
             if headingtohome != None:
                 alreadyhome.append(headingtohome)
                 headingtohome = None
-
-            return [headingtofirst, headingtosecond, headingtothird, alreadyhome], errortype
+            errors = []
+            if errortype != None:
+                errors.append(error_text)
+            if error_state != None:
+                errors.append(error_state)
+            return [headingtofirst, headingtosecond, headingtothird, alreadyhome], errors #errortype
 
         else: 
-            is_error, errortype = self.Throw_V_Run(primarydefender, None, None, None)
-            if is_error == True:
+            print("Is this it?")
+            post_catch_error, errortype, error_text = self.Throw_V_Run(primarydefender[0], None, None, None)
+            if post_catch_error == True:
                 headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome = self.ErrorDeterminer(errortype, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, batted_ball_outcome)
-                print(f"NEXT LEVEL UP CHECK FOR ERROR OUTS: {batted_ball_outcome} {headingtofirst} {headingtosecond} {headingtothird} {headingtohome} {alreadyhome}")    
+                #print(f"NEXT LEVEL UP CHECK FOR ERROR OUTS: {batted_ball_outcome} {headingtofirst} {headingtosecond} {headingtothird} {headingtohome} {alreadyhome}")    
             else:
                 self.gamestate.game.outcount+=1
 
@@ -368,20 +387,19 @@ class ballmoving():
             if headingtohome != None:
                 alreadyhome.append(headingtohome)
                 headingtohome = None
-                
-            return [headingtofirst, headingtosecond, headingtothird, alreadyhome], errortype
+            errors = []                
+            if errortype != None:
+                errors.append(error_text)
+            if error_state != None:
+                errors.append(error_state)
+            return [headingtofirst, headingtosecond, headingtothird, alreadyhome], errors#[]errortype
 
     def Throw_V_Run(self, primarydefender, ballcatcher, target, target_baserunner):
+        print(f"DEFENSIVE PLAY: {primarydefender.lineup} {target} {ballcatcher.lineup}")
         fieldingerror = False
         throwingerror = False
         
-        errorodds1 = random.randint(1,10) #eventually other stuff goes here
-        errorodds2 = random.randint(1,10) #eventually other stuff goes here
-        
-        if errorodds1 == 10:
-            fieldingerror = True
-        if errorodds2 == 10:
-            throwingerror = True
+        throwingerror, fieldingerror = self.gamestate.game.baselines.Throw_Catch(primarydefender, ballcatcher)
 
         if (fieldingerror == False and throwingerror == False):
             is_error = False
@@ -396,19 +414,30 @@ class ballmoving():
         if (fieldingerror == False and throwingerror == False):
             errortype = None
         if (fieldingerror == True and throwingerror == False):
-            errortype = 'fielding error'
+            errortype = f"fielding error"#" by {ballcatcher.lineup} {ballcatcher.name}"
+            errortext = f"fielding error by {ballcatcher.lineup} {ballcatcher.name}"
             #can assign player specific error here as well if needed eventually.            
         if (fieldingerror == False and throwingerror == True):
-            errortype = 'throwing error'
+            errortype = f"throwing error"#" by {primarydefender.lineup} {primarydefender.name}"
+            errortext = f"throwing error by {primarydefender.lineup} {primarydefender.name}"
             #can assign player specific error here as well if needed eventually.
         if (fieldingerror == True and throwingerror == True):
-            errortype = 'double error'
+            errortype = f"double error"#" by {primarydefender.lineup} {primarydefender.name} followed by a fielding error by {ballcatcher.lineup} {ballcatcher.name}"
+            errortext = f"throwing error by {primarydefender.lineup} {primarydefender.name} followed by a fielding error by {ballcatcher.lineup} {ballcatcher.name}"
+            print(errortext)
             #can assign player specific error here as well if needed eventually.
 
-        return is_error, errortype
+        if (fieldingerror == False and throwingerror == False) and (target_baserunner != None):
+            primarydefender.fieldingstats.assists += 1
+            ballcatcher.fieldingstats.putouts += 1
+            #print(f"THROWN OUT RUNNING TO BASES: {self.gamestate.id} {target_baserunner}")
+            self.gamestate.game.outcount += 1
+            target_baserunner = None
+
+        return is_error, errortype, errortext
 
     def ErrorDeterminer(self, error_state, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, batted_ball_outcome):     
-        print(f"PREPROCESS CHECK FOR ERROR: {batted_ball_outcome} {headingtofirst} {headingtosecond} {headingtothird} {headingtohome} {alreadyhome}")    
+        #print(f"PREPROCESS CHECK FOR ERROR: {batted_ball_outcome} {headingtofirst} {headingtosecond} {headingtothird} {headingtohome} {alreadyhome}")    
         if error_state == 'fielding error':
             if headingtohome != None:
                 alreadyhome.append(headingtohome)
@@ -422,8 +451,9 @@ class ballmoving():
             if headingtofirst != None:
                 headingtosecond = headingtofirst
                 headingtofirst = None
-            if batted_ball_outcome == 'out':
-                headingtofirst = self.gamestate.game.battingteam.currentbatter
+            #if batted_ball_outcome == 'out':
+            #    headingtofirst = self.gamestate.game.battingteam.currentbatter
+            #    self.gamestate.game.battingteam.currentbatter = None
             
         if error_state == 'throwing error':
             if headingtohome != None:
@@ -438,8 +468,9 @@ class ballmoving():
             if headingtofirst != None:
                 headingtosecond = headingtofirst
                 headingtofirst = None
-            if batted_ball_outcome == 'out':
-                headingtofirst = self.gamestate.game.battingteam.currentbatter
+            #if batted_ball_outcome == 'out':
+            #    headingtofirst = self.gamestate.game.battingteam.currentbatter
+            #    self.gamestate.game.battingteam.currentbatter = None
 
         if error_state == 'double error':
             if headingtohome != None:
@@ -454,21 +485,25 @@ class ballmoving():
             if headingtofirst != None:
                 headingtothird = headingtofirst
                 headingtofirst = None
-            if batted_ball_outcome == 'out':
-                headingtofirst = self.gamestate.game.battingteam.currentbatter
+            #if batted_ball_outcome == 'out':
+            #    headingtofirst = self.gamestate.game.battingteam.currentbatter
+            #   self.gamestate.game.battingteam.currentbatter = None
 
-        print(f"POSTPROCESS CHECK FOR ERROR: {batted_ball_outcome} {headingtofirst} {headingtosecond} {headingtothird} {headingtohome} {alreadyhome}")    
+        #print(f"POSTPROCESS CHECK FOR ERROR: {batted_ball_outcome} {headingtofirst} {headingtosecond} {headingtothird} {headingtohome} {alreadyhome}")    
         return headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome
 
     def RunDeterminer(self, batted_ball_outcome, air_or_ground, primarydefender):
         strat = self.gamestate.game.battingteam.strategy
+        self.gamestate.game.batted_ball = batted_ball_outcome
+        self.gamestate.game.air_or_ground = air_or_ground
+        self.gamestate.game.targeted_defender = primarydefender[0].lineup
+
 
         headingtofirst = None
         headingtosecond = None
         headingtothird = None
         headingtohome = None
         alreadyhome = []
-      
         if batted_ball_outcome == 'single':
             self.gamestate.game.is_single = True
             headingtofirst = self.gamestate.game.battingteam.currentbatter
@@ -505,14 +540,24 @@ class ballmoving():
                 alreadyhome.append(self.gamestate.game.on_secondbase)            
             if self.gamestate.game.on_thirdbase != None:
                 alreadyhome.append(self.gamestate.game.on_thirdbase)  
-            return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome
+            return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, None
+
         elif batted_ball_outcome == 'out':
+            print(f"{primarydefender[0].name} {primarydefender[0].lineup}")
+            is_error = self.gamestate.game.baselines.CatchErrorEval(None, primarydefender[0])
+
+            if is_error == True:
+                self.gamestate.game.error_count += 1
+                headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome = self.ErrorDeterminer('fielding error', self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, [], batted_ball_outcome)
+                return True, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, f"XX fielding error by {primarydefender[0].name}"
+
+            primarydefender[0].fieldingstats.putouts +=1
             if air_or_ground == 'airball':
                 #need to add getting current batter out 
                 if (self.gamestate.game.currentouts + self.gamestate.game.outcount)-1 >= self.gamestate.game.rules.outs:
-                    return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome
+                    return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, None
                 if ([self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase]) == [None, None, None]:
-                    return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome                
+                    return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, None                
                 if primarydefender[0].throwpower < 40:
                     if self.gamestate.game.on_secondbase != None:
                         headingtothird = self.gamestate.game.on_secondbase
@@ -522,7 +567,7 @@ class ballmoving():
                         if self.gamestate.game.on_firstbase != None:
                             headingtosecond = self.gamestate.game.on_firstbase
                 else:
-                    return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome
+                    return False, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, None
 
             elif air_or_ground == 'groundball':
                 if (self.gamestate.game.currentouts + self.gamestate.game.outcount) -1 >= self.gamestate.game.rules.outs:
@@ -549,4 +594,4 @@ class ballmoving():
                     else:                      
                         pass
 
-        return True, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome
+        return True, headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome, None

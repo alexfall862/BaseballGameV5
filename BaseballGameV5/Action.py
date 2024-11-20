@@ -26,6 +26,8 @@ class Action():
     def PrePitch(self):
         self.game.error_count=0
         skip = steals.Steals(self).skippitch 
+        #print(f"{skip} {self.id}{self.defensiveoutcome}")
+        
         if skip == True:
             self.game.skip_bool = True
         elif skip == False:
@@ -39,6 +41,7 @@ class Action():
         #outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
         AtBatOutcomeParser(self)
         Action.PostPitch(self)
+        print(f"{self.game.skip_bool} {self.id}{self.defensiveoutcome}")
 
     def ActionPrint(self):
         return {
@@ -57,6 +60,11 @@ class Action():
             "Current Away Pitcher": str(self.game.awayteam.currentpitcher),
             "Current Home Batter": str(self.game.hometeam.currentbatter),
             "Current Away Batter": str(self.game.awayteam.currentbatter),
+            "Outcomes": str(self.outcome),
+            "Batted Ball": str(self.game.batted_ball),
+            "Air or Ground": str(self.game.air_or_ground),
+            "Targeted Defender": str(self.game.targeted_defender),
+            "Defensive Outcome": str(self.defensiveoutcome[3] if self.defensiveoutcome != None else None), #str(self.defensiveoutcome), 
             "On First": str(self.game.on_firstbase),
             "On Second": str(self.game.on_secondbase),
             "On Third": str(self.game.on_thirdbase),
@@ -95,6 +103,7 @@ class Action():
         
 
     def PostPitch(self):
+        #print(f"{self.id}{self.defensiveoutcome}")
         if self.game.is_strikeout == False:
             WalkEval(self) 
             if self.defensiveoutcome != None:
@@ -159,6 +168,9 @@ def NextAction(self):
     self.game.is_pickoff = False
     self.game.is_stealattempt = False
     self.game.is_stealsuccess = False
+    self.game.batted_ball = None
+    self.game.air_or_ground = None
+    self.game.targeted_defender = None
     self.game.current_runners_home = []
   
 def NextAtBat(self):
@@ -209,6 +221,7 @@ def AtBatOutcomeParser(self):
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
         #print("event fired")
         self.defensiveoutcome = d.ballmoving(self).defenseoutcome
+        #print(f"{self.id}{self.defensiveoutcome}")
         self.game.ab_over = True
 
 
