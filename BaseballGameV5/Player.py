@@ -75,40 +75,42 @@ class Player():
         self.injurystate = injurystate
         self.energy = energy
 
-        self.pitchcount = 0
-        self.pitchstrikes = 0
-        self.pitchballs = 0        
-        self.earnedruns = 0
-        self.pitch_hbp = 0
-        self.pitch_strikeouts = 0
-        self.pitch_walks = 0
-        self.pickoff_throws = 0
+        self.earned_bool = True
+        self.on_base_pitcher = None
+        # self.pitchcount = 0
+        # self.pitchstrikes = 0
+        # self.pitchballs = 0        
+        # self.earnedruns = 0
+        # self.pitch_hbp = 0
+        # self.pitch_strikeouts = 0
+        # self.pitch_walks = 0
+        # self.pickoff_throws = 0
 
-        self.plateappearances = 0
-        self.singles = 0
-        self.doubles = 0
-        self.triples = 0
-        self.homeruns = 0
-        self.bat_strikeouts = 0
-        self.bat_walks = 0
-        self.bat_hbp = 0
+        # self.plateappearances = 0
+        # self.singles = 0
+        # self.doubles = 0
+        # self.triples = 0
+        # self.homeruns = 0
+        # self.bat_strikeouts = 0
+        # self.bat_walks = 0
+        # self.bat_hbp = 0
 
-        self.putouts = 0
-        self.assists = 0
-        self.throwingerrors = 0
-        self.catchingerrors = 0
+        # self.putouts = 0
+        # self.assists = 0
+        # self.throwingerrors = 0
+        # self.catchingerrors = 0
 
-        self.currentbase = 0
-        self.stealattempts = 0
-        self.stealsuccess = 0  
-        self.runs = 0
+        # self.currentbase = 0
+        # self.stealattempts = 0
+        # self.stealsuccess = 0  
+        # self.runs = 0
 
-        self.fieldingstats = Stats.FieldingStats(self.id, self.lineup, str(self.firstname + " " + self.lastname))
-        self.battingstats = Stats.BattingStats(self.id, self.lineup, str(self.firstname + " " + self.lastname))
-        self.pitchingstats = Stats.PitchingStats(self.id, self.lineup, str(self.firstname + " " + self.lastname))
+        self.fieldingstats = Stats.FieldingStats(self.id, self.lineup, self.name)
+        self.battingstats = Stats.BattingStats(self.id, self.lineup, self.name)
+        self.pitchingstats = Stats.PitchingStats(self.id, self.lineup, self.name)
         
     def __repr__(self):
-        return f"{self.lineup} {self.firstname} {self.lastname}" # f"{self.__dict__}\n"
+        return f"{self.lineup} {self.name} {self.earned_bool} {self.on_base_pitcher}" # f"{self.__dict__}\n"
 
     def to_dict(self):
         return {

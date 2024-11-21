@@ -62,22 +62,27 @@ class Game():
             x = Action.Action(self)
         Action.Action.counter = 0
         listofactions = []
-        print(self.overallresults)
+        #print(self.overallresults)
         thing = stats.create_score_table(self.overallresults)
-        print(thing)
+        #print(thing)
         #stats.Inning_Tabulator(self.overallresults)
         
-        for player in self.hometeam.roster.playerlist:
-            if player.fieldingstats.innings_played > 0:
-                print(f"Defense: {player.fieldingstats.pid}")
+        stats.FieldStatPullSave(self.hometeam, self.gname)
+        stats.FieldStatPullSave(self.awayteam, self.gname)
+        stats.BattingStatPullSave(self.hometeam, self.gname)
+        stats.BattingStatPullSave(self.awayteam, self.gname)
+        stats.PitchStatPullSave(self.hometeam, self.gname)
+        stats.PitchStatPullSave(self.awayteam, self.gname)
 
         for player in self.hometeam.roster.playerlist:
             if player.pitchingstats.pitches_thrown > 0:
-                print(f"Pitching: {player.pitchingstats.pid}")
+                pass
+                #print(f"Pitching: {player.pitchingstats.pid}")
 
         for player in self.hometeam.roster.playerlist:
             if player.battingstats.plate_appearances> 0:
-                print(f"Batting: {player.pitchingstats.pid}")        
+                pass
+                #print(f"Batting: {player.pitchingstats.pid}")        
 
         for action in self.actions:
             #print(action)

@@ -1,0 +1,10 @@
+pid,position,name,games_started,game_appearances,at_bats,plate_appearances,runs,singles,doubles,triples,homeruns,stolen_bases,caught_stealing,walks,strikeouts,hbp,ibb,bases,hits,totalbases
+58370,catcher,John Benzschawel,0,0,0,17,2,0,1,0,2,0,0,0,0,0,0,10,3,10
+47666,shortstop,Bob Small,0,0,0,14,1,0,0,0,0,0,0,2,0,0,0,5,0,0
+39758,centerfield,Dave Eckert,0,0,0,21,1,1,0,0,0,0,0,0,0,0,0,4,1,1
+37689,leftfield,Benny Powell,0,0,0,14,1,2,0,0,0,0,0,0,0,0,0,5,2,2
+51817,secondbase,Delos Echols,0,0,0,17,0,0,1,0,0,0,0,1,0,0,0,3,1,2
+45013,rightfield,Oil Can Vardell,0,0,0,19,1,1,0,0,0,0,0,1,0,0,0,4,1,1
+44251,designatedhitter,Glenn Jones,0,0,0,14,1,1,0,0,0,0,0,2,0,0,0,8,1,1
+55204,firstbase,Jerry Johnson,0,0,0,21,0,0,1,0,0,0,0,2,0,0,0,4,1,2
+66286,thirdbase,Teyo Miraldi,0,0,0,16,1,0,0,0,0,0,0,1,0,0,0,3,0,0

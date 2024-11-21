@@ -23,7 +23,7 @@ class Baselines():
         
         self.steal_success = float(ltypeload.get("steal_success"))
         self.pickoff_success = float(ltypeload.get("pickoff_success"))	
-        self.error_rate = 50000 #float(ltypeload.get("error_rate"))
+        self.error_rate = float(ltypeload.get("error_rate"))
 
         self.spread_leftline = 14
         self.spread_left = 14
@@ -37,7 +37,7 @@ class Baselines():
         return f"{self.leaguetype}"
 
     def Throw_Catch(self, thrower, catcher):
-        print("Is this causing it?")
+        #print("Is this causing it?")
         if thrower == None:
             throw = False
             catch = self.CatchErrorEval(thrower, catcher)
@@ -48,7 +48,7 @@ class Baselines():
 
     def ThrowErrorEval(self, thrower):
         depth = self.Depth(thrower)
-        diceroll = np.random.rand() * 100
+        diceroll = np.random.rand()
         tta = (thrower.throwacc - 50)/50
         ttp = (thrower.throwpower - 50)/50
         cscores = [tta, ttp]
@@ -60,6 +60,8 @@ class Baselines():
         error_rate = (1+np.average(cscores, weights=cweights))*self.error_rate
         #print(f"BASELINE ERROR FORM CHECK THROW: {error_rate}/{diceroll}")
         if error_rate > diceroll:
+            #print(True)
+            thrower.fieldingstats.Adder("throwing_errors", 1)
             return True 
         else: 
             return False
@@ -73,7 +75,7 @@ class Baselines():
         elif thrower != None:
             depth = self.Depth(thrower)
 
-        diceroll = np.random.rand() * 100
+        diceroll = np.random.rand()
         cfs = (catcher.fieldspot - 50)/50
         cfr = (catcher.fieldreact - 50)/50
         cfc = (catcher.fieldcatch - 50)/50
@@ -86,6 +88,8 @@ class Baselines():
         error_rate = (1+np.average(cscores, weights=cweights))*self.error_rate
         #print(f"BASELINE ERROR FORM CHECK CATCH: {error_rate}/{diceroll}")
         if error_rate > diceroll:
+            #print(True)
+            catcher.fieldingstats.Adder("catching_errors", 1)
             return True 
         else: 
             return False

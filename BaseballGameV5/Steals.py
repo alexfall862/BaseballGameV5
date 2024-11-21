@@ -34,7 +34,7 @@ class Steals():
                 #print(f"PICKOFF STATE: {pickofffreqrating}>{diceroll} {self.gamestate.counter} {self.gamestate.game.is_pickoff}")
                 if firstbase != None:
                     pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.firstbase)
-                    print(f"PICKOFF TEST: {pickoff}+{throwerror}+{catcherror}")
+                    #print(f"PICKOFF TEST: {pickoff}+{throwerror}+{catcherror}")
                     if pickoff == True:
                         if (throwerror == False and catcherror == False):
                             self.gamestate.defensiveoutcome = [None, None, None, "successful pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home]]
@@ -72,7 +72,7 @@ class Steals():
                 #print(f"PICKOFF STATE: {pickofffreqrating}>{diceroll} {self.gamestate.counter} {self.gamestate.game.is_pickoff}")
                 if secondbase != None:
                     pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, secondbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.secondbase)
-                    print(f"PICKOFF TEST: {throwerror}+{catcherror}")
+                    #print(f"PICKOFF TEST: {throwerror}+{catcherror}")
                     if pickoff == True:
                         if throwerror == False and catcherror == False:
                             self.gamestate.defensiveoutcome = [None, None, None, "successful pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home]]
@@ -110,7 +110,7 @@ class Steals():
                 #print(f"PICKOFF STATE: {pickofffreqrating}>{diceroll} {self.gamestate.counter} {self.gamestate.game.is_pickoff}")
                 if thirdbase != None:
                     pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.thirdbase)
-                    print(f"PICKOFF TEST: {throwerror}+{catcherror}")
+                    #print(f"PICKOFF TEST: {throwerror}+{catcherror}")
                     if pickoff == True:
                         if throwerror == False and catcherror == False:
                             self.gamestate.defensiveoutcome = [None, None, None, "successful pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home]]
@@ -259,7 +259,7 @@ class Steals():
         baserunner  = ((1+np.average(baserunner_scores, weights=baserunner_weights))*50)+brr
         
         error_check = self.gamestate.game.baselines.Throw_Catch(pitcher, baseman)
-        print(f"PICKOFF ERROR_CHECK: {error_check}")
+        #print(f"PICKOFF ERROR_CHECK: {error_check}")
 
         if error_check[0] or error_check[1] == True:
             self.gamestate.defensiveoutcome = [None, None, None, "error on pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home]]
@@ -302,11 +302,11 @@ class Steals():
 
         diceroll = np.random.rand()
         
-        print(f"STEAL MAFFS: {diceroll}/{steal_outcome_odds}")
+        #print(f"STEAL MAFFS: {diceroll}/{steal_outcome_odds}")
         
         error_check = self.gamestate.game.baselines.Throw_Catch(pitcher, baseman) 
         
-        print(f"STEAL ERROR CHECK {error_check}")
+        #print(f"STEAL ERROR CHECK {error_check}")
 
         if (steal_outcome_odds > diceroll):
             #print(f"STEAL SUCCESS: {round(steal_outcome_odds, 2)} {round( diceroll, 2)}")

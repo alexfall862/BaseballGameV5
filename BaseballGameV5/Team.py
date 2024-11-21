@@ -101,7 +101,7 @@ class Team():
             
         sub = switch(subbedplayer.lineup)
         subid = find_index(self.benchplayers, 'id', sub.id)
-        print(f"{subid}: {sub}")
+        #print(f"{subid}: {sub}")
         sub = self.benchplayers.pop(subid)
         
         sub.lineup = subbedplayer.lineup
@@ -115,11 +115,13 @@ class Team():
         defenders = [defender for defender in self.battinglist if defender.lineup!="designatedhitter"]
 
         for defender in defenders:
-            defender.fieldingstats.innings_played += 1/3
+            defender.fieldingstats.Adder("innings_played", 1/3)
+            
+        self.TickInningsPitched()
             
     def TickInningsPitched(self):
-        for defender in self.currentpitcher:
-            defender.pitchingstats.innings_pitched += 1/3
+        self.currentpitcher.pitchingstats.Adder("innings_pitched", 1/3)
+        self.currentpitcher.fieldingstats.Adder("innings_played", 1/3)
 
 def find_index(objectlist, attribute, targetvalue):
     for index, obj in enumerate(objectlist):

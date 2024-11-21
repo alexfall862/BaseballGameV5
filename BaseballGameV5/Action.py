@@ -41,7 +41,7 @@ class Action():
         #outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
         AtBatOutcomeParser(self)
         Action.PostPitch(self)
-        print(f"{self.game.skip_bool} {self.id}{self.defensiveoutcome}")
+        #print(f"{self.game.skip_bool} {self.id}{self.defensiveoutcome}")
 
     def ActionPrint(self):
         return {
@@ -114,6 +114,10 @@ class Action():
         self.game.currentouts += self.game.outcount
         #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
         self.game.battingteam.score += len(self.game.current_runners_home)
+        for runners in self.game.current_runners_home:
+            runners.battingstats.Adder("runs", 1)
+            print(f"RUNNERS CHECK: {runners.earned_bool} {runners.on_base_pitcher}")
+            
         self.game.actions.append(self.ActionPrint())#[self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
         NextAction(self)
         NextAtBat(self)        
@@ -124,7 +128,7 @@ class Action():
         
 
 def HitEval(self):
-#    print(f"DEFENSIVE OUTCOME: {self.defensiveoutcome[4]}")
+    #print(f"DEFENSIVE OUTCOME: {self.defensiveoutcome[4]}")
     self.game.on_firstbase = self.defensiveoutcome[4][0]
     self.game.on_secondbase = self.defensiveoutcome[4][1]
     self.game.on_thirdbase = self.defensiveoutcome[4][2]
@@ -136,26 +140,42 @@ def HitEval(self):
 
                 
 def WalkEval(self):
+    if self.game.is_walk == True:
+        self.game.battingteam.currentbatter.battingstats.Adder("walks", 1)
+
+    if self.game.is_hbp == True:
+        self.game.battingteam.currentbatter.battingstats.Adder("hbp", 1)        
+
     if self.game.is_walk == True or self.game.is_hbp == True:
         if self.game.on_firstbase == None:
             self.game.on_firstbase = self.game.battingteam.currentbatter
+            self.game.on_firstbase.battingstats.Adder("bases", 1)
             return
         if self.game.on_firstbase != None:
             if self.game.on_secondbase == None:
                 self.game.on_secondbase = self.game.on_firstbase
                 self.game.on_firstbase = self.game.battingteam.currentbatter
+                self.game.on_firstbase.battingstats.Adder("bases", 1)
+                self.game.on_secondbase.battingstats.Adder("bases", 1)
                 return
             if self.game.on_secondbase != None:
                 if self.game.on_thirdbase == None:
                     self.game.on_thirdbase = self.game.on_secondbase
                     self.game.on_secondbase = self.game.on_firstbase
                     self.game.on_firstbase = self.game.battingteam.currentbatter
+                    self.game.on_thirdbase.battingstats.Adder("bases", 1)
+                    self.game.on_secondbase.battingstats.Adder("bases", 1)
+                    self.game.on_firstbase.battingstats.Adder("bases", 1)
                     return
                 if self.game.on_thirdbase != None:
                     self.game.current_runners_home.append(self.game.on_thirdbase)
+                    self.game.on_thirdbase.battingstats.Adder("bases", 1)
                     self.game.on_thirdbase = self.game.on_secondbase
                     self.game.on_secondbase = self.game.on_firstbase
                     self.game.on_firstbase = self.game.battingteam.currentbatter
+                    self.game.on_thirdbase.battingstats.Adder("bases", 1)
+                    self.game.on_secondbase.battingstats.Adder("bases", 1)
+                    self.game.on_firstbase.battingstats.Adder("bases", 1)
                     return
 
         
@@ -206,14 +226,17 @@ def AtBatOutcomeParser(self):
         #print("working")
         self.game.ab_over = True
         self.game.is_strikeout = True
+        self.game.pitchingteam.currentpitcher.pitchingstats.Adder("strikeouts", 1)
         self.game.outcount+=1
         
     if self.outcome[0] == 'Ball':
         self.game.currentballs +=1
     
     if self.game.currentballs >= self.game.rules.balls:
+        stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)        
         self.game.ab_over = True
         self.game.is_walk = True
+        
 
     #print(outcome[1])
     #print(f"input: {self.outcome[1]}")
@@ -237,8 +260,7 @@ def WalkoffCheck(self):
         self.game.gamedone = True
 
 def OutProcessor(self):
-    self.game.hometeam.TickInningsPlayed()
-    self.game.awayteam.TickInningsPlayed()        
+    self.game.pitchingteam.TickInningsPlayed()
     WalkoffCheck(self)  
     if (self.game.currentouts) < self.game.rules.outs:
         #self.game.currentouts += self.game.outcount 
@@ -247,6 +269,9 @@ def OutProcessor(self):
         InningFlip(self)    
 
 def InningFlip(self):
+    for player in self.game.battingteam.roster.playerlist:
+        stats.ResetPitcherStatus(player)
+
     if self.game.topofinning == True:
         score = self.game.awayteam.score
     else:

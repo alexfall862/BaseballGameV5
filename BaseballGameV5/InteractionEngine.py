@@ -14,7 +14,7 @@ class PitchEvent():
         self.pitch, self.pitchlocation = self.choosepitch(action.game.pitchingteam.currentpitcher, action.game.pitchingteam.catcher)
         
         self.runpitcheval() 
-        self.pitcher.pitchingstats.pitches_thrown += 1
+        self.pitcher.pitchingstats.Adder("pitches_thrown", 1)
 
 
     def choosepitch(self, pitcher, catcher):
@@ -39,7 +39,7 @@ class PitchEvent():
         pitch_eye_mod = float (self.pitch.ovr / self.batter.eye)        
         bat_disc_mod = float (self.batter.discipline / self.pitch.ovr)
         pitch_disc_mod = float (self.pitch.ovr / self.batter.discipline)   
-        self.batter.battingstats.plate_appearances += 1
+        self.batter.battingstats.Adder("plate_appearances", 1)
         if self.pitchlocation == "Inside":
             swing_w = self.insideswing * pitch_disc_mod
             look_w = self.insidelook * bat_disc_mod
@@ -65,9 +65,11 @@ class PitchEvent():
         if firstpassoutcome == "Look":
             if self.pitchlocation == "Outside":
                 self.outcome = ["Ball", "Looking", self.pitch.name]
+                self.pitcher.pitchingstats.Adder("balls", 1)                
                 return self.outcome
             elif self.pitchlocation == "Inside":
                 self.outcome = ["Strike", "Looking", self.pitch.name]
+                self.pitcher.pitchingstats.Adder("strikes", 1)
                 return self.outcome
 
         if firstpassoutcome == "Swing":
@@ -90,9 +92,11 @@ class PitchEvent():
 
         if secondpassoutcome == "Whiff":
             self.outcome = ["Strike", "Swinging", self.pitch.name]
+            self.pitcher.pitchingstats.Adder("strikes", 1)
             return self.outcome
         elif secondpassoutcome == "Foul":
             self.outcome = ["Strike", "Foul", self.pitch.name]
+            self.pitcher.pitchingstats.Adder("strikes", 1)
             return self.outcome
         elif secondpassoutcome == "InPlay":
             self.outcome = BattedBallEvent(self).outcome
