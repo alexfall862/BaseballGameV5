@@ -116,7 +116,7 @@ class Action():
         self.game.battingteam.score += len(self.game.current_runners_home)
         for runners in self.game.current_runners_home:
             runners.battingstats.Adder("runs", 1)
-            print(f"RUNNERS CHECK: {runners.earned_bool} {runners.on_base_pitcher}")
+            #print(f"RUNNERS CHECK: {runners.earned_bool} {runners.on_base_pitcher}")
             
         self.game.actions.append(self.ActionPrint())#[self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
         NextAction(self)
@@ -244,6 +244,7 @@ def AtBatOutcomeParser(self):
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
         #print("event fired")
         self.defensiveoutcome = d.ballmoving(self).defenseoutcome
+        d.fielding(self)
         #print(f"{self.id}{self.defensiveoutcome}")
         self.game.ab_over = True
 
