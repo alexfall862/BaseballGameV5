@@ -2,6 +2,7 @@ from ast import Pass
 import random
 import Stats as stats
 
+
 # distweights = {
 #     "barrel": [ .50, .28, .10, .05, .00, .00, .00, .00, .00],
 #     "solid":  [ .10, .20, .25, .20, .15, .10, .00, .00, .00],
@@ -214,8 +215,26 @@ class fielding():
         self.specificweights = self.distweights[self.contacttype]
         self.depth = random.choices(self.distoutcomes, self.specificweights, k=1)[0]
         print(f"Con: {self.contacttype} Dep:{self.depth} Dir:{self.direction}")
+        self.liveball = True
+        self.basepaths = fielding.BasePaths(self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
+        
+        while self.liveball == True:
+            fielding.TimeStep(self)     
 
+        self.primary_defender = None
+        self.batted_ball_outcome = None
+        self.base_situation = [None, None, None, None]
+        self.defensiveoutcome = (self.contacttype, self.direction, self.primary_defender, self.batted_ball_outcome, self.base_situation)
 
+    class BasePaths():
+        def __init__(self, batter, firstbase, secondbase, thirdbase):
+            pass
+
+    def TimeStep(self):
+        print(f"TIME STEP")
+        test = random.randint(0,2)
+        if test >= 2:
+            self.liveball = False
 
 class ballmoving():
     def __init__(self, gamestate):
