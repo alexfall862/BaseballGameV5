@@ -202,39 +202,76 @@ class fielding():
     def __init__(self, gamestate):
         self.gamestate = gamestate
         self.test = self.gamestate.game.baselines.threestepaway
-        self.specificlocation = None
-        self.fieldingdefender = None
-        self.fieldingdefenderbackup = None
         self.distweights = self.gamestate.game.baselines.distweights
         self.distoutcomes = self.gamestate.game.baselines.distoutcomes
         self.defensivealignment = self.gamestate.game.baselines.defensivealignment
-        self.fieldingweights = self.gamestate.game.baselines.fieldingweights
-        self.fieldingoutcomes = self.gamestate.game.baselines.fieldingoutcomes
+        #self.fieldingweights = self.gamestate.game.baselines.fieldingweights
+        #self.fieldingoutcomes = self.gamestate.game.baselines.fieldingoutcomes
         self.contacttype = self.gamestate.outcome[0]
         self.direction = self.gamestate.outcome[1]
         self.specificweights = self.distweights[self.contacttype]
         self.depth = random.choices(self.distoutcomes, self.specificweights, k=1)[0]
-        print(f"Con: {self.contacttype} Dep:{self.depth} Dir:{self.direction}")
+        #print(f"Con: {self.contacttype} Dep:{self.depth} Dir:{self.direction}")
+        self.ball_airtime = fielding.Air_TimeTick(self)
         self.liveball = True
+        self.depth = fielding.PickDepth(self)
+        self.fieldingdefender = fielding.PickDefender(self)
         self.basepaths = fielding.BasePaths(self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
         
+        #print(f"DEFENSE INPUT TEST: {self.depth} {self.contacttype} {self.direction} {self.depth} {self.fieldingdefender}")
         while self.liveball == True:
             fielding.TimeStep(self)     
 
-        self.primary_defender = None
         self.batted_ball_outcome = None
         self.base_situation = [None, None, None, None]
-        self.defensiveoutcome = (self.contacttype, self.direction, self.primary_defender, self.batted_ball_outcome, self.base_situation)
+        self.defensiveoutcome = (self.contacttype, self.direction, self.fieldingdefender, self.batted_ball_outcome, self.base_situation)
 
     class BasePaths():
         def __init__(self, batter, firstbase, secondbase, thirdbase):
+            self.baserunner_eval_list = []
+            if batter != None:
+                self.baserunner_eval_list.append(batter)
+            if firstbase != None:
+                self.baserunner_eval_list.append(firstbase)
+            if secondbase != None:
+                self.baserunner_eval_list.append(secondbase)
+            if thirdbase != None:
+                self.baserunner_eval_list.append(thirdbase)
+            self.at_home = []
+            self.out = []            
+
+        def __repr__(self):
+            return f"Baserunners: {self.baserunner_eval_list} Home: {self.at_home} Out: {self.out}"
+    
+        def ChooseRun(self):
             pass
 
+            
+    def PickDepth(self):
+        depth = random.choices(self.distoutcomes, self.specificweights, k=1)[0]
+        return depth
+        
+    def PickDefender(self):        
+        if self.depth == 'homerun':
+            primary_defender = None
+        else:
+            defenderlist = self.defensivealignment[self.direction][self.depth]
+            try:
+                primary_defender = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==defenderlist[0]][0]
+            except:
+                primary_defender = self.gamestate.game.pitchingteam.currentpitcher
+
+        return primary_defender
+
     def TimeStep(self):
-        print(f"TIME STEP")
+        print(f"{self.basepaths}")
+        #print(f"TIME STEP")
         test = random.randint(0,2)
         if test >= 2:
             self.liveball = False
+
+    def Air_TimeTick(self):
+        pass
 
 class ballmoving():
     def __init__(self, gamestate):

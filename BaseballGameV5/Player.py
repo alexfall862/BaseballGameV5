@@ -74,6 +74,10 @@ class Player():
 
         self.injurystate = injurystate
         self.energy = energy
+        
+        self.base = None
+        self.running = None
+        self.sliding = (((self.baserunning*3) + (self.basereaction)) / 4)
 
         self.earned_bool = True
         self.on_base_pitcher = None
@@ -110,7 +114,7 @@ class Player():
         self.pitchingstats = Stats.PitchingStats(self.id, self.lineup, self.name)
         
     def __repr__(self):
-        return f"{self.lineup} {self.name} {self.earned_bool} {self.on_base_pitcher}" # f"{self.__dict__}\n"
+        return f"{self.lineup} {self.name}"# {self.earned_bool} {self.on_base_pitcher}" # f"{self.__dict__}\n"
 
     def to_dict(self):
         return {
