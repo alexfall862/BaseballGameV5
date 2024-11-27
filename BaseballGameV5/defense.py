@@ -1,202 +1,7 @@
 from ast import Pass
 import random
 import Stats as stats
-
-
-# distweights = {
-#     "barrel": [ .50, .28, .10, .05, .00, .00, .00, .00, .00],
-#     "solid":  [ .10, .20, .25, .20, .15, .10, .00, .00, .00],
-#     "flare":  [ .00, .00, .25, .35, .25, .10, .05, .00, .00],
-#     "burner": [ .00, .00, .00, .00, .20, .60, .20, .00, .00],
-#     "under":  [ .00, .00, .00, .05, .15, .25, .35, .15, .05],
-#     "topped": [ .00, .00, .00, .00, .00, .20, .40, .30, .10],
-#     "weak":   [ .00, .00, .00, .00, .00, .00, .30, .40, .30]
-#     }
-
-# distoutcomes = [
-#     'homerun',
-#     'deep_of',
-#     'middle_of',
-#     'shallow_of',
-#     'deep_if',
-#     'middle_if',
-#     'shallow_if',
-#     'mound',
-#     'catcher'
-#     ]
-
-# fieldingweights = {
-#     "barrel": [ .25, .28, .10, .05],
-#     "solid":  [ .72, .20, .15, .01],
-#     "flare":  [ .52, .28, .20, .00],
-#     "burner": [ .52, .38, .10, .00],
-#     "under":  [ .92, .08, .00, .00],
-#     "topped": [ .88, .12, .00, .00],
-#     "weak":   [ .88, .12, .00, .00]
-#     }
-
-# fieldingoutcomes = [
-#     'out',
-#     'single',
-#     'double',
-#     'triple'
-#     ]
-
-# # fieldingerrorrate = 0.01
-# # throwingerrorrate = 0.01
-
-# defensivealignment = {
-#     "far left": {
-#         'deep_of': ['leftfield'], 
-#         'middle_of': ['leftfield'], 
-#         'shallow_of':['leftfield'], 
-#         'deep_if':['thirdbase'], 
-#         'middle_if':['thirdbase'], 
-#         'shallow_if':['thirdbase'], 
-#         'mound': ['thirdbase', 'pitcher'], 
-#         'catcher': ['catcher']
-#         },
-#     "left": {
-#         'deep_of': ['leftfield'], 
-#         'middle_of': ['leftfield'], 
-#         'shallow_of':['leftfield'], 
-#         'deep_if':['shortstop'], 
-#         'middle_if':['shortstop'], 
-#         'shallow_if':['shortstop', 'thirdbase'], 
-#         'mound': ['thirdbase', 'shortstop', 'pitcher'], 
-#         'catcher': ['catcher']
-#         },
-#     "center left": {
-#         'deep_of': ['centerfield', 'leftfield'], 
-#         'middle_of': ['centerfield', 'leftfield'], 
-#         'shallow_of':['centerfield', 'leftfield'], 
-#         'deep_if':['shortstop'], 
-#         'middle_if':['shortstop'], 
-#         'shallow_if':['shortstop'], 
-#         'mound': ['shortstop', 'pitcher'], 
-#         'catcher': ['catcher']
-#         },
-#     "dead center": {
-#         'deep_of': ['centerfield'], 
-#         'middle_of': ['centerfield'], 
-#         'shallow_of':['centerfield'], 
-#         'deep_if':['shortstop', 'secondbase'], 
-#         'middle_if':['shortstop', 'secondbase'], 
-#         'shallow_if':['shortstop', 'secondbase'], 
-#         'mound': ['pitcher'], 
-#         'catcher': ['catcher']
-#         },
-#     "center right": {
-#         'deep_of': ['centerfield', 'rightfield'], 
-#         'middle_of': ['centerfield', 'rightfield'], 
-#         'shallow_of':['centerfield', 'rightfield'], 
-#         'deep_if':['secondbase'], 
-#         'middle_if':['secondbase'], 
-#         'shallow_if':['secondbase'], 
-#         'mound': ['secondbase', 'pitcher'], 
-#         'catcher': ['catcher']
-#         },
-#     "right": {
-#         'deep_of': ['rightfield'], 
-#         'middle_of': ['rightfield'], 
-#         'shallow_of':['rightfield'], 
-#         'deep_if':['secondbase'], 
-#         'middle_if':['secondbase'], 
-#         'shallow_if':['secondbase', 'firstbase'], 
-#         'mound': ['firstbase', 'secondbase', 'pitcher'], 
-#         'catcher': ['catcher']
-#         },
-#     "far right": {
-#         'deep_of': ['rightfield'], 
-#         'middle_of': ['rightfield'], 
-#         'shallow_of':['rightfield'], 
-#         'deep_if':['firstbase'], 
-#         'middle_if':['firstbase'], 
-#         'shallow_if':['firstbase'], 
-#         'mound': ['firstbase', 'pitcher'], 
-#         'catcher': ['catcher']
-#         } 
-#     }
-
-# freehit = [
-#     ('far left', 'shallow_of'), 
-#     ('center left', 'shallow_of'), 
-#     ('center right', 'shallow_of'), 
-#     ('far right', 'shallow_of'), 
-#     ('left', 'deep_if'), 
-#     ('dead center', 'deep_if'), 
-#     ('right', 'deep_if'), 
-#     ('left', 'middle_if'), 
-#     ('dead center', 'middle_if'), 
-#     ('right', 'middle_if') 
-#     ]
-
-# directlyat = [
-#     ('left', 'middle_of'),
-#     ('dead center', 'middle_of'), 
-#     ('right', 'middle_of'), 
-#     ('far left', 'middle_if'), 
-#     ('center left', 'middle_if'), 
-#     ('center right', 'middle_if'), 
-#     ('far right', 'middle_if'),
-#     ('dead center', 'mound'), 
-#     ('far left', 'catcher'), 
-#     ('left', 'catcher'), 
-#     ('center left', 'catcher'), 
-#     ('dead center', 'catcher'), 
-#     ('center right', 'catcher'), 
-#     ('right', 'catcher'),
-#     ('far right', 'catcher')
-#     ]
-
-# onestepaway = [
-#     ('far left', 'deep_if'),
-#     ('center left', 'deep_if'),
-#     ('center right', 'deep_if'),
-#     ('far right', 'deep_if'),
-#     ('left', 'middle_if'),
-#     ('dead center', 'middle_if'),
-#     ('right', 'middle_if'),
-#     ('far left', 'shallow_if'),
-#     ('left', 'shallow_if'),
-#     ('center left', 'shallow_if'),
-#     ('dead center', 'shallow_if'),
-#     ('center right', 'shallow_if'),
-#     ('right', 'shallow_if'),
-#     ('far right', 'shallow_if'),
-#     ('left', 'mound'),
-#     ('center left', 'mound'),
-#     ('center right', 'mound'),
-#     ('right', 'mound'),
-#     ('far right', 'mound') 
-#     ]
-
-# twostepaway = [
-#     ('left', 'deep_of'),
-#     ('dead center', 'deep_of'),
-#     ('right', 'deep_of'),
-#     ('far left', 'middle_of'),
-#     ('center left', 'middle_of'),
-#     ('center right', 'middle_of'),
-#     ('far right', 'middle_of'),
-#     ('left', 'shallow_of'),
-#     ('dead center', 'shallow_of'),
-#     ('right', 'shallow_of'),
-#     ('left', 'deep_if'),
-#     ('dead center', 'deep_if'),
-#     ('right', 'deep_if')
-#     ]
-
-# threestepaway = [
-#     ('far left', 'deep_of'),
-#     ('center left', 'deep_of'),
-#     ('center right', 'deep_of'),
-#     ('far right', 'deep_of'),
-#     ('far left', 'shallow_of'),
-#     ('center left', 'shallow_of'),
-#     ('center right', 'shallow_of'),
-#     ('far right', 'shallow_of')
-#     ]
+import numpy as np
 
 class fielding():
     def __init__(self, gamestate):
@@ -205,14 +10,19 @@ class fielding():
         self.distweights = self.gamestate.game.baselines.distweights
         self.distoutcomes = self.gamestate.game.baselines.distoutcomes
         self.defensivealignment = self.gamestate.game.baselines.defensivealignment
-        self.contacttype = self.gamestate.outcome[0]
+        self.fieldingweights = self.gamestate.game.baselines.fieldingweights
+        self.fieldingoutcomes = self.gamestate.game.baselines.fieldingoutcomes
+
+        self.contacttype = self.gamestate.outcome[0]        
         self.direction = self.gamestate.outcome[1]
         self.specificweights = self.distweights[self.contacttype]
         self.depth = fielding.PickDepth(self)
         self.fieldingdefender = fielding.PickDefender(self)
-        self.distanceaway, self.groundbool, self.timetoground = fielding.Air_TimeTick(self)
+        self.airball_bool = fielding.AirballBool(self.contacttype)
+        self.adjustedfieldingweights = fielding.ModWeights(self.fieldingdefender, self.fieldingweights[self.contacttype], self.depth, self.airball_bool, self.gamestate.game.baselines.fieldmod, self.gamestate.game.baselines.fieldingmultiplier)
+        #self.distanceaway, self.groundbool, self.timetoground = fielding.Air_TimeTick(self)
         self.basepaths = fielding.BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
-        self.basepaths.CheckForForce()        
+        #self.basepaths.CheckForForce()        
         self.liveball = True
         
         if self.contacttype == 'homerun':
@@ -303,6 +113,47 @@ class fielding():
                 primary_defender = self.gamestate.game.pitchingteam.currentpitcher
 
         return primary_defender
+
+    def AirballBool(contacttype):
+        if contacttype == "homerun":
+            airball_bool = None
+        elif contacttype == "barrel" or "solid" or "flare" or "under":
+            airball_bool = True
+        else:
+            airball_bool = False
+        return airball_bool
+
+    def ModWeights(defender, fieldingodds, depth, airball_bool, mod, multiplier):
+        if airball_bool == True:
+            ab = 'air'
+        else:
+            ab = 'ground'
+        if '_of' in depth:
+            d = 'outfield'
+        else:
+            d = 'infield'
+
+
+        outodds = fieldingodds[0]
+        singleodds = fieldingodds[1]
+        doubleodds = fieldingodds[2]
+        tripleodds = fieldingodds[3]
+        sumvalue = sum(outodds, singleodds, doubleodds, tripleodds)
+        skills = [defender.fieldcatch, defender.fieldreact, defender.fieldspot, defender.speed]
+        skillsweight = mod[ab][d]
+        modifier = (((np.average(skills, weights=skillsweight))/50)+multiplier)/(multiplier+1)
+        outodds /= modifier
+        singleodds *= modifier
+        doubleodds *= modifier
+        tripleodds *= modifier
+        listofodds = [outodds, singleodds, doubleodds, tripleodds]
+        processedodds = [x / sum(listofodds) for x in listofodds]
+        outodds = processedodds[0]
+        singleodds = processedodds[1]
+        doubleodds = processedodds[2]
+        tripleodds = processedodds[3]
+        processedlistofodds = [outodds, singleodds, doubleodds, tripleodds]        
+        return processedlistofodds
 
     def TimeStep(self):
         test = random.randint(0,2)
@@ -430,6 +281,17 @@ class ballmoving():
             weights = [.25, .75]
         elif depth == 'catcher':
             weights = [.1, .9]
+
+        "catchable": {
+                "deep_of": [1, 0],
+                "middle_of": [1, 0],
+                "shallow_of": [1, 0],
+                "deep_if": [.5, .5],
+                "deep_if": [.5, .5],
+                "deep_if": [.25, .75],
+                "mound": [1, 0],
+                "catcher": [1, 0]
+            }
 
         air_or_ground = random.choices(['airball', 'groundball'], weights, k=1)[0]
 

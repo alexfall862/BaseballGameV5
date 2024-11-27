@@ -49,6 +49,19 @@
       },
       "fieldingoutcomes": [ "out", "single", "double", "triple" ],
 
+      "fieldingmod": {
+        "air": {
+          "infield": [ 2, 2, 3, 0 ],
+          "outfield": [ 3, 1, 5, 2 ]
+        },
+        "ground": {
+          "infield": [ 1, 5, 1, 1 ],
+          "outfield": [ 2, 2, 3, 3 ]
+        }
+      },
+
+      "fieldingmultiplier": 0,
+
       "defensivealignment": {
         "far left": {
           "deep_of": [ "leftfield" ],
@@ -296,6 +309,19 @@
         "weak": [ 0.88, 0.12, 0.00, 0.00 ]
       },
       "fieldingoutcomes": [ "out", "single", "double", "triple" ],
+
+      "fieldingmod": {
+        "air": {
+          "infield": [ 2, 2, 3, 0 ],
+          "outfield": [ 3, 1, 5, 2 ]
+        },
+        "ground": {
+          "infield": [ 1, 5, 1, 1 ],
+          "outfield": [ 2, 2, 3, 3 ]
+        }
+      },
+
+      "fieldingmultiplier": 0,
 
       "defensivealignment": {
         "far left": {

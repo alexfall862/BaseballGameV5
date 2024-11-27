@@ -41,6 +41,8 @@ class Baselines():
         self.fieldingweights = load["fieldingweights"]
         self.fieldingoutcomes = load["fieldingoutcomes"]
         self.defensivealignment = load["defensivealignment"]
+        self.fieldingmod = load["fieldingmod"]
+        self.fieldingmultiplier = load["fieldingmultiplier"]
         self.directlyat = load["directlyat"]
         self.onestepaway = load["onestepaway"]
         self.twostepaway = load["twostepaway"]
