@@ -77,6 +77,7 @@ class Player():
         
         self.base = None
         self.running = None
+        self.force = None
         self.sliding = (((self.baserunning*3) + (self.basereaction)) / 4)
 
         self.earned_bool = True

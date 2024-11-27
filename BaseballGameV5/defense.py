@@ -212,11 +212,11 @@ class fielding():
         self.fieldingdefender = fielding.PickDefender(self)
         self.distanceaway, self.groundbool, self.timetoground = fielding.Air_TimeTick(self)
         self.basepaths = fielding.BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
-        self.basepaths.ChooseRun()        
+        self.basepaths.CheckForForce()        
         self.liveball = True
         
         if self.contacttype == 'homerun':
-            fielding.BasePaths.HandleHomeRun(self)
+            self.basepaths.HandleHomeRun(self)
             self.batted_ball_outcome = 'homerun'
         
         while self.liveball == True:
@@ -225,7 +225,7 @@ class fielding():
             fielding.TimeStep(self)     
 
         self.batted_ball_outcome = None
-        self.base_situation = [None, None, None, fielding.BasePaths.at_home]
+        self.base_situation = [None, None, None, self.basepaths.at_home]
         self.defensiveoutcome = (self.contacttype, self.direction, self.fieldingdefender, self.batted_ball_outcome, self.base_situation)
 
     class BasePaths():
@@ -235,15 +235,16 @@ class fielding():
             if batter != None:
                 self.baserunner_eval_list.append(batter)
                 batter.base = 0
+                batter.running = True
             if firstbase != None:
                 self.baserunner_eval_list.append(firstbase)
-                firstbase.base = 3
+                firstbase.base = 1
             if secondbase != None:
                 self.baserunner_eval_list.append(secondbase)
-                secondbase.base = 6
+                secondbase.base = 2
             if thirdbase != None:
                 self.baserunner_eval_list.append(thirdbase)
-                thirdbase.base = 9
+                thirdbase.base = 3
             self.at_home = []
             self.out = []            
 
@@ -254,13 +255,22 @@ class fielding():
             for runner in self.baserunner_eval_list:
                 self.at_home.append(runner)
                 runner.base = None
+                runner.running = None
                 self.baserunner_eval_list = []
 
-        def ChooseRun(self):
+        def CheckForForce(self):
             for baserunner in self.baserunner_eval_list:
-                pass
+                print(f"If Forced Eval: {baserunner}")
+                print(f"{self.baserunner_eval_list}")
+                needadvance = [baserunner for runner in self.baserunner_eval_list if (baserunner.base - 1) == runner.base]
+                print(f"Output: {needadvance}")
+                if needadvance != []:
+                    baserunner.running = True
+                print(f"{baserunner.running}")
                 #print(f"Whether to Run Criteria: Def {self.defense.fieldingdefender} Depth {self.defense.depth} Direction {self.defense.direction} Airtime {self.defense.ball_airtime} Baserunner {baserunner}")
-                
+
+        def CheckForVoluntaryRunners(self):
+            pass
 
     def DefenseChoice(self):
         if (self.gamestate.game.outcount + self.gamestate.game.currentouts) >= self.gamestate.game.rules.outs:
@@ -281,14 +291,12 @@ class fielding():
             listofweights = []
             defenderlist = self.defensivealignment[self.direction][self.depth]
             
-            print(f"Length of List: {len(defenderlist)}")
             for item in range(0, len(defenderlist)):
                 listofweights.append(weight)
                 weight = (weight *.5)
 
-            print(f"{listofweights} {defenderlist}")
             defenderposition = random.choices(defenderlist, listofweights, k=1)[0]
-            print(f"{defenderposition}")
+
             try:
                 primary_defender = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==defenderposition]
             except:
@@ -297,15 +305,12 @@ class fielding():
         return primary_defender
 
     def TimeStep(self):
-        #print(f"{self.basepaths}")
-        #print(f"TIME STEP")
         test = random.randint(0,2)
         if test >= 2:
             self.liveball = False
 
     def Air_TimeTick(self):
         location = [self.direction, self.depth]
-        print(location, self.fieldingdefender)
         if location in self.gamestate.game.baselines.directlyat:
             distancefromdefender = 0
         if location in self.gamestate.game.baselines.onestepaway:
@@ -321,7 +326,7 @@ class fielding():
             hit_ground = False
         else:
             hit_ground = True
-        if self.contactype == "homerun":
+        if self.depth == "homerun":
             timetoground = None
         else:
             timetoground = self.gamestate.game.baselines.timetoground[self.contacttype][self.depth]
@@ -400,8 +405,6 @@ class ballmoving():
             base_situation, errortype = self.ThrowDeterminer(direction, depth, batted_ball_outcome, adjusted_weights[1], primarydefender)
             if self.gamestate.game.error_count>0:
                 batted_ball_outcome = errortype
-            #[headingtofirst, headingtosecond, headingtothird, headingtohome, alreadyhome]
-            #print(f"Throw Outcome Test: {base_situation}")
         
 
         defenseoutcome = (contacttype, direction, primarydefender, batted_ball_outcome, base_situation)
