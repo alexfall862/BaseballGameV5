@@ -41,11 +41,12 @@ class Baselines():
         self.fieldingweights = load["fieldingweights"]
         self.fieldingoutcomes = load["fieldingoutcomes"]
         self.defensivealignment = load["defensivealignment"]
-        self.freehit = load["freehit"]
         self.directlyat = load["directlyat"]
         self.onestepaway = load["onestepaway"]
         self.twostepaway = load["twostepaway"]
         self.threestepaway = load["threestepaway"]
+        self.homerun = load["homerun"]
+        self.timetoground = load["timetoground"]
 
     def __repr__(self):
         return f"{self.leaguetype}"

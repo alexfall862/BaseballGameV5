@@ -205,46 +205,68 @@ class fielding():
         self.distweights = self.gamestate.game.baselines.distweights
         self.distoutcomes = self.gamestate.game.baselines.distoutcomes
         self.defensivealignment = self.gamestate.game.baselines.defensivealignment
-        #self.fieldingweights = self.gamestate.game.baselines.fieldingweights
-        #self.fieldingoutcomes = self.gamestate.game.baselines.fieldingoutcomes
         self.contacttype = self.gamestate.outcome[0]
         self.direction = self.gamestate.outcome[1]
         self.specificweights = self.distweights[self.contacttype]
-        self.depth = random.choices(self.distoutcomes, self.specificweights, k=1)[0]
-        #print(f"Con: {self.contacttype} Dep:{self.depth} Dir:{self.direction}")
-        self.ball_airtime = fielding.Air_TimeTick(self)
-        self.liveball = True
         self.depth = fielding.PickDepth(self)
         self.fieldingdefender = fielding.PickDefender(self)
-        self.basepaths = fielding.BasePaths(self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
+        self.distanceaway, self.groundbool, self.timetoground = fielding.Air_TimeTick(self)
+        self.basepaths = fielding.BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
+        self.basepaths.ChooseRun()        
+        self.liveball = True
         
-        #print(f"DEFENSE INPUT TEST: {self.depth} {self.contacttype} {self.direction} {self.depth} {self.fieldingdefender}")
+        if self.contacttype == 'homerun':
+            fielding.BasePaths.HandleHomeRun(self)
+            self.batted_ball_outcome = 'homerun'
+        
         while self.liveball == True:
+            self.defensechoice = fielding.DefenseChoice(self)
+
             fielding.TimeStep(self)     
 
         self.batted_ball_outcome = None
-        self.base_situation = [None, None, None, None]
+        self.base_situation = [None, None, None, fielding.BasePaths.at_home]
         self.defensiveoutcome = (self.contacttype, self.direction, self.fieldingdefender, self.batted_ball_outcome, self.base_situation)
 
     class BasePaths():
-        def __init__(self, batter, firstbase, secondbase, thirdbase):
+        def __init__(self, defense, batter, firstbase, secondbase, thirdbase):
+            self.defense = defense
             self.baserunner_eval_list = []
             if batter != None:
                 self.baserunner_eval_list.append(batter)
+                batter.base = 0
             if firstbase != None:
                 self.baserunner_eval_list.append(firstbase)
+                firstbase.base = 3
             if secondbase != None:
                 self.baserunner_eval_list.append(secondbase)
+                secondbase.base = 6
             if thirdbase != None:
                 self.baserunner_eval_list.append(thirdbase)
+                thirdbase.base = 9
             self.at_home = []
             self.out = []            
 
         def __repr__(self):
             return f"Baserunners: {self.baserunner_eval_list} Home: {self.at_home} Out: {self.out}"
     
+        def HandleHomeRun(self):
+            for runner in self.baserunner_eval_list:
+                self.at_home.append(runner)
+                runner.base = None
+                self.baserunner_eval_list = []
+
         def ChooseRun(self):
-            pass
+            for baserunner in self.baserunner_eval_list:
+                pass
+                #print(f"Whether to Run Criteria: Def {self.defense.fieldingdefender} Depth {self.defense.depth} Direction {self.defense.direction} Airtime {self.defense.ball_airtime} Baserunner {baserunner}")
+                
+
+    def DefenseChoice(self):
+        if (self.gamestate.game.outcount + self.gamestate.game.currentouts) >= self.gamestate.game.rules.outs:
+            throw_it_bool = False
+        elif (self.gamestate.game.outcount + self.gamestate.game.currentouts) >= self.gamestate.game.rules.outs:
+            throw_it_bool = True
 
             
     def PickDepth(self):
@@ -255,22 +277,65 @@ class fielding():
         if self.depth == 'homerun':
             primary_defender = None
         else:
+            weight = 1
+            listofweights = []
             defenderlist = self.defensivealignment[self.direction][self.depth]
+            
+            print(f"Length of List: {len(defenderlist)}")
+            for item in range(0, len(defenderlist)):
+                listofweights.append(weight)
+                weight = (weight *.5)
+
+            print(f"{listofweights} {defenderlist}")
+            defenderposition = random.choices(defenderlist, listofweights, k=1)[0]
+            print(f"{defenderposition}")
             try:
-                primary_defender = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==defenderlist[0]][0]
+                primary_defender = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==defenderposition]
             except:
                 primary_defender = self.gamestate.game.pitchingteam.currentpitcher
 
         return primary_defender
 
     def TimeStep(self):
-        print(f"{self.basepaths}")
+        #print(f"{self.basepaths}")
         #print(f"TIME STEP")
         test = random.randint(0,2)
         if test >= 2:
             self.liveball = False
 
     def Air_TimeTick(self):
+        location = [self.direction, self.depth]
+        print(location, self.fieldingdefender)
+        if location in self.gamestate.game.baselines.directlyat:
+            distancefromdefender = 0
+        if location in self.gamestate.game.baselines.onestepaway:
+            distancefromdefender = 1        
+        if location in self.gamestate.game.baselines.twostepaway:
+            distancefromdefender = 2        
+        if location in self.gamestate.game.baselines.threestepaway:
+            distancefromdefender = 3
+        if location in self.gamestate.game.baselines.homerun:
+            distancefromdefender = 4
+
+        if self.contacttype == "barrel" or "solid" or "flare" or "under" or "homerun":
+            hit_ground = False
+        else:
+            hit_ground = True
+        if self.contactype == "homerun":
+            timetoground = None
+        else:
+            timetoground = self.gamestate.game.baselines.timetoground[self.contacttype][self.depth]
+       
+        return distancefromdefender, hit_ground, timetoground
+
+
+    def Error_Throw_Catch(baselines, thrower, catcher):
+        pass
+
+    def Error_Catch(baselines, thrower, catcher):
+        pass
+
+    def Error_Throw(baselines, thrower, catcher):
         pass
 
 class ballmoving():

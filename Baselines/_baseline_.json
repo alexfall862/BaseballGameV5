@@ -121,19 +121,6 @@
           "catcher": [ "catcher" ]
         }
       },
-
-      "freehit": [
-        [ "far left", "shallow_of" ],
-        [ "center left", "shallow_of" ],
-        [ "center right", "shallow_of" ],
-        [ "far right", "shallow_of" ],
-        [ "left", "deep_if" ],
-        [ "dead center", "deep_if" ],
-        [ "right", "deep_if" ],
-        [ "left", "middle_if" ],
-        [ "dead center", "middle_if" ],
-        [ "right", "middle_if" ]
-      ],
       "directlyat": [
         [ "left", "middle_of" ],
         [ "dead center", "middle_of" ],
@@ -201,7 +188,63 @@
         [ "center right", "shallow_of" ],
         [ "far right", "shallow_of" ]
 
-      ]
+      ],
+      "homerun": [
+
+        [ "far left", "homerun" ],
+        [ "left", "homerun" ],
+        [ "center left", "homerun" ],
+        [ "dead center", "homerun" ],
+        [ "center right", "homerun" ],
+        [ "right", "homerun" ],
+        [ "far right", "homerun" ]
+      ],
+      "timetoground": {
+        "barrel": {
+          "deep_of": 2,
+          "middle_of": 1,
+          "shallow_of": 1
+        },
+        "solid": {
+          "deep_of": 3,
+          "middle_of": 2,
+          "shallow_of": 1,
+          "deep_if": 1,
+          "middle_if": 1
+        },
+        "flare": {
+          "middle_of": 3,
+          "shallow_of": 2,
+          "deep_if": 2,
+          "middle_if": 1,
+          "shallow_if": 1
+        },
+        "burner": {
+          "shallow_of": 3,
+          "deep_if": 2,
+          "middle_if": 1,
+          "shallow_if": 1
+        },
+        "under": {
+          "shallow_of": 4,
+          "deep_if": 3,
+          "middle_if": 2,
+          "shallow_if": 1,
+          "mound": 1,
+          "catcher": 1
+        },
+        "topped": {
+          "middle_if": 1,
+          "shallow_if": 1,
+          "mound": 1,
+          "catcher": 1
+        },
+        "weak": {
+          "shallow_if": 1,
+          "mound": 1,
+          "catcher": 1
+        }
+      }
     }
   },
   {
@@ -326,19 +369,6 @@
           "catcher": [ "catcher" ]
         }
       },
-
-      "freehit": [
-        [ "far left", "shallow_of" ],
-        [ "center left", "shallow_of" ],
-        [ "center right", "shallow_of" ],
-        [ "far right", "shallow_of" ],
-        [ "left", "deep_if" ],
-        [ "dead center", "deep_if" ],
-        [ "right", "deep_if" ],
-        [ "left", "middle_if" ],
-        [ "dead center", "middle_if" ],
-        [ "right", "middle_if" ]
-      ],
       "directlyat": [
         [ "left", "middle_of" ],
         [ "dead center", "middle_of" ],
@@ -406,7 +436,65 @@
         [ "center right", "shallow_of" ],
         [ "far right", "shallow_of" ]
 
-      ]
+      ],
+      "homerun": [
+
+        [ "far left", "homerun" ],
+        [ "left", "homerun" ],
+        [ "center left", "homerun" ],
+        [ "dead center", "homerun" ],
+        [ "center right", "homerun" ],
+        [ "right", "homerun" ],
+        [ "far right", "homerun" ]
+      ],
+      "timetoground": {
+        "barrel": {
+          "deep_of": 2,
+          "middle_of": 1,
+          "shallow_of": 1
+        },
+        "solid": {
+          "deep_of": 3,
+          "middle_of": 2,
+          "shallow_of": 1,
+          "deep_if": 1,
+          "middle_if": 1
+        },
+        "flare": {
+          "middle_of": 3,
+          "shallow_of": 2,
+          "deep_if": 2,
+          "middle_if": 1,
+          "shallow_if": 1
+        },
+        "burner": {
+          "shallow_of": 3,
+          "deep_if": 2,
+          "middle_if": 1,
+          "shallow_if": 1
+        },
+        "under": {
+          "shallow_of": 4,
+          "deep_if": 3,
+          "middle_if": 2,
+          "shallow_if": 1,
+          "mound": 1,
+          "catcher": 1
+        },
+        "topped": {
+          "middle_if": 1,
+          "shallow_if": 1,
+          "mound": 1,
+          "catcher": 1
+        },
+        "weak": {
+          "shallow_if": 1,
+          "mound": 1,
+          "catcher": 1
+        }
+      }
+
+
     }
   }
 
