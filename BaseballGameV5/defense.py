@@ -19,9 +19,11 @@ class fielding():
         self.depth = fielding.PickDepth(self)
         self.fieldingdefender = fielding.PickDefender(self)
         self.airball_bool = fielding.AirballBool(self.contacttype)
-        self.adjustedfieldingweights = fielding.ModWeights(self.fieldingdefender, self.fieldingweights[self.contacttype], self.depth, self.airball_bool, self.gamestate.game.baselines.fieldmod, self.gamestate.game.baselines.fieldingmultiplier)
-        #self.distanceaway, self.groundbool, self.timetoground = fielding.Air_TimeTick(self)
+        self.adjustedfieldingweights = fielding.ModWeights(self.fieldingdefender, self.fieldingweights[self.contacttype], self.depth, self.airball_bool, self.gamestate.game.baselines.fieldingmod, self.gamestate.game.baselines.fieldingmultiplier)
         self.basepaths = fielding.BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
+        self.batted_ball_outcome = fielding.OutcomeChooser(self)
+
+        #self.distanceaway, self.groundbool, self.timetoground = fielding.Air_TimeTick(self)
         #self.basepaths.CheckForForce()        
         self.liveball = True
         
@@ -39,6 +41,7 @@ class fielding():
         self.defensiveoutcome = (self.contacttype, self.direction, self.fieldingdefender, self.batted_ball_outcome, self.base_situation)
 
     class BasePaths():
+        #should go in order of establishing initial positions, check to see whether they'd run before or after the catch (if there's a catch or not as well) - move basemen according to speed and bsrn ability if so, and then eval whether there's a catch or not and move again.
         def __init__(self, defense, batter, firstbase, secondbase, thirdbase):
             self.defense = defense
             self.baserunner_eval_list = []
@@ -108,7 +111,7 @@ class fielding():
             defenderposition = random.choices(defenderlist, listofweights, k=1)[0]
 
             try:
-                primary_defender = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==defenderposition]
+                primary_defender = [player for player in self.gamestate.game.pitchingteam.battinglist if player.lineup==defenderposition][0]
             except:
                 primary_defender = self.gamestate.game.pitchingteam.currentpitcher
 
@@ -124,6 +127,9 @@ class fielding():
         return airball_bool
 
     def ModWeights(defender, fieldingodds, depth, airball_bool, mod, multiplier):
+        if defender == None:
+            return [0,0,0,0]
+        
         if airball_bool == True:
             ab = 'air'
         else:
@@ -133,26 +139,33 @@ class fielding():
         else:
             d = 'infield'
 
+        print(f"Type:{ab} In/Out:{d}")
 
         outodds = fieldingodds[0]
         singleodds = fieldingodds[1]
         doubleodds = fieldingodds[2]
         tripleodds = fieldingodds[3]
-        sumvalue = sum(outodds, singleodds, doubleodds, tripleodds)
+        sumvalue = sum([outodds, singleodds, doubleodds, tripleodds])
         skills = [defender.fieldcatch, defender.fieldreact, defender.fieldspot, defender.speed]
+        print(f"Skills {skills}")
         skillsweight = mod[ab][d]
+        print(f"Weights {skillsweight}")
         modifier = (((np.average(skills, weights=skillsweight))/50)+multiplier)/(multiplier+1)
-        outodds /= modifier
-        singleodds *= modifier
-        doubleodds *= modifier
-        tripleodds *= modifier
+        print(f"Mod {modifier}")
+        print(f"OG Odds {fieldingodds}")
+        outodds *= modifier
+        singleodds /= modifier
+        doubleodds /= modifier
+        tripleodds /= modifier
         listofodds = [outodds, singleodds, doubleodds, tripleodds]
+        print(f"Output Odds {listofodds}")
         processedodds = [x / sum(listofodds) for x in listofodds]
         outodds = processedodds[0]
         singleodds = processedodds[1]
         doubleodds = processedodds[2]
         tripleodds = processedodds[3]
         processedlistofodds = [outodds, singleodds, doubleodds, tripleodds]        
+        print(f"Processed Odds {processedlistofodds}")
         return processedlistofodds
 
     def TimeStep(self):
@@ -184,7 +197,14 @@ class fielding():
        
         return distancefromdefender, hit_ground, timetoground
 
-
+    def OutcomeChooser(self):
+        if self.contacttype == 'homerun':
+            outcome = 'homerun'
+        else:
+            outcome = random.choices(self.gamestate.game.baselines.fieldingoutcomes, self.adjustedfieldingweights, k=1)[0]
+        print(f"Outcome Picked {outcome}")
+        return outcome 
+    
     def Error_Throw_Catch(baselines, thrower, catcher):
         pass
 
@@ -282,16 +302,16 @@ class ballmoving():
         elif depth == 'catcher':
             weights = [.1, .9]
 
-        "catchable": {
-                "deep_of": [1, 0],
-                "middle_of": [1, 0],
-                "shallow_of": [1, 0],
-                "deep_if": [.5, .5],
-                "deep_if": [.5, .5],
-                "deep_if": [.25, .75],
-                "mound": [1, 0],
-                "catcher": [1, 0]
-            }
+        # "catchable": {
+        #         "deep_of": [1, 0],
+        #         "middle_of": [1, 0],
+        #         "shallow_of": [1, 0],
+        #         "deep_if": [.5, .5],
+        #         "deep_if": [.5, .5],
+        #         "deep_if": [.25, .75],
+        #         "mound": [1, 0],
+        #         "catcher": [1, 0]
+        #     }
 
         air_or_ground = random.choices(['airball', 'groundball'], weights, k=1)[0]
 
