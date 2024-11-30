@@ -2,6 +2,7 @@ from ast import Pass
 import random
 import Stats as stats
 import numpy as np
+from operator import attrgetter
 
 class fielding():
     def __init__(self, gamestate):
@@ -20,23 +21,17 @@ class fielding():
         self.fieldingdefender = fielding.PickDefender(self)
         self.airball_bool = fielding.AirballBool(self.contacttype)
         self.adjustedfieldingweights = fielding.ModWeights(self.fieldingdefender, self.fieldingweights[self.contacttype], self.depth, self.airball_bool, self.gamestate.game.baselines.fieldingmod, self.gamestate.game.baselines.fieldingmultiplier)
+        self.batted_ball_outcome = fielding.OutcomeChooser(self)          
         self.basepaths = fielding.BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
-        self.batted_ball_outcome = fielding.OutcomeChooser(self)
-
-        #self.distanceaway, self.groundbool, self.timetoground = fielding.Air_TimeTick(self)
-        #self.basepaths.CheckForForce()        
-        self.liveball = True
+        if self.batted_ball_outcome == 'out':
+            #check for catching error
+            errors = 0
+            if errors == 0:
+                self.basepaths.RunnerOut(self.basepaths.batter)
+                
+        self.target, self.targetbase = self.basepaths.WhereToThrow()
+        print(f"Target: {self.target} TargetBase: {self.targetbase}")
         
-        if self.contacttype == 'homerun':
-            self.basepaths.HandleHomeRun(self)
-            self.batted_ball_outcome = 'homerun'
-        
-        while self.liveball == True:
-            self.defensechoice = fielding.DefenseChoice(self)
-
-            fielding.TimeStep(self)     
-
-        self.batted_ball_outcome = None
         self.base_situation = [None, None, None, self.basepaths.at_home]
         self.defensiveoutcome = (self.contacttype, self.direction, self.fieldingdefender, self.batted_ball_outcome, self.base_situation)
 
@@ -44,34 +39,73 @@ class fielding():
         #should go in order of establishing initial positions, check to see whether they'd run before or after the catch (if there's a catch or not as well) - move basemen according to speed and bsrn ability if so, and then eval whether there's a catch or not and move again.
         def __init__(self, defense, batter, firstbase, secondbase, thirdbase):
             self.defense = defense
+            self.batter = batter
+            self.firstbase = firstbase
+            self.secondbase = secondbase
+            self.thirdbase = thirdbase
+
             self.baserunner_eval_list = []
-            if batter != None:
+            if self.batter != None:
                 self.baserunner_eval_list.append(batter)
-                batter.base = 0
-                batter.running = True
-            if firstbase != None:
+                self.batter.base = 0
+                self.batter.running = True
+            if self.firstbase != None:
                 self.baserunner_eval_list.append(firstbase)
-                firstbase.base = 1
-            if secondbase != None:
+                self.firstbase.base = 1
+            if self.secondbase != None:
                 self.baserunner_eval_list.append(secondbase)
-                secondbase.base = 2
-            if thirdbase != None:
+                self.secondbase.base = 2
+            if self.thirdbase != None:
                 self.baserunner_eval_list.append(thirdbase)
-                thirdbase.base = 3
+                self.thirdbase.base = 3
             self.at_home = []
             self.out = []            
 
         def __repr__(self):
             return f"Baserunners: {self.baserunner_eval_list} Home: {self.at_home} Out: {self.out}"
-    
+        def RunnerOut(self, player):            
+            player.base = None
+            player.running = None
+            player.out = True
+            print(self.baserunner_eval_list)
+            self.baserunner_eval_list.remove(player)
+            print(self.baserunner_eval_list)
+            
+        def WhereToThrow(self):
+            try: 
+                highestbase = max(self.baserunner_eval_list, key=attrgetter('base')).base
+            except: 
+                return None, None
+
+            def CheckForForce(self, highestbase):
+                if (highestbase == None) or (len(self.baserunner_eval_list) == 0):
+                    return None, None
+                else:
+                    self.baserunner_eval_list.sort(key=lambda runner: runner.base, reverse=True)
+                    for player in self.baserunner_eval_list:
+                        if player.running == True:
+                            target = player 
+                            highestbase = player.base
+                            return target, highestbase     
+                        else: 
+                            pass
+                    return None, None
+                
+            target, targetbase = CheckForForce(self, highestbase)
+            return target, targetbase
+
+            #Return highest base having number
+            #If outs aren't 1 less than total outs needed, 
+                #Take player with that base
+                #else throw to first
         def HandleHomeRun(self):
             for runner in self.baserunner_eval_list:
                 self.at_home.append(runner)
                 runner.base = None
                 runner.running = None
-                self.baserunner_eval_list = []
+            self.baserunner_eval_list = []
 
-        def CheckForForce(self):
+        def DecideToRun(self):
             for baserunner in self.baserunner_eval_list:
                 print(f"If Forced Eval: {baserunner}")
                 print(f"{self.baserunner_eval_list}")
@@ -80,6 +114,9 @@ class fielding():
                 if needadvance != []:
                     baserunner.running = True
                 print(f"{baserunner.running}")
+            if (self.gamestate.game.currentouts + self.gamestate.game.outcount) == self.gamestate.game.rules.outs -1:
+                for baserunner in self.baserunner_eval_list:
+                    baserunner.running = True
                 #print(f"Whether to Run Criteria: Def {self.defense.fieldingdefender} Depth {self.defense.depth} Direction {self.defense.direction} Airtime {self.defense.ball_airtime} Baserunner {baserunner}")
 
         def CheckForVoluntaryRunners(self):
@@ -198,9 +235,10 @@ class fielding():
         return distancefromdefender, hit_ground, timetoground
 
     def OutcomeChooser(self):
-        if self.contacttype == 'homerun':
+        if self.depth == 'homerun':
             outcome = 'homerun'
         else:
+            print(f"{self.gamestate.game.baselines.fieldingoutcomes} {self.adjustedfieldingweights}")
             outcome = random.choices(self.gamestate.game.baselines.fieldingoutcomes, self.adjustedfieldingweights, k=1)[0]
         print(f"Outcome Picked {outcome}")
         return outcome 

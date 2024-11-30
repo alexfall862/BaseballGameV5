@@ -77,7 +77,9 @@ class Player():
         
         self.base = None
         self.running = None
+        self.out = None
         self.force = None
+        
         self.sliding = (((self.baserunning*3) + (self.basereaction)) / 4)
 
         self.earned_bool = True
@@ -116,6 +118,11 @@ class Player():
         
     def __repr__(self):
         return f"{self.lineup} {self.name}"# {self.earned_bool} {self.on_base_pitcher}" # f"{self.__dict__}\n"
+
+    def __eq__(self, other):
+        if isinstance(other, Player):
+            return self.value == other.value
+        return False
 
     def to_dict(self):
         return {
