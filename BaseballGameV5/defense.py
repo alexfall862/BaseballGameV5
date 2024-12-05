@@ -171,7 +171,9 @@ class fielding():
             return [ self.firstbase, self.secondbase, self.thirdbase, self.at_home]
 
         def RunnerCheck(self, target, targetbase):
+            print(f"DEFENDER {self.defense.fieldingdefender.lineup} {self.defense.fieldingdefender.throwpower} {self.defense.fieldingdefender.throwacc}")
             for runner in self.baserunner_eval_list:
+                print(runner.base, runner.name, runner.speed, runner.baserunning)
                 runner.running = None
 
             if self.batter.base == 0:
@@ -280,29 +282,17 @@ class fielding():
             #print(f"{runner.base} {runner}")
         #print(self.targetbase)
         if self.targetbase == 0: 
-            try:
-                runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 0][0]
-                self.basepaths.RunnerOut(runner)
-            except:
-                pass
+            runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 0][0]
+            self.basepaths.RunnerOut(runner)
         elif self.targetbase == 1:
-            try:
-                runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 1][0]            
-                self.basepaths.RunnerOut(runner)
-            except: 
-                pass
+            runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 1][0]            
+            self.basepaths.RunnerOut(runner)
         elif self.targetbase == 2:
-            try:
-                runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 2][0]
-                self.basepaths.RunnerOut(runner)
-            except:
-                pass
+            runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 2][0]
+            self.basepaths.RunnerOut(runner)
         elif self.targetbase == 3:
-            try: 
-                runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 3][0]
-                self.basepaths.RunnerOut(runner)
-            except:
-                pass
+            runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 3][0]
+            self.basepaths.RunnerOut(runner)
             
 
     def PickDepth(self):

@@ -6,6 +6,7 @@ import Baselines
 import json 
 import csv 
 import Stats as stats
+import pandas as pd
 
 class Game():
     def __init__(self, gamedict):
@@ -87,13 +88,18 @@ class Game():
         for action in self.actions:
             #print(action)
             listofactions.append(action)    
+        export_dataframe = pd.DataFrame(listofactions)
+        export_dataframe.replace({"None": ""}, inplace=True)
+        print(export_dataframe['Error List'])
+        export_dataframe.to_csv(f"{self.gname}.csv", na_rep="", index=False)
         json_string = listofactions
+        
         with open(f"testoutput_{self.gname}.json", "w") as outfile:
             json.dump(json_string, outfile)
         
-        with open(f"testoutput_{self.gname}.csv", "w", newline="") as outputfile:
-            dict_writer = csv.DictWriter(outputfile, listofactions[0].keys())
-            dict_writer.writeheader()
-            dict_writer.writerows(listofactions)
+        # with open(f"testoutput_{self.gname}.csv", "w", newline="") as outputfile:
+        #     dict_writer = csv.DictWriter(outputfile, listofactions[0].keys())
+        #     dict_writer.writeheader()
+        #     dict_writer.writerows(listofactions)
         ##print("DONE")
         #print(listofactions)
