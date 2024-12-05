@@ -131,11 +131,12 @@ class Action():
 
 def HitEval(self):
     #print(f"DEFENSIVE OUTCOME: {self.defensiveoutcome[4]}")
+   
     self.game.on_firstbase = self.defensiveoutcome[4][0]
     self.game.on_secondbase = self.defensiveoutcome[4][1]
     self.game.on_thirdbase = self.defensiveoutcome[4][2]
     if self.defensiveoutcome[4][3] != None:
-        listofrunners = self.defensiveoutcome[4][3].copy()
+        listofrunners = self.defensiveoutcome[4][3]#.copy()
         #print(f"SELF DEFENSIVEOUTCOME: ::: {len(listofrunners)}")
         for runner in listofrunners:
             self.game.current_runners_home.append(runner)

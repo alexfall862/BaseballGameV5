@@ -23,21 +23,26 @@ class fielding():
         self.fieldingdefender = fielding.PickDefender(self)
         self.airball_bool = fielding.AirballBool(self.contacttype)
         self.adjustedfieldingweights = fielding.ModWeights(self.fieldingdefender, self.fieldingweights[self.contacttype], self.depth, self.airball_bool, self.gamestate.game.baselines.fieldingmod, self.gamestate.game.baselines.fieldingmultiplier)
-        self.batted_ball_outcome = fielding.OutcomeChooser(self)          
-        self.basepaths = fielding.BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase, self.gamestate.game.on_firstbase)
+        self.batted_ball_outcome = fielding.OutcomeChooser(self)
+        print(self.batted_ball_outcome)
+        self.basepaths = fielding.BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase)
+        print(f"BASES BEFORE RUNNING: {self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase}")
 
 
         if self.batted_ball_outcome == 'homerun':
             self.target, self.targetbase = None, None
+            self.basepaths.HandleHomeRun()
         else:
             if self.batted_ball_outcome == 'out':
                 error_on_catch = fielding.Error_Catch(self, None, self.fieldingdefender)
                 #if (fielding.DefenseChoice(self) == False ):
                 #    pass
 
-                if error_on_catch:
-                    print("after error on intial catch")
+                if error_on_catch == True:
+                    #print("after error on intial catch")
                     self.basepaths.RunnerMover("fielding error")
+                    for runner in self.basepaths.baserunner_eval_list:
+                        print(f"EVAL CHECK: {runner} {runner.base}")
 
 
                     self.target, self.targetbase = self.basepaths.WhereToThrow()
@@ -49,6 +54,7 @@ class fielding():
                         fielding.ExecuteThrow(self)
                         
                 elif error_on_catch != False:
+                    print("NON ERROR IS FIRING")
                     self.basepaths.RunnerOut(self.basepaths.batter)
 
     #                if len([runner for runner in self.basepaths.baserunner_eval_list if runner.running == True])<=0:
@@ -62,7 +68,7 @@ class fielding():
                 self.basepaths.RunnerCheck(self.target, self.targetbase)
 
                 if len([runner for runner in self.basepaths.baserunner_eval_list if runner.running == True])>0:
-                    print("After non-out play")
+                    #print("After non-out play")
                     self.target, self.targetbase = self.basepaths.WhereToThrow()
                     fielding.ExecuteThrow(self)
                     self.basepaths.RunnerMover("single")
@@ -75,6 +81,8 @@ class fielding():
     class BasePaths():
         #should go in order of establishing initial positions, check to see whether they'd run before or after the catch (if there's a catch or not as well) - move basemen according to speed and bsrn ability if so, and then eval whether there's a catch or not and move again.
         def __init__(self, defense, batter, firstbase, secondbase, thirdbase):
+            print(f"INSIDE OF BASEPATH OBJECT INIT: {batter, firstbase, secondbase, thirdbase}")            
+
             self.defense = defense
             self.batter = batter
             self.firstbase = firstbase
@@ -102,19 +110,22 @@ class fielding():
             return f"Baserunners: {self.baserunner_eval_list} Home: {self.at_home} Out: {self.out}"
 
         def RunnerOut(self, player):   
-            print(player)
+            #print(player)
             player.base = None
             player.running = None
             player.out = True
+            self.gamestate.game.outcount +=1
             #print(self.baserunner_eval_list)
             self.baserunner_eval_list.remove(player)
             #print(self.baserunner_eval_list)
 
         def RunnerMover(self, outcome):
+            print(f"Inside Runner Mover: {self.batter, self.firstbase, self.secondbase, self.thirdbase}")
+            print(f"{self.baserunner_eval_list}")
             def AdvanceRunners(self):
                 #this is the place to add speed as a modifier
                 for runner in self.baserunner_eval_list:
-                    print(f"RUNNER {runner.base} {runner}")
+                    #print(f"RUNNER {runner.base} {runner}")
 
 
                     runner.base+=1
@@ -141,17 +152,23 @@ class fielding():
                 runner.running = None               
                 
         def RunnerConverter(self):
-            listofrunners = [self.batter, self.firstbase, self.secondbase, self.thirdbase]
-            for baserunner in listofrunners:
-                if baserunner != None:
-                    if baserunner.base == 1:
-                        self.firstbase = baserunner
-                    if baserunner.base == 2:
-                        self.secondbase = baserunner            
-                    if baserunner.base == 3:
-                        self.thirdbase = baserunner
+            print(f" |||||||| BEFORE: {self.batter, self.firstbase, self.secondbase, self.thirdbase}")            
+            try:
+                self.firstbase = [runner for runner in self.baserunner_eval_list if runner.base == 1][0]            
+            except:
+                self.firstbase = None
                                
-            return [self.firstbase, self.secondbase, self.thirdbase, self.at_home]
+            try:
+                self.secondbase = [runner for runner in self.baserunner_eval_list if runner.base == 2][0]            
+            except:
+                self.secondbase = None
+                               
+            try:
+                self.thirdbase = [runner for runner in self.baserunner_eval_list if runner.base == 3][0]            
+            except:
+                self.thirdbase = None
+            print(f" |||||||| AFTER: {None, self.firstbase, self.secondbase, self.thirdbase, self.at_home}")
+            return [ self.firstbase, self.secondbase, self.thirdbase, self.at_home]
 
         def RunnerCheck(self, target, targetbase):
             for runner in self.baserunner_eval_list:
@@ -161,7 +178,7 @@ class fielding():
                 self.batter.running = True
 
         def WhereToThrow(self):
-            print(f"Running WHERE TO THROW")
+            #print(f"Running WHERE TO THROW")
             try: 
                 highestbase = max(self.baserunner_eval_list, key=attrgetter('base')).base
             except: 
@@ -203,7 +220,7 @@ class fielding():
                 #print(f"Output: {needadvance}")
                 if needadvance != []:
                     baserunner.running = True
-                print(f"{baserunner.running}")
+                #print(f"{baserunner.running}")
             if (self.gamestate.game.currentouts + self.gamestate.game.outcount) == self.gamestate.game.rules.outs -1:
                 for baserunner in self.baserunner_eval_list:
                     baserunner.running = True
@@ -242,14 +259,14 @@ class fielding():
     
         catcher = PickCatchingDefender(self)
 
-        print(f"Target: {self.target}")
-        print(f"Target Base: {self.targetbase}")
-        print(f"Defender: {self.fieldingdefender}")
-        print(f"Catcher: {catcher}")
+        #print(f"Target: {self.target}")
+        #print(f"Target Base: {self.targetbase}")
+        #print(f"Defender: {self.fieldingdefender}")
+        #print(f"Catcher: {catcher}")
 
         throw, catch = fielding.Error_Throw_Catch(self, self.fieldingdefender, catcher)
         if throw == False:
-            self.basepaths.RunnerMover("single")
+            pass
         if catch == False:
             pass
         if throw and catch == True:
@@ -259,9 +276,9 @@ class fielding():
 
     def PickRunnerToRemove(self):
         #TEMP SOLUTION TO ADD TRY EXCEPT HERE
-        for runner in self.basepaths.baserunner_eval_list:
-            print(f"{runner.base} {runner}")
-        print(self.targetbase)
+        #for runner in self.basepaths.baserunner_eval_list:
+            #print(f"{runner.base} {runner}")
+        #print(self.targetbase)
         if self.targetbase == 0: 
             try:
                 runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 0][0]
@@ -397,9 +414,9 @@ class fielding():
         if self.depth == 'homerun':
             outcome = 'homerun'
         else:
-            print(f"{self.gamestate.game.baselines.fieldingoutcomes} {self.adjustedfieldingweights}")
+            #print(f"{self.gamestate.game.baselines.fieldingoutcomes} {self.adjustedfieldingweights}")
             outcome = random.choices(self.gamestate.game.baselines.fieldingoutcomes, self.adjustedfieldingweights, k=1)[0]
-        print(f"Outcome Picked {outcome}")
+        #print(f"Outcome Picked {outcome}")
         return outcome 
     
     def Error_Throw_Catch(self, thrower, catcher):
@@ -408,8 +425,8 @@ class fielding():
         return throw, catch
 
     def Error_Catch(self, thrower, catcher):
+        print("catch error")
         baselines = self.gamestate.game.baselines        
-        
         if thrower != None:
             depth = fielding.Throw_CatchDepth(thrower)
         elif thrower == None:
@@ -429,6 +446,7 @@ class fielding():
             cweights = [1, 2, 3]   
         error_rate = (1+np.average(cscores, weights=cweights))*baselines.error_rate
         if error_rate > diceroll:
+            self.basepaths.RunnerMover("throwing error")
             self.errorlist.append(f"{catcher} catching error!")
             catcher.fieldingstats.Adder("catching_errors", 1)
             return True 
@@ -436,8 +454,8 @@ class fielding():
             return False        
 
     def Error_Throw(self, thrower, catcher):
+        print("throw error")
         baselines = self.gamestate.game.baselines        
-
         if thrower != None:
             depth = fielding.Throw_CatchDepth(thrower)
         elif thrower == None:
@@ -459,6 +477,7 @@ class fielding():
         #print(f"BASELINE ERROR FORM CHECK THROW: {error_rate}/{diceroll}")
         if error_rate > diceroll:
             #print(True)
+            self.basepaths.RunnerMover("throwing error")
             self.errorlist.append(f"{thrower} throws it wide!")
             thrower.fieldingstats.Adder("throwing_errors", 1)
             return True 
