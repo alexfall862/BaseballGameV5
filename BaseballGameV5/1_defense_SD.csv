@@ -1,10 +1,10 @@
 pid,position,name,throwing_errors,catching_errors,assists,putouts,innings_played,errors,defensive_chances,fielding_percentage
-43617,starter,Darrion Smith,0,0,0,0,6.666666666666664,0,0,
-58370,catcher,John Benzschawel,0,0,0,0,6.666666666666664,0,0,
-47666,shortstop,Bob Small,0,0,3,1,6.666666666666664,0,4,1.0
-39758,centerfield,Dave Eckert,0,0,0,2,6.666666666666664,0,2,1.0
-37689,leftfield,Benny Powell,0,0,1,2,6.666666666666664,0,3,1.0
-51817,secondbase,Delos Echols,0,0,1,1,6.666666666666664,0,2,1.0
-45013,rightfield,Oil Can Vardell,0,0,1,2,6.666666666666664,0,3,1.0
-55204,firstbase,Jerry Johnson,0,0,0,7,6.666666666666664,0,7,1.0
-66286,thirdbase,Teyo Miraldi,0,0,1,1,6.666666666666664,0,2,1.0
+43617,starter,Darrion Smith,1,4,0,0,8.999999999999998,5,5,0.0
+58370,catcher,John Benzschawel,1,1,0,0,8.999999999999998,2,2,0.0
+47666,shortstop,Bob Small,6,6,0,0,8.999999999999998,12,12,0.0
+39758,centerfield,Dave Eckert,1,1,0,0,8.999999999999998,2,2,0.0
+37689,leftfield,Benny Powell,4,4,0,0,8.999999999999998,8,8,0.0
+51817,secondbase,Delos Echols,3,3,0,0,8.999999999999998,6,6,0.0
+45013,rightfield,Oil Can Vardell,3,3,0,0,8.999999999999998,6,6,0.0
+55204,firstbase,Jerry Johnson,3,25,0,0,8.999999999999998,28,28,0.0
+66286,thirdbase,Teyo Miraldi,3,3,0,0,8.999999999999998,6,6,0.0

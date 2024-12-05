@@ -65,6 +65,8 @@ class Action():
             "Air or Ground": str(self.game.air_or_ground),
             "Targeted Defender": str(self.game.targeted_defender),
             "Defensive Outcome": str(self.defensiveoutcome[3] if self.defensiveoutcome != None else None), #str(self.defensiveoutcome), 
+            "Error List": str(self.defensiveoutcome[5] if self.defensiveoutcome != None else None),
+            "Defensive Actions": str(self.defensiveoutcome[6] if self.defensiveoutcome != None else None),
             "On First": str(self.game.on_firstbase),
             "On Second": str(self.game.on_secondbase),
             "On Third": str(self.game.on_thirdbase),
@@ -243,8 +245,7 @@ def AtBatOutcomeParser(self):
     #print(f"{self.outcome[1] in ('far left' or 'left' or 'center left' or 'dead center' or 'center right' or 'right' or 'far right')} | {self.outcome[1]}")
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
         #print("event fired")
-        self.defensiveoutcome = d.ballmoving(self).defenseoutcome
-        d.fielding(self)
+        self.defensiveoutcome = d.fielding(self).defenseoutcome
         #print(f"{self.id}{self.defensiveoutcome}")
         self.game.ab_over = True
 

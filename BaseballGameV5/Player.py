@@ -121,7 +121,7 @@ class Player():
 
     def __eq__(self, other):
         if isinstance(other, Player):
-            return self.value == other.value
+            return self.id == other.id
         return False
 
     def to_dict(self):
