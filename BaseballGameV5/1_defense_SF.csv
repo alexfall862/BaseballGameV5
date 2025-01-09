@@ -1,10 +1,10 @@
 pid,position,name,throwing_errors,catching_errors,assists,putouts,innings_played,errors,defensive_chances,fielding_percentage
 52697,starter,Neal Asiodu,0,0,0,0,8.999999999999998,0,0,
 55577,catcher,Jared Harris,0,0,0,0,8.999999999999998,0,0,
-66117,secondbase,Stephen Smith,0,5,0,0,8.999999999999998,5,5,0.0
-45348,rightfield,Tony Everett,0,7,0,0,8.999999999999998,7,7,0.0
-63233,shortstop,Karlos Smith,0,4,0,0,8.999999999999998,4,4,0.0
-61452,centerfield,A.J. Oswalt,0,11,0,0,8.999999999999998,11,11,0.0
-53116,firstbase,John Redmond,0,2,0,0,8.999999999999998,2,2,0.0
-45707,thirdbase,Steve Delong,0,5,0,0,8.999999999999998,5,5,0.0
-53288,leftfield,Logan Stephens,0,10,0,0,8.999999999999998,10,10,0.0
+66117,secondbase,Stephen Smith,0,3,0,0,8.999999999999998,3,3,0.0
+45348,rightfield,Tony Everett,0,3,0,0,8.999999999999998,3,3,0.0
+63233,shortstop,Karlos Smith,0,8,0,0,8.999999999999998,8,8,0.0
+61452,centerfield,A.J. Oswalt,0,8,0,0,8.999999999999998,8,8,0.0
+53116,firstbase,John Redmond,0,3,0,0,8.999999999999998,3,3,0.0
+45707,thirdbase,Steve Delong,0,1,0,0,8.999999999999998,1,1,0.0
+53288,leftfield,Logan Stephens,0,9,0,0,8.999999999999998,9,9,0.0

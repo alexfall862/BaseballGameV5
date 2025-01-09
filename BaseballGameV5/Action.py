@@ -1,7 +1,7 @@
 import random
 import InteractionEngine as ie
 import copy
-import FatigueInjury as fi
+import Fatigue as f
 import defense as d
 import Steals as steals
 import itertools

@@ -257,7 +257,9 @@
           "mound": 1,
           "catcher": 1
         }
-      }
+      },
+      "energytickcap": 0.15,
+      "energystep":  1
     }
   },
   {
@@ -518,9 +520,9 @@
           "mound": 1,
           "catcher": 1
         }
-      }
-
-
+      },
+      "energytickcap": 0.15,
+      "energystep": 1
     }
   }
 

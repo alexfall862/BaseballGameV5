@@ -1,5 +1,6 @@
 from Roster import Roster as r
 from Strategy import Strategy as s
+from Baselines import Baselines as b
 import Player
 import os
 
@@ -123,6 +124,14 @@ class Team():
         self.currentpitcher.pitchingstats.Adder("innings_pitched", 1/3)
         self.currentpitcher.fieldingstats.Adder("innings_played", 1/3)
 
+    def TickPitcherStamina(self):
+        pass
+
+    def TickBatterStamina(self):
+        pass
+
+    def TickDefenderStamina(self):
+        pass
 def find_index(objectlist, attribute, targetvalue):
     for index, obj in enumerate(objectlist):
         if getattr(obj, attribute) == targetvalue:

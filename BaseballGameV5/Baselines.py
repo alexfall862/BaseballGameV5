@@ -50,6 +50,9 @@ class Baselines():
         self.homerun = load["homerun"]
         self.timetoground = load["timetoground"]
 
+        self.energytickcap = load["energytickcap"]
+        self.energystep = load["energystep"]
+
     def __repr__(self):
         return f"{self.leaguetype}"
 
