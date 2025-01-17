@@ -24,9 +24,9 @@ class fielding():
         self.airball_bool = fielding.AirballBool(self.contacttype)
         self.adjustedfieldingweights = fielding.ModWeights(self.fieldingdefender, self.fieldingweights[self.contacttype], self.depth, self.airball_bool, self.gamestate.game.baselines.fieldingmod, self.gamestate.game.baselines.fieldingmultiplier)
         self.batted_ball_outcome = fielding.OutcomeChooser(self)
-        print(self.batted_ball_outcome)
+        #print(self.batted_ball_outcome)
         self.basepaths = fielding.BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase)
-        print(f"BASES BEFORE RUNNING: {self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase}")
+        #print(f"BASES BEFORE RUNNING: {self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase}")
 
 
         if self.batted_ball_outcome == 'homerun':
@@ -42,7 +42,8 @@ class fielding():
                     #print("after error on intial catch")
                     self.basepaths.RunnerMover("fielding error")
                     for runner in self.basepaths.baserunner_eval_list:
-                        print(f"EVAL CHECK: {runner} {runner.base}")
+                        pass
+                        #print(f"EVAL CHECK: {runner} {runner.base}")
 
 
                     self.target, self.targetbase = self.basepaths.WhereToThrow()
@@ -54,7 +55,7 @@ class fielding():
                         fielding.ExecuteThrow(self)
                         
                 elif error_on_catch != False:
-                    print("NON ERROR IS FIRING")
+                    #print("NON ERROR IS FIRING")
                     self.basepaths.RunnerOut(self.basepaths.batter)
 
     #                if len([runner for runner in self.basepaths.baserunner_eval_list if runner.running == True])<=0:
@@ -81,7 +82,7 @@ class fielding():
     class BasePaths():
         #should go in order of establishing initial positions, check to see whether they'd run before or after the catch (if there's a catch or not as well) - move basemen according to speed and bsrn ability if so, and then eval whether there's a catch or not and move again.
         def __init__(self, defense, batter, firstbase, secondbase, thirdbase):
-            print(f"INSIDE OF BASEPATH OBJECT INIT: {batter, firstbase, secondbase, thirdbase}")            
+            #print(f"INSIDE OF BASEPATH OBJECT INIT: {batter, firstbase, secondbase, thirdbase}")            
 
             self.defense = defense
             self.batter = batter
@@ -120,8 +121,8 @@ class fielding():
             #print(self.baserunner_eval_list)
 
         def RunnerMover(self, outcome):
-            print(f"Inside Runner Mover: {self.batter, self.firstbase, self.secondbase, self.thirdbase}")
-            print(f"{self.baserunner_eval_list}")
+            #print(f"Inside Runner Mover: {self.batter, self.firstbase, self.secondbase, self.thirdbase}")
+            #print(f"{self.baserunner_eval_list}")
             def AdvanceRunners(self):
                 #this is the place to add speed as a modifier
                 for runner in self.baserunner_eval_list:
@@ -152,7 +153,7 @@ class fielding():
                 runner.running = None               
                 
         def RunnerConverter(self):
-            print(f" |||||||| BEFORE: {self.batter, self.firstbase, self.secondbase, self.thirdbase}")            
+            #print(f" |||||||| BEFORE: {self.batter, self.firstbase, self.secondbase, self.thirdbase}")            
             try:
                 self.firstbase = [runner for runner in self.baserunner_eval_list if runner.base == 1][0]            
             except:
@@ -167,13 +168,13 @@ class fielding():
                 self.thirdbase = [runner for runner in self.baserunner_eval_list if runner.base == 3][0]            
             except:
                 self.thirdbase = None
-            print(f" |||||||| AFTER: {None, self.firstbase, self.secondbase, self.thirdbase, self.at_home}")
+            #print(f" |||||||| AFTER: {None, self.firstbase, self.secondbase, self.thirdbase, self.at_home}")
             return [ self.firstbase, self.secondbase, self.thirdbase, self.at_home]
 
         def RunnerCheck(self, target, targetbase):
-            print(f"DEFENDER {self.defense.fieldingdefender.lineup} {self.defense.fieldingdefender.throwpower} {self.defense.fieldingdefender.throwacc}")
+            #print(f"DEFENDER {self.defense.fieldingdefender.lineup} {self.defense.fieldingdefender.throwpower} {self.defense.fieldingdefender.throwacc}")
             for runner in self.baserunner_eval_list:
-                print(runner.base, runner.name, runner.speed, runner.baserunning)
+                #print(runner.base, runner.name, runner.speed, runner.baserunning)
                 runner.running = None
 
             if self.batter.base == 0:
@@ -217,7 +218,7 @@ class fielding():
         def DecideToRun(self):
             for baserunner in self.baserunner_eval_list:
                 #print(f"If Forced Eval: {baserunner}")
-                print(f"{self.baserunner_eval_list}")
+                #print(f"{self.baserunner_eval_list}")
                 needadvance = [baserunner for runner in self.baserunner_eval_list if (baserunner.base - 1) == runner.base]
                 #print(f"Output: {needadvance}")
                 if needadvance != []:
@@ -415,7 +416,7 @@ class fielding():
         return throw, catch
 
     def Error_Catch(self, thrower, catcher):
-        print("catch error")
+        #print("catch error")
         baselines = self.gamestate.game.baselines        
         if thrower != None:
             depth = fielding.Throw_CatchDepth(thrower)
@@ -444,7 +445,7 @@ class fielding():
             return False        
 
     def Error_Throw(self, thrower, catcher):
-        print("throw error")
+        #print("throw error")
         baselines = self.gamestate.game.baselines        
         if thrower != None:
             depth = fielding.Throw_CatchDepth(thrower)

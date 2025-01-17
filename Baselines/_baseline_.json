@@ -258,8 +258,8 @@
           "catcher": 1
         }
       },
-      "energytickcap": 0.15,
-      "energystep":  1
+      "energytickcap": 1.5,
+      "energystep":  2
     }
   },
   {
@@ -521,8 +521,8 @@
           "catcher": 1
         }
       },
-      "energytickcap": 0.15,
-      "energystep": 1
+      "energytickcap": 1.5,
+      "energystep": 2
     }
   }
 

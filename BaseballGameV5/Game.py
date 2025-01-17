@@ -11,8 +11,9 @@ import pandas as pd
 class Game():
     def __init__(self, gamedict):
         self.gname = gamedict.get("gameid")
-        self.hometeam = Team.Team(gamedict.get("Home"), "Home", gamedict.get("Rotation"))
-        self.awayteam = Team.Team(gamedict.get("Away"), "Away", gamedict.get("Rotation"))
+        self.baselines = Baselines.Baselines(gamedict.get("Rules"))
+        self.hometeam = Team.Team(gamedict.get("Home"), "Home", gamedict.get("Rotation"), self.baselines)
+        self.awayteam = Team.Team(gamedict.get("Away"), "Away", gamedict.get("Rotation"), self.baselines)
         self.rules = Rules.Rules(gamedict.get("Rules"))
         self.currentinning = 1
         self.currentouts = 0
@@ -48,7 +49,6 @@ class Game():
         self.skip_bool = None
         self.actions = []
         self.overallresults = []
-        self.baselines = Baselines.Baselines(gamedict.get("Rules"))
 
     def __repr__(self):
         return f"{str(self.gname)} {str(self.hometeam)} {str(self.awayteam)} {str(self.rules)}"
@@ -90,7 +90,7 @@ class Game():
             listofactions.append(action)    
         export_dataframe = pd.DataFrame(listofactions)
         export_dataframe.replace({"None": ""}, inplace=True)
-        print(export_dataframe['Error List'])
+        #print(export_dataframe['Error List'])
         export_dataframe.to_csv(f"{self.gname}.csv", na_rep="", index=False)
         json_string = listofactions
         

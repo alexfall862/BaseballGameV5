@@ -1,5 +1,5 @@
 def TickEnergy(baseline, player):
-    pass
+    player.energy = player.energy - baseline.energytickcap
 
 
 

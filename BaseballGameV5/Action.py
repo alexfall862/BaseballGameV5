@@ -188,6 +188,7 @@ def WalkEval(self):
         pass    
 
 def NextAction(self):
+    self.game.pitchingteam.TickPitcherStamina()
     self.game.is_pickoff = False
     self.game.is_stealattempt = False
     self.game.is_stealsuccess = False

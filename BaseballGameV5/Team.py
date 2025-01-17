@@ -1,12 +1,14 @@
 from Roster import Roster as r
 from Strategy import Strategy as s
 from Baselines import Baselines as b
+import Fatigue as f
 import Player
 import os
 
 class Team():
-    def __init__(self, name, travelstatus, pitchervalue):
+    def __init__(self, name, travelstatus, pitchervalue, baselines):
         self.name = name
+        self.baselines = baselines
         self.travelstatus = travelstatus
         self.roster = r(self.name)
         self.strategy = s(self.name)
@@ -125,8 +127,10 @@ class Team():
         self.currentpitcher.fieldingstats.Adder("innings_played", 1/3)
 
     def TickPitcherStamina(self):
-        pass
-
+        f.TickEnergy(self.baselines, self.currentpitcher)
+        # self.currentpitcher.energy = self.currentpitcher.energy - 1
+        print(f"{self.currentpitcher.name}: {self.currentpitcher.energy}")
+        
     def TickBatterStamina(self):
         pass
 
