@@ -129,13 +129,26 @@ class Team():
     def TickPitcherStamina(self):
         f.TickEnergy(self.baselines, self.currentpitcher)
         # self.currentpitcher.energy = self.currentpitcher.energy - 1
-        print(f"{self.currentpitcher.name}: {self.currentpitcher.energy}")
+        #print(f"{self.currentpitcher.name}: {self.currentpitcher.energy}")
         
     def TickBatterStamina(self):
         pass
 
     def TickDefenderStamina(self):
         pass
+
+    def ActionAdjustments(self):
+        Team.AttributeReCalc(self)
+        Team.InjuryCheck(self)
+
+    def AttributeReCalc(self):
+        for player in self.battinglist:
+            player.AbilityMod()
+        self.currentpitcher.AbilityMod()
+
+    def InjuryCheck(self):
+        pass
+
 def find_index(objectlist, attribute, targetvalue):
     for index, obj in enumerate(objectlist):
         if getattr(obj, attribute) == targetvalue:

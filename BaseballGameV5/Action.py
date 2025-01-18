@@ -16,12 +16,17 @@ class Action():
         self.game = game
         self.outcome = None
         self.defensiveoutcome = None
+        Action.AttributeInjuryCheck(self)
         Action.PrePitch(self)        
         Action.Processing(self)
 
 
     def __repr__(self):
         return f"I{self.game.currentinning}{self.game.topofinning}O{self.game.currentouts}HT{self.game.hometeam.name}HS{self.game.hometeam.score}AT{self.game.awayteam.name:<3}AS{self.game.awayteam.score:>2}BT{self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot}PT{self.game.pitchingteam.name}{self.game.pitchingteam.currentbatspot}AB{self.game.currentstrikes}/{self.game.currentballs}"
+
+    def AttributeInjuryCheck(self):
+        self.game.hometeam.ActionAdjustments()
+        self.game.awayteam.ActionAdjustments()
 
     def PrePitch(self):
         self.game.error_count=0

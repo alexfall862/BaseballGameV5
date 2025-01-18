@@ -84,33 +84,46 @@ class Player():
 
         self.earned_bool = True
         self.on_base_pitcher = None
-        # self.pitchcount = 0
-        # self.pitchstrikes = 0
-        # self.pitchballs = 0        
-        # self.earnedruns = 0
-        # self.pitch_hbp = 0
-        # self.pitch_strikeouts = 0
-        # self.pitch_walks = 0
-        # self.pickoff_throws = 0
+        self.abilitymodifierscore = 1
 
-        # self.plateappearances = 0
-        # self.singles = 0
-        # self.doubles = 0
-        # self.triples = 0
-        # self.homeruns = 0
-        # self.bat_strikeouts = 0
-        # self.bat_walks = 0
-        # self.bat_hbp = 0
 
-        # self.putouts = 0
-        # self.assists = 0
-        # self.throwingerrors = 0
-        # self.catchingerrors = 0
+        self.og_contact = self.contact
+        self.og_power = self.power
+        self.og_discipline = self.discipline
+        self.og_eye = self.eye
+        self.og_basereaction = self.basereaction 
+        self.og_baserunning = self.baserunning
+        self.og_speed = self.speed
+        self.og_throwpower = self.throwpower 
+        self.og_throwacc = self.throwacc
+        self.og_fieldcatch = self.fieldcatch 
+        self.og_fieldreact = self.fieldreact  
+        self.og_fieldspot = self.fieldspot
+        self.og_catchframe = self.catchframe
+        self.og_catchsequence = self.catchsequence 
+        self.og_pthrowpower = self.pthrowpower 
+        self.og_pgencontrol = self.pgencontrol  
+        self.og_pickoff = self.pickoff
+        self.og_psequencing = self.psequencing
+        self.og_pitch1pacc = self.pitch1.pacc
+        self.og_pitch1pcntrl = self.pitch1.pcntrl 
+        self.og_pitch1pbrk = self.pitch1.pbrk
+        self.og_pitch2pacc = self.pitch2.pacc
+        self.og_pitch2pcntrl = self.pitch2.pcntrl
+        self.og_pitch2pbrk = self.pitch2.pbrk
+        self.og_pitch3pacc = self.pitch3.pacc  
+        self.og_pitch3pcntrl = self.pitch3.pcntrl 
+        self.og_pitch3pbrk = self.pitch3.pbrk
+        self.og_pitch4pacc = self.pitch4.pacc
+        self.og_pitch4pcntrl = self.pitch4.pcntrl
+        self.og_pitch4pbrk = self.pitch4.pbrk
+        self.og_pitch5pacc = self.pitch5.pacc
+        self.og_pitch5pcntrl = self.pitch5.pcntrl 
+        self.og_pitch5pbrk = self.pitch5.pbrk 
 
-        # self.currentbase = 0
-        # self.stealattempts = 0
-        # self.stealsuccess = 0  
-        # self.runs = 0
+
+
+
 
         self.fieldingstats = Stats.FieldingStats(self.id, self.lineup, self.name)
         self.battingstats = Stats.BattingStats(self.id, self.lineup, self.name)
@@ -211,6 +224,41 @@ class Player():
             "lineup": self.lineup,
             "injurystate": self.injurystate
             }
+
+    def AbilityMod(self):
+        self.contact = round( self.og_contact * self.abilitymodifierscore, 2)
+        self.power = round( self.og_power * self.abilitymodifierscore, 2)
+        self.discipline = round( self.og_discipline * self.abilitymodifierscore, 2)
+        self.eye = round( self.og_eye * self.abilitymodifierscore, 2)
+        self.basereaction = round( self.og_basereaction * self.abilitymodifierscore, 2)
+        self.baserunning = round( self.og_baserunning * self.abilitymodifierscore, 2)
+        self.speed = round( self.og_speed * self.abilitymodifierscore, 2)
+        self.throwpower = round( self.og_throwpower * self.abilitymodifierscore, 2)
+        self.throwacc = round( self.og_throwacc * self.abilitymodifierscore, 2)
+        self.fieldcatch = round( self.og_fieldcatch * self.abilitymodifierscore, 2)
+        self.fieldreact = round( self.og_fieldreact * self.abilitymodifierscore, 2)
+        self.fieldspot = round( self.og_fieldspot * self.abilitymodifierscore, 2)
+        self.catchframe = round( self.og_catchframe * self.abilitymodifierscore, 2)
+        self.catchsequence = round( self.og_catchsequence * self.abilitymodifierscore, 2)
+        self.pthrowpower = round( self.og_pthrowpower * self.abilitymodifierscore, 2)
+        self.pgencontrol = round( self.og_pgencontrol * self.abilitymodifierscore, 2)
+        self.pickoff = round( self.og_pickoff * self.abilitymodifierscore, 2)
+        self.psequencing = round( self.og_psequencing * self.abilitymodifierscore, 2)
+        self.pitch1.pacc = round( self.og_pitch1pacc * self.abilitymodifierscore, 2)
+        self.pitch1.pcntrl = round( self.og_pitch1pcntrl * self.abilitymodifierscore, 2)
+        self.pitch1.pbrk = round( self.og_pitch1pbrk * self.abilitymodifierscore, 2)
+        self.pitch2.pacc = round( self.og_pitch2pacc * self.abilitymodifierscore, 2)
+        self.pitch2.pcntrl = round( self.og_pitch2pcntrl * self.abilitymodifierscore, 2)
+        self.pitch2.pbrk = round( self.og_pitch2pbrk * self.abilitymodifierscore, 2)
+        self.pitch3.pacc = round( self.og_pitch3pacc * self.abilitymodifierscore, 2)
+        self.pitch3.pcntrl = round( self.og_pitch3pcntrl * self.abilitymodifierscore, 2)
+        self.pitch3.pbrk = round( self.og_pitch3pbrk * self.abilitymodifierscore, 2)
+        self.pitch4.pacc = round( self.og_pitch4pacc * self.abilitymodifierscore, 2)
+        self.pitch4.pcntrl = round( self.og_pitch4pcntrl * self.abilitymodifierscore, 2)
+        self.pitch4.pbrk = round( self.og_pitch4pbrk * self.abilitymodifierscore, 2)
+        self.pitch5.pacc = round( self.og_pitch5pacc * self.abilitymodifierscore, 2)
+        self.pitch5.pcntrl = round( self.og_pitch5pcntrl * self.abilitymodifierscore, 2)
+        self.pitch5.pbrk = round( self.og_pitch5pbrk * self.abilitymodifierscore, 2)
 
     class CreatePitch():
         def __init__(self, pitchname, ovr, pacc, pcntrl, pbrk, consist):
