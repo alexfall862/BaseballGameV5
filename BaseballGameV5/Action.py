@@ -118,7 +118,7 @@ class Action():
 
     def Processing(self):
         #print(self.game.outcount)
-        self.game.currentouts += self.game.outcount
+        #self.game.currentouts += self.game.outcount
         #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
         self.game.battingteam.score += len(self.game.current_runners_home)
         for runners in self.game.current_runners_home:
