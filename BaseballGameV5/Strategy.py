@@ -7,11 +7,12 @@ class Strategy():
     
     class PlayerStrat():
         def __init__(self, playerstrat):
-            #print(playerstrat)
+            print(playerstrat)
             self.id = playerstrat['id']
             self.stealfreq = playerstrat['stealfreq']
             self.pickofffreq = playerstrat['pickofffreq']
             self.pitchpull = playerstrat['pitchpull']
+            self.pulltend = playerstrat['pulltend']
             self.plateapproach = playerstrat['plateapproach']
             self.pitchchoices = playerstrat['pitchchoices']
             

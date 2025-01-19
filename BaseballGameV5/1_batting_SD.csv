@@ -1,10 +1,10 @@
 pid,position,name,games_started,game_appearances,at_bats,plate_appearances,runs,singles,doubles,triples,homeruns,stolen_bases,caught_stealing,walks,strikeouts,hbp,ibb,bases,hits,totalbases
-58370,catcher,John Benzschawel,0,0,0,42,10,0,0,0,0,0,0,0,0,0,0,2,0,0
-47666,shortstop,Bob Small,0,0,0,45,13,0,0,0,0,0,0,1,0,0,0,3,0,0
-39758,centerfield,Dave Eckert,0,0,0,48,9,0,0,0,0,0,0,0,0,0,0,0,0,0
-37689,leftfield,Benny Powell,0,0,0,49,10,0,0,0,0,0,0,0,0,0,0,2,0,0
-51817,secondbase,Delos Echols,0,0,0,41,11,0,0,0,0,0,0,1,0,0,0,3,0,0
-45013,rightfield,Oil Can Vardell,0,0,0,38,10,0,0,0,0,0,0,0,0,0,0,1,0,0
-44251,designatedhitter,Glenn Jones,0,0,0,37,12,0,0,0,0,0,0,0,0,0,0,0,0,0
-55204,firstbase,Jerry Johnson,0,0,0,50,11,0,0,0,0,0,0,2,0,0,0,2,0,0
-66286,thirdbase,Teyo Miraldi,0,0,0,48,10,0,0,0,0,0,0,1,0,0,0,2,0,0
+58370,catcher,John Benzschawel,0,0,0,35,5,0,0,0,0,0,0,0,0,0,0,0,0,0
+47666,shortstop,Bob Small,0,0,0,36,5,0,0,0,0,0,0,1,0,0,0,1,0,0
+39758,centerfield,Dave Eckert,0,0,0,33,6,0,0,0,0,0,0,1,0,0,0,1,0,0
+37689,leftfield,Benny Powell,0,0,0,33,5,0,0,0,0,0,0,0,0,0,0,1,0,0
+51817,secondbase,Delos Echols,0,0,0,34,5,0,0,0,0,0,0,0,0,0,0,0,0,0
+45013,rightfield,Oil Can Vardell,0,0,0,23,8,0,0,0,0,0,0,0,0,0,0,0,0,0
+44251,designatedhitter,Glenn Jones,0,0,0,33,7,0,0,0,0,0,0,0,0,0,0,1,0,0
+55204,firstbase,Jerry Johnson,0,0,0,34,6,0,0,0,0,0,0,0,0,0,0,1,0,0
+66286,thirdbase,Teyo Miraldi,0,0,0,37,3,0,0,0,0,0,0,0,0,0,0,0,0,0

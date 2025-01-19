@@ -1,2 +1,3 @@
 pid,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
-43617,starter,Darrion Smith,0,0,0,0,8.999999999999998,256,62,143,0,27,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-6.0
+58966,relief,Tom Nicol,0,0,0,0,3.0,43,8,31,0,9,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-6.0
+43617,starter,Darrion Smith,0,0,0,0,3.0,104,27,52,0,9,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-6.0

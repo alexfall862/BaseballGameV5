@@ -259,7 +259,10 @@
         }
       },
       "energytickcap": 1.5,
-      "energystep":  2
+      "energystep": 2,
+      "shortleash": 0.8,
+      "normalleash": 0.7,
+      "longleash": 0.5
     }
   },
   {
@@ -522,7 +525,10 @@
         }
       },
       "energytickcap": 1.5,
-      "energystep": 2
+      "energystep": 2,
+      "shortleash": 0.8,
+      "normalleash": 0.7,
+      "longleash": 0.5
     }
   }
 

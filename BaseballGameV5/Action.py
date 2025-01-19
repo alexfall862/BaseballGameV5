@@ -217,7 +217,7 @@ def NextAtBat(self):
         self.game.ab_over = False
         self.game.current_runners_home = []
         self.game.battingteam.TickBatter()
-    
+        self.game.pitchingteam.DecidePitchingChange()    
 
 def AtBatOutcomeParser(self):
     if self.outcome[0] == 'Strike':
@@ -272,7 +272,7 @@ def OutProcessor(self):
     self.game.pitchingteam.TickInningsPlayed()
     WalkoffCheck(self)  
     if (self.game.currentouts) < self.game.rules.outs:
-        #self.game.currentouts += self.game.outcount 
+        self.game.currentouts += self.game.outcount 
         self.game.outcount = 0
     elif (self.game.currentouts + self.game.outcount) >= self.game.rules.outs:
         InningFlip(self)    

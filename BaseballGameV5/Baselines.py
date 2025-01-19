@@ -25,7 +25,7 @@ class Baselines():
         self.modexp = float(baselines["modexp"])    
         self.steal_success = float(baselines["steal_success"])
         self.pickoff_success = float(baselines["pickoff_success"])	
-        self.error_rate = 400# float(baselines["error_rate"])
+        self.error_rate = float(baselines["error_rate"])
 
         spread = load["spread"]
         self.spread_leftline = spread["leftline"]
@@ -52,6 +52,10 @@ class Baselines():
 
         self.energytickcap = load["energytickcap"]
         self.energystep = load["energystep"]
+
+        self.shortleash = load["shortleash"]
+        self.normalleash = load["normalleash"]
+        self.longleash = load["longleash"]
 
     def __repr__(self):
         return f"{self.leaguetype}"

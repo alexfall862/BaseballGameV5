@@ -149,6 +149,25 @@ class Team():
     def InjuryCheck(self):
         pass
 
+    def DecidePitchingChange(self):
+        playerstrat = [playerstrat for playerstrat in self.strategy.playerstrategy if playerstrat.id == self.currentpitcher.id][0]
+
+
+        if self.currentpitcher.pitchingstats.pitches_thrown > playerstrat.pitchpull:
+            print(f"pitches exceeded {self.currentpitcher.pitchingstats.pitches_thrown} / {playerstrat.pitchpull}")
+            self.ChooseReliefPitcher()
+        
+        if playerstrat.pulltend == 'normal':
+            pulltend = self.baselines.normalleash
+        elif playerstrat.pulltend == 'quick':
+            pulltend = self.baselines.shortleash
+        elif playerstrat.pulltend == 'long':
+            pulltend = self.baselines.longleash
+
+        if self.currentpitcher.abilitymodifierscore < pulltend:
+            print(f"manager pulls: {playerstrat.pulltend} / {self.currentpitcher.pitchingstats.pitches_thrown} / {self.currentpitcher.abilitymodifierscore}")
+            self.ChooseReliefPitcher()
+
 def find_index(objectlist, attribute, targetvalue):
     for index, obj in enumerate(objectlist):
         if getattr(obj, attribute) == targetvalue:
