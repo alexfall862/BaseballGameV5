@@ -1,10 +1,10 @@
 pid,position,name,games_started,game_appearances,at_bats,plate_appearances,runs,singles,doubles,triples,homeruns,stolen_bases,caught_stealing,walks,strikeouts,hbp,ibb,bases,hits,totalbases
-55577,catcher,Jared Harris,0,0,0,22,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-55820,designatedhitter,John Williams,0,0,0,28,2,0,0,0,0,0,0,0,0,0,0,0,0,0
-66117,secondbase,Stephen Smith,0,0,0,21,2,0,0,0,0,0,0,0,0,0,0,0,0,0
-45348,rightfield,Tony Everett,0,0,0,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-63233,shortstop,Karlos Smith,0,0,0,22,2,0,0,0,0,0,0,1,0,0,0,1,0,0
-61452,centerfield,A.J. Oswalt,0,0,0,23,2,0,0,0,0,0,0,1,0,0,0,1,0,0
-53116,firstbase,John Redmond,0,0,0,22,2,0,0,0,0,0,0,0,0,0,0,0,0,0
-45707,thirdbase,Steve Delong,0,0,0,23,2,0,0,0,0,0,0,0,0,0,0,0,0,0
-53288,leftfield,Logan Stephens,0,0,0,33,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+55577,catcher,Jared Harris,0,0,0,20,3,0,0,0,0,0,0,0,0,0,0,0,0,0
+55820,designatedhitter,John Williams,0,0,0,34,2,0,0,0,0,0,0,0,0,0,0,0,0,0
+66117,secondbase,Stephen Smith,0,0,0,19,1,0,0,0,0,0,0,0,0,0,0,0,0,0
+45348,rightfield,Tony Everett,0,0,0,34,4,0,0,0,0,0,0,0,0,0,0,0,0,0
+63233,shortstop,Karlos Smith,0,0,0,26,2,0,0,0,0,0,0,1,0,0,0,1,0,0
+61452,centerfield,A.J. Oswalt,0,0,0,27,2,0,0,0,0,0,0,1,0,0,0,1,0,0
+53116,firstbase,John Redmond,0,0,0,32,4,0,0,0,0,0,0,0,0,0,0,1,0,0
+45707,thirdbase,Steve Delong,0,0,0,23,3,0,0,0,0,0,0,0,0,0,0,0,0,0
+53288,leftfield,Logan Stephens,0,0,0,16,4,0,0,0,0,0,0,0,0,0,0,0,0,0

@@ -1,3 +1,4 @@
 pid,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
-52697,starter,Neal Asiodu,0,0,0,0,7.33333333333333,102,21,51,0,10,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-2.727
-55136,relief,Kerry Barnhardt,0,0,0,0,4.666666666666666,81,32,30,0,6,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-2.571
+52697,starter,Neal Asiodu,0,0,0,0,6.999999999999997,101,29,38,0,6,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-1.714
+55136,relief,Kerry Barnhardt,0,0,0,0,4.333333333333333,102,32,42,0,2,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-0.923
+49781,relief,Brooks Williams,0,0,0,0,0.6666666666666666,11,2,5,0,0,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,0.0

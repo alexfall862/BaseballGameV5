@@ -154,7 +154,7 @@ class Team():
 
 
         if self.currentpitcher.pitchingstats.pitches_thrown > playerstrat.pitchpull:
-            print(f"pitches exceeded {self.currentpitcher.pitchingstats.pitches_thrown} / {playerstrat.pitchpull}")
+            #print(f"pitches exceeded {self.currentpitcher.pitchingstats.pitches_thrown} / {playerstrat.pitchpull}")
             self.ChooseReliefPitcher()
         
         if playerstrat.pulltend == 'normal':
@@ -165,7 +165,7 @@ class Team():
             pulltend = self.baselines.longleash
 
         if self.currentpitcher.abilitymodifierscore < pulltend:
-            print(f"manager pulls: {playerstrat.pulltend} / {self.currentpitcher.pitchingstats.pitches_thrown} / {self.currentpitcher.abilitymodifierscore}")
+            #print(f"manager pulls: {playerstrat.pulltend} / {self.currentpitcher.pitchingstats.pitches_thrown} / {self.currentpitcher.abilitymodifierscore}")
             self.ChooseReliefPitcher()
 
 def find_index(objectlist, attribute, targetvalue):
