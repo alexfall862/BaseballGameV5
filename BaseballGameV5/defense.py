@@ -34,7 +34,8 @@ class fielding():
             self.basepaths.HandleHomeRun()
         else:
             if self.batted_ball_outcome == 'out':
-                error_on_catch = Error_Catch(self, None, self.fieldingdefender)
+                error_on_catch, d_action = Error_Catch(self, None, self.fieldingdefender)
+                self.defensiveactions.append(d_action)
                 if error_on_catch == True:
                     self.basepaths.RunnerMover("fielding error")
 
@@ -112,7 +113,8 @@ class fielding():
         #print(f"Catcher: {catcher}")
 
         #print(f"Fielding Defender: {self.fieldingdefender}")
-        throw, catch = Error_Throw_Catch(self, self.fieldingdefender, catcher)
+        throw, catch, d_action = Error_Throw_Catch(self, self.fieldingdefender, catcher)
+        self.defensiveactions.append(d_action)
         if throw == False:
             pass
         if catch == False:
@@ -228,9 +230,10 @@ class fielding():
     
 def Error_Throw_Catch(self, thrower, catcher):
     print(f"{thrower.lineup, thrower.name} throws to {catcher.lineup, catcher.name}")
-    throw = Error_Catch(self, thrower, catcher)
-    catch = Error_Throw(self, thrower, catcher)
-    return throw, catch
+    throw, t_action = Error_Catch(self, thrower, catcher)
+    catch, c_action = Error_Throw(self, thrower, catcher)
+    defensiveaction = str(t_action) + " " + str(c_action)
+    return throw, catch, defensiveaction
 
 def Error_Catch(self, thrower, catcher):
     #print("catch error")
@@ -254,12 +257,15 @@ def Error_Catch(self, thrower, catcher):
         cweights = [1, 2, 3]   
     error_rate = (1+np.average(cscores, weights=cweights))*baselines.error_rate
     if error_rate > diceroll:
-        self.basepaths.RunnerMover("throwing error")
+        self.basepaths.RunnerMover("fielding error")
         self.errorlist.append(f"{catcher} catching error!")
         catcher.fieldingstats.Adder("catching_errors", 1)
-        return True 
+        return True, None 
     else: 
-        return False        
+        if thrower == None:
+            return False, f"Ball caught by {catcher.lineup} {catcher.name}"        
+        else:
+            return False, f"{thrower.lineup} {thrower.name}'s throw caught by {catcher.lineup} {catcher.name}"        
 
 def Error_Throw(self, thrower, catcher):
     #print("throw error")
@@ -288,9 +294,9 @@ def Error_Throw(self, thrower, catcher):
         self.basepaths.RunnerMover("throwing error")
         self.errorlist.append(f"{thrower} throws it wide!")
         thrower.fieldingstats.Adder("throwing_errors", 1)
-        return True 
+        return True, None 
     else: 
-        return False        
+        return False, f"{thrower.lineup} {thrower.name} throws it to {catcher.lineup} {catcher.name}"        
 
 def Throw_CatchDepth(thrower):
     if thrower.lineup == 'leftfield' or thrower.lineup == 'centerfield' or thrower.lineup == 'rightfield':

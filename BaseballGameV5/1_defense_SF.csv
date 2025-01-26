@@ -1,12 +1,12 @@
 pid,position,name,throwing_errors,catching_errors,assists,putouts,innings_played,errors,defensive_chances,fielding_percentage
-52697,starter,Neal Asiodu,0,0,0,0,6.999999999999997,0,0,
-55577,catcher,Jared Harris,0,1,0,0,12.000000000000004,1,1,0.0
-55136,relief,Kerry Barnhardt,4,0,0,0,4.333333333333333,4,4,0.0
-49781,relief,Brooks Williams,0,0,0,0,0.6666666666666666,0,0,
-66117,secondbase,Stephen Smith,1,3,0,0,12.000000000000004,4,4,0.0
-45348,rightfield,Tony Everett,4,0,0,0,12.000000000000004,4,4,0.0
+52697,starter,Neal Asiodu,1,0,0,0,6.666666666666664,1,1,0.0
+55577,catcher,Jared Harris,0,0,0,0,12.000000000000004,0,0,
+55136,relief,Kerry Barnhardt,1,0,0,0,4.999999999999999,1,1,0.0
+49781,relief,Brooks Williams,0,0,0,0,0.3333333333333333,0,0,
+66117,secondbase,Stephen Smith,0,2,0,0,12.000000000000004,2,2,0.0
+45348,rightfield,Tony Everett,0,0,0,0,12.000000000000004,0,0,
 63233,shortstop,Karlos Smith,0,0,0,0,12.000000000000004,0,0,
 61452,centerfield,A.J. Oswalt,0,1,0,0,12.000000000000004,1,1,0.0
 53116,firstbase,John Redmond,0,0,0,0,12.000000000000004,0,0,
-45707,thirdbase,Steve Delong,0,2,0,0,12.000000000000004,2,2,0.0
+45707,thirdbase,Steve Delong,0,0,0,0,12.000000000000004,0,0,
 53288,leftfield,Logan Stephens,0,0,0,0,12.000000000000004,0,0,

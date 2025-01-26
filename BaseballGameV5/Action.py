@@ -126,7 +126,7 @@ class Action():
             #print(f"RUNNERS CHECK: {runners.earned_bool} {runners.on_base_pitcher}")
             
         self.game.actions.append(self.ActionPrint())#[self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
-        #print(f"{self.id} {self.defensiveoutcome}")
+        print(f"{self.id} {self.defensiveoutcome}")
         NextAction(self)
         NextAtBat(self)        
 
