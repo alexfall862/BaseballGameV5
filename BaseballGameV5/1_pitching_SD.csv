@@ -1,4 +1,3 @@
 pid,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
-58966,relief,Tom Nicol,0,0,0,0,4.666666666666666,101,37,45,0,6,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-2.571
-43617,starter,Darrion Smith,0,0,0,0,5.666666666666665,103,28,50,0,7,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-2.471
-50579,relief,David Gillery,0,0,0,0,0.3333333333333333,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,0.0
+58966,relief,Tom Nicol,0,0,0,0,5.999999999999998,80,50,68,0,4,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-1.333
+43617,starter,Darrion Smith,0,0,0,0,5.999999999999998,101,46,112,0,10,0,0,0,0,0,0,0,0,0,0,0.0,0,0.0,-3.333

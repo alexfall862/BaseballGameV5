@@ -40,6 +40,22 @@ class InningStats():
     def __repr__(self):
         return f"{self.inning, self.team, self.score}"
 
+def OutcomeStatAdder(pitcher, batter, stat):
+    if stat == "single":
+        stattoadd = "singles"
+    if stat == "double":
+        stattoadd = "doubles"
+    if stat == "triple":
+        stattoadd = "triples"
+    if stat == "homeruns":
+        stattoadd = "homeruns"
+
+
+
+    #pitcher.pitchingstats.Adder(stattoadd, 1)
+    pass
+
+
 class PitchingStats():
     def __init__(self, pid, position, name):
         self.pid = pid
