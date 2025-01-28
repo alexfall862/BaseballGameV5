@@ -131,6 +131,7 @@ class Baselines():
         return data
 
     def LoadLeagueType(ruletype):
+        print(ruletype)
         directory = f'..\\Baselines\\'
         keyword = "_" + "baseline" + "_.json"
         for fname in os.listdir(directory):

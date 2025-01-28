@@ -1,10 +1,10 @@
 pid,teamname,position,name,throwing_errors,catching_errors,assists,putouts,innings_played,errors,defensive_chances,fielding_percentage
-43617,SD,starter,Darrion Smith,0,0,0,0,12.000000000000004,0,0,
 58370,SD,catcher,John Benzschawel,0,0,0,0,12.000000000000004,0,0,
+52815,SD,starter,Darnell O'Neil,0,0,0,0,12.000000000000004,0,0,
 47666,SD,shortstop,Bob Small,0,0,0,0,12.000000000000004,0,0,
 39758,SD,centerfield,Dave Eckert,0,0,0,0,12.000000000000004,0,0,
 37689,SD,leftfield,Benny Powell,0,0,0,0,12.000000000000004,0,0,
-51817,SD,secondbase,Delos Echols,0,1,0,0,12.000000000000004,1,1,0.0
+51817,SD,secondbase,Delos Echols,0,0,0,0,12.000000000000004,0,0,
 45013,SD,rightfield,Oil Can Vardell,0,0,0,0,12.000000000000004,0,0,
 55204,SD,firstbase,Jerry Johnson,0,1,0,0,12.000000000000004,1,1,0.0
 66286,SD,thirdbase,Teyo Miraldi,0,0,0,0,12.000000000000004,0,0,

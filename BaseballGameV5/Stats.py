@@ -286,3 +286,119 @@ def StatSaverJSON(objects, filename):
 def StatSaverCombo(objects, filename):
     StatSaverCSV(objects, filename)
     StatSaverJSON(objects, filename)
+
+def GameJSONCombiner(resultdict):
+    battingstats = BatJSONCombiner(resultdict)
+    pitchingstats = PitchJSONCombiner(resultdict)
+    fieldingstats = FieldJSONCombiner(resultdict)
+    resultsstats = ResultsJSONCombiner(resultdict)
+
+
+
+
+def BatJSONCombiner(resultdict):
+    batters = []
+    for game in resultdict.values():
+        for player in game['stats']['batting']:
+            batstat = SCObject(**player)
+            batters.append(batstat)
+    batters = BatDeDuper(batters)
+    for batter in batters:
+        JSONCombineBat(batter)
+        print(batter.__dict__)
+    return batters
+
+def PitchJSONCombiner(resultdict):
+    pitchers = []
+    for game in resultdict.values():
+        for player in game['stats']['pitching']:
+            pitchstat = SCObject(**player)
+            pitchers.append(pitchstat)
+    pitchers = PitchDeDuper(pitchers)
+    for pitcher in pitchers:
+        JSONCombinePitch(pitcher)
+        print(pitcher.__dict__)
+    return pitchers
+
+def FieldJSONCombiner(resultdict):
+    fielders = []
+    for game in resultdict.values():
+        for player in game['stats']['fielding']:
+            fieldstat = SCObject(**player)
+            fielders.append(fieldstat)
+    fielders = FieldDeDuper(fielders)
+    for fielder in fielders:
+        JSONCombineField(fielder)
+        print(fielder.__dict__)
+    return fielders
+
+def ResultsJSONCombiner(resultdict):
+    results = []
+    for game in resultdict.values():
+        for result in game['result']:
+            result_obj = SCObject(**result)
+            results.append(result_obj)
+    results = ResultsDeDuper(results)
+    for result in results:
+        JSONCombineResults(result)
+        print(result.__dict__)
+    return results
+
+
+
+
+class SCObject:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+def PitchDeDuper(pitchers):
+    return pitchers
+
+def FieldDeDuper(fielders):
+    return fielders
+
+def ResultsDeDuper(results):
+    return results
+
+def BatDeDuper(players):
+    result = {}
+    for player in players:
+        if player.pid in result:
+            result[player.pid].games_started += player.games_started
+            result[player.pid].game_appearances += player.game_appearances
+            result[player.pid].at_bats += player.at_bats
+            result[player.pid].runs += player.runs
+            result[player.pid].singles += player.singles
+            result[player.pid].doubles += player.doubles
+            result[player.pid].triples += player.triples
+            result[player.pid].homeruns += player.homeruns
+            result[player.pid].stolen_bases += player.stolen_bases
+            result[player.pid].caught_stealing += player.caught_stealing
+            result[player.pid].walks += player.walks
+            result[player.pid].strikeouts += player.strikeouts
+            result[player.pid].hbp += player.hbp
+            result[player.pid].ibb += player.ibb
+            result[player.pid].bases += player.bases
+            result[player.pid].triples += player.triples
+            result[player.pid].triples += player.triples
+            result[player.pid].triples += player.triples
+            result[player.pid].triples += player.triples
+
+        else:
+            result[player.pid] = player
+    return list(result.values())
+
+
+def JSONCombineBat(batstats):
+    batstats.hits = batstats.singles + batstats.doubles + batstats.triples + batstats.homeruns
+    batstats.totalbases = ((1*batstats.singles) + (2*batstats.doubles) + (3*batstats.triples) + (4*batstats.homeruns))
+    if batstats.at_bats == 0:
+        batstats.avg = 0
+        batstats.obp = 0
+        batstats.slg = 0
+        batstats.ops = 0
+    else:
+        batstats.avg = round( (batstats.hits/batstats.at_bats), 3 )
+        batstats.obp = round( (batstats.hits + batstats.walks + batstats.hbp)/(batstats.at_bats + batstats.walks + batstats.hbp), 3 )
+        batstats.slg = round( batstats.totalbases/batstats.at_bats, 3)
+        batstats.ops = round( (batstats.obp + batstats.slg), 3 )

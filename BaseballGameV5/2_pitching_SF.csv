@@ -1,2 +1,2 @@
 pid,teamname,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
-43617,SD,starter,Darrion Smith,0,0,2,0,12.000000000000004,127,64,134,1,12,2,0,0,0,0,0,0,0,1,0,1.5,2,0.25,0.417
+66199,SF,starter,Bill McCoo,0,0,1,0,12.000000000000004,170,140,142,7,10,1,0,0,1,0,0,0,0,1,0,0.75,2,0.75,1.167

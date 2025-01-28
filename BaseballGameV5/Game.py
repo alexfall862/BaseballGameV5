@@ -51,6 +51,10 @@ class Game():
         self.overallresults = []
         self.meta = Game.GameResult(self.gname, self.hometeam, self.awayteam, self.actions)
 
+    def ReturnBox(self):
+        test = stats.StatJSONConverter(self)
+        return test #stats.SaveJSON(test, "full_json_test")
+
     class GameResult():
         def __init__(self, gname, hometeam, awayteam, actions):
             self.id = gname
@@ -114,7 +118,6 @@ class Game():
         test = stats.StatJSONConverter(self)
 
         stats.SaveJSON(test, "full_json_test")
-        exit()
         
         with open(f"testoutput_{self.gname}.json", "w") as outfile:
             json.dump(actions_string, outfile)
