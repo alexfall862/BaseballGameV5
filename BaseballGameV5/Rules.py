@@ -6,7 +6,7 @@ class Rules():
     def __init__(self, ruletype):
         self.ruletype = ruletype
         rulesload = Rules.LoadRules(ruletype)        
-        self.innings = int(rulesload["Innings"])        
+        self.innings = 1450# int(rulesload["Innings"])        
         self.outs = int(rulesload["Outs"])
         self.balls = int(rulesload["Balls"])
         self.strikes = int(rulesload["Strikes"])

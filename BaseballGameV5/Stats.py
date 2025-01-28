@@ -40,21 +40,28 @@ class InningStats():
     def __repr__(self):
         return f"{self.inning, self.team, self.score}"
 
-def OutcomeStatAdder(pitcher, batter, stat):
+def OutcomeStatAdder(batter, pitcher, stat):
+    stattoadd = None
     if stat == "single":
+        #print("single properly counted")
         stattoadd = "singles"
     if stat == "double":
+        #print("double properly counted")
         stattoadd = "doubles"
     if stat == "triple":
         stattoadd = "triples"
-    if stat == "homeruns":
+    if stat == "homerun":
         stattoadd = "homeruns"
+    if stattoadd != None:
+        batter.battingstats.Adder(stattoadd, 1)
+        pitcher.pitchingstats.Adder(stattoadd, 1)
 
-
-
-    #pitcher.pitchingstats.Adder(stattoadd, 1)
-    pass
-
+def RunScorer(runner):
+    runner.battingstats.Adder("runs", 1)
+    if runner.earned_bool == True:
+        runner.on_base_pitcher.pitchingstats.Adder("earned_runs", 1)
+    else:
+        runner.on_base_pitcher.pitchingstats.Adder("unearned_runs", 1)
 
 class PitchingStats():
     def __init__(self, pid, position, name):
@@ -143,7 +150,10 @@ class BattingStats():
         self.hits = self.singles + self.doubles + self.triples + self.homeruns
         self.totalbases = ((1*self.singles) + (2*self.doubles) + (3*self.triples) + (4*self.homeruns))
         if self.at_bats == 0:
-            pass
+            self.avg = 0
+            self.obp = 0
+            self.slg = 0
+            self.ops = 0
         else:
             self.avg = round( (self.hits/self.at_bats), 3 )
             self.obp = round( (self.hits + self.walks + self.hbp)/(self.at_bats + self.walks + self.hbp), 3 )
@@ -170,7 +180,11 @@ def StatPullFielding(team, gname):
         if player.fieldingstats.innings_played > 0:
             player.fieldingstats.Combiner()
             export.append(player.fieldingstats)
-            #print(f"defense: {player.fieldingstats.pid}")
+            #print(f"
+            #
+            #
+            #
+            #defense: {player.fieldingstats.pid}")
     return export, filename
 
 def StatPullPitching(team, gname):

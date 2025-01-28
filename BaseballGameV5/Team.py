@@ -42,6 +42,7 @@ class Team():
     def TickBatter(self):
         self.TickBatSpot()
         self.currentbatter = self.GrabBatter(self.currentbatspot)
+        self.currentbatter.battingstats.Adder("plate_appearances", 1)
 
     def TickBatSpot(self):
         if self.currentbatspot < 9:
@@ -53,10 +54,15 @@ class Team():
         return self.battinglist[(currentbatspot-1)]
 
     def GrabPositionPlayer(self, position):
-        return [player for player in self.roster.playerlist if player.lineup==position][0]
+        starter = [player for player in self.roster.playerlist if player.lineup==position][0]
+        starter.battingstats.Adder("games_started", 1)
+        starter.battingstats.Adder("game_appearances", 1)
+        return starter
        
     def GrabStartingPitcher(self, pitchervalue):
-        return [player for player in self.roster.playerlist if player.lineup=="starter" and player.pitchingorder==int(pitchervalue)][0]
+        starter = [player for player in self.roster.playerlist if player.lineup=="starter" and player.pitchingorder==int(pitchervalue)][0]
+        starter.pitchingstats.Adder("games_started", 1)
+        return starter
     
     def GrabBenchBats(self):
         return [player for player in self.roster.playerlist if player.lineup=="bench"]
@@ -66,6 +72,7 @@ class Team():
     
     def ChooseReliefPitcher(self):
         rpitchers = sorted(self.reliefpitchers, key=lambda x: x.rp_rating, reverse=True)
+        self.reliefpitchers = rpitchers
         newpitcher = self.reliefpitchers.pop(0)
         self.currentpitcher = newpitcher
         
@@ -152,11 +159,11 @@ class Team():
     def DecidePitchingChange(self):
         playerstrat = [playerstrat for playerstrat in self.strategy.playerstrategy if playerstrat.id == self.currentpitcher.id][0]
 
-
         if self.currentpitcher.pitchingstats.pitches_thrown > playerstrat.pitchpull:
             #print(f"pitches exceeded {self.currentpitcher.pitchingstats.pitches_thrown} / {playerstrat.pitchpull}")
-            self.ChooseReliefPitcher()
-        
+            #self.ChooseReliefPitcher()
+            pass 
+
         if playerstrat.pulltend == 'normal':
             pulltend = self.baselines.normalleash
         elif playerstrat.pulltend == 'quick':
@@ -166,7 +173,9 @@ class Team():
 
         if self.currentpitcher.abilitymodifierscore < pulltend:
             #print(f"manager pulls: {playerstrat.pulltend} / {self.currentpitcher.pitchingstats.pitches_thrown} / {self.currentpitcher.abilitymodifierscore}")
-            self.ChooseReliefPitcher()
+            #self.ChooseReliefPitcher()
+            pass
+            
 
 def find_index(objectlist, attribute, targetvalue):
     for index, obj in enumerate(objectlist):

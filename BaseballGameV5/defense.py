@@ -115,11 +115,11 @@ class fielding():
         #print(f"Fielding Defender: {self.fieldingdefender}")
         throw, catch, d_action = Error_Throw_Catch(self, self.fieldingdefender, catcher)
         self.defensiveactions.append(d_action)
-        if throw == False:
+        if throw == True:
             pass
-        if catch == False:
+        if catch == True:
             pass
-        if throw and catch == True:
+        if throw and catch == False:
             fielding.PickRunnerToRemove(self)
         self.fieldingdefender = catcher
         
@@ -229,7 +229,7 @@ class fielding():
         return outcome 
     
 def Error_Throw_Catch(self, thrower, catcher):
-    print(f"{thrower.lineup, thrower.name} throws to {catcher.lineup, catcher.name}")
+    #print(f"{thrower.lineup, thrower.name} throws to {catcher.lineup, catcher.name}")
     throw, t_action = Error_Catch(self, thrower, catcher)
     catch, c_action = Error_Throw(self, thrower, catcher)
     defensiveaction = str(t_action) + " " + str(c_action)
@@ -260,7 +260,7 @@ def Error_Catch(self, thrower, catcher):
         self.basepaths.RunnerMover("fielding error")
         self.errorlist.append(f"{catcher} catching error!")
         catcher.fieldingstats.Adder("catching_errors", 1)
-        return True, None 
+        return True, f"error by {catcher.lineup} {catcher.name}"
     else: 
         if thrower == None:
             return False, f"Ball caught by {catcher.lineup} {catcher.name}"        
@@ -294,7 +294,7 @@ def Error_Throw(self, thrower, catcher):
         self.basepaths.RunnerMover("throwing error")
         self.errorlist.append(f"{thrower} throws it wide!")
         thrower.fieldingstats.Adder("throwing_errors", 1)
-        return True, None 
+        return True, f"error by {thrower.lineup} {thrower.name}"
     else: 
         return False, f"{thrower.lineup} {thrower.name} throws it to {catcher.lineup} {catcher.name}"        
 
@@ -318,6 +318,7 @@ class BasePaths():
             self.baserunner_eval_list.append(batter)
             self.batter.base = 0
             self.batter.running = True
+            self.batter.on_base_pitcher = self.game.pitchingteam.currentpitcher
         if self.firstbase != None:
             self.baserunner_eval_list.append(firstbase)
             self.firstbase.base = 1
@@ -350,9 +351,13 @@ class BasePaths():
 
 
                 runner.base+=1
+                if len(self.fielding.errorlist) >= 1:
+                    runner.earned_bool = False
                 if runner.base > 3:
                     #runner.base = None
                     runner.running = None
+
+
                     self.at_home.append(runner)
                     self.baserunner_eval_list.remove(runner)
 
@@ -394,11 +399,11 @@ class BasePaths():
     def RunnerCheck(self, target, targetbase):
         #print(f"DEFENDER {self.defense.fieldingdefender.lineup} {self.defense.fieldingdefender.throwpower} {self.defense.fieldingdefender.throwacc}")
         for runner in self.baserunner_eval_list:
-            print(runner.base, runner.name, runner.speed, runner.baserunning)
+            #print(runner.base, runner.name, runner.speed, runner.baserunning)
             runner.running = None
 
         if self.batter.base == 0:
-            print("RUNNING")
+            #print("RUNNING")
             self.batter.running = True
 
     def WhereToThrow(self):

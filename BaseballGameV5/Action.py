@@ -121,12 +121,21 @@ class Action():
         #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
         self.game.battingteam.score += len(self.game.current_runners_home)
         for runners in self.game.current_runners_home:
-            runners.battingstats.Adder("runs", 1)
-            print(f"RUNNERS CHECK: {runners.earned_bool} {runners.on_base_pitcher}")
-        #if len(self.game.current_runners_home)>=1:
-        #    exit()
+            stats.RunScorer(runners)
+            #print(f"RUNNERS CHECK: {self.id} {runners.name} {runners.earned_bool} {runners.on_base_pitcher}")
+        
+            
+            
+        #stats.OutcomeStatAdder(self.game.pitchingteam.currentpitcher, self.game.battingteam.currentbatter, self.defensiveoutcome[6])
         self.game.actions.append(self.ActionPrint())#[self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
-        print(f"{self.id} {self.defensiveoutcome}")
+        print(self.ActionPrint())
+        
+        
+        #print(f"
+        #
+        #
+        #
+        #{self.id} {self.defensiveoutcome}")
         NextAction(self)
         NextAtBat(self)        
 
@@ -141,13 +150,11 @@ def HitEval(self):
     self.game.on_firstbase = self.defensiveoutcome[4][0]
     self.game.on_secondbase = self.defensiveoutcome[4][1]
     self.game.on_thirdbase = self.defensiveoutcome[4][2]
-    if self.defensiveoutcome[4][3] != None:
+    if self.defensiveoutcome[3] == "single" or self.defensiveoutcome[3] == "double" or self.defensiveoutcome[3] == "triple" or self.defensiveoutcome[3] == "homerun":
         listofrunners = self.defensiveoutcome[4][3]#.copy()
-        #print(f"SELF DEFENSIVEOUTCOME: ::: {len(listofrunners)}")
         for runner in listofrunners:
             self.game.current_runners_home.append(runner)
 
-                
 def WalkEval(self):
     if self.game.is_walk == True:
         self.game.battingteam.currentbatter.battingstats.Adder("walks", 1)
@@ -218,6 +225,10 @@ def NextAction(self):
 def NextAtBat(self):
     #print(self.game.ab_over)
     if self.game.ab_over == True:
+        if self.game.is_walk  == True or self.game.is_hbp == True:
+            pass
+        else: 
+            self.game.battingteam.currentbatter.battingstats.Adder("at_bats", 1)
         self.game.currentstrikes = 0
         self.game.currentballs = 0
         self.game.is_hit = False
@@ -228,6 +239,12 @@ def NextAtBat(self):
         self.game.is_walk = False
         self.game.is_strikeout = False
         self.game.ab_over = False
+        if self.game.on_firstbase != None:
+            self.game.on_firstbase.earned_bool = True
+        if self.game.on_secondbase != None:
+            self.game.on_secondbase.earned_bool = True
+        if self.game.on_thirdbase != None:
+            self.game.on_thirdbase.earned_bool = True
         self.game.current_runners_home = []
         self.game.battingteam.TickBatter()
         self.game.pitchingteam.DecidePitchingChange()    
@@ -262,7 +279,7 @@ def AtBatOutcomeParser(self):
         self.game.currentballs +=1
     
     if self.game.currentballs >= self.game.rules.balls:
-        stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)        
+        stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)
         self.game.ab_over = True
         self.game.is_walk = True
         
@@ -273,7 +290,7 @@ def AtBatOutcomeParser(self):
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
         #print("event fired")
         self.defensiveoutcome = d.fielding(self).defenseoutcome
-        stats.OutcomeStatAdder(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, self.defensiveoutcome[6])
+        stats.OutcomeStatAdder(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, self.defensiveoutcome[3])
         self.game.ab_over = True
     #print(f"{self.id}{self.defensiveoutcome}")
 

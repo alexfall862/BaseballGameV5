@@ -161,27 +161,37 @@ class Steals():
                         self.gamestate.game.is_stealattempt = True
                         #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
                         outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.thirdbase)
-                        if outcome == True:
-                            self.gamestate.defensiveoutcome = (None, None, None, "stolen base", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                            self.gamestate.game.is_stealsuccess = True
+
+                        if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                            self.gamestate.game.error_count+=1
+                            self.gamestate.game.current_runners_home.append(thirdbase)
+                            thirdbase.battingstats.Adder("stolen_bases", 1)
+                            self.gamestate.game.on_thirdbase = None
+                            if secondbase != None:
+                                self.gamestate.game.on_thirdbase = self.gamestate.game.on_secondbase                                
+                                self.gamestate.game.on_secondbase = None
+                            if firstbase != None:
+                                self.gamestate.game.on_secondbase = self.gamestate.game.on_firstbase
+                                self.gamestate.game.on_firstbase = None
+                            self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                        elif error_check[1] == True:
+                            self.gamestate.game.error_count+=1
+                            thirdbase.battingstats.Adder("stolen_bases", 1)
                             self.gamestate.game.current_runners_home.append(thirdbase)
                             self.gamestate.game.on_thirdbase = None
-                            if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
-                                self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                                self.gamestate.game.error_count+=1
-                                if secondbase != None:
-                                    self.gamestate.game.on_thirdbase = secondbase
-                                    self.gamestate.game.on_secondbase = None
-                                if firstbase != None:
-                                    self.gamestate.game.on_secondbase = firstbase
-                                    self.gamestate.game.on_firstbase = None
-                            elif error_check[1] == True:
-                                self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                                self.gamestate.game.error_count+=1
-                                pass
-                            return True
-                        elif outcome == False:
-                            return True
+                            self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                        elif error_check[0] and error_check[1] == False:
+                            if outcome == True:
+                                self.gamestate.game.is_stealsuccess = True
+                                self.gamestate.game.current_runners_home.append(thirdbase)
+                                thirdbase.battingstats.Adder("stolen_bases", 1)
+                                self.gamestate.game.on_thirdbase = None
+                                self.gamestate.defensiveoutcome = (None, None, None, "stolen base", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                                return True           
+                            if outcome == False:
+                                thirdbase.battingstats.Adder("caught_stealing", 1)
+                                self.gamestate.game.on_thirdbase = None
+                                self.gamestate.defensiveoutcome = (None, None, None, "caught stealing", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
                 else:
                     pass
                         #return True
@@ -195,27 +205,37 @@ class Steals():
                         self.gamestate.game.is_stealattempt = True
                         #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
                         outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, secondbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.secondbase)
-                        if outcome == True:
-                            self.gamestate.defensiveoutcome = (None, None, None, "stolen base", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                            self.gamestate.game.is_stealsuccess = True
-                            self.gamestate.game.on_thirdbase = secondbase
+
+                        if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                            self.gamestate.game.error_count+=1
+                            if thirdbase != None:
+                                self.gamestate.game.current_runners_home.append(thirdbase)
+                                self.gamestate.game.on_thirdbase = None
+                            secondbase.battingstats.Adder("stolen_bases", 1)
+                            self.gamestate.game.on_thirdbase = self.gamestate.game.on_secondbase
                             self.gamestate.game.on_secondbase = None
-                            if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
-                                self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                                self.gamestate.game.error_count+=1
-                                if thirdbase != None:
-                                    self.gamestate.game.current_runners_home.append(thirdbase)
-                                    self.gamestate.game.on_thirdbase = None
-                                if firstbase != None:
-                                    self.gamestate.game.on_secondbase = firstbase
-                                    self.gamestate.game.on_firstbase = None
-                            elif error_check[1] == True:
-                                self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                                self.gamestate.game.error_count+=1
-                                pass
-                            return True               
-                        elif outcome == False:
-                            return True                    
+                            if firstbase != None:
+                                self.gamestate.game.on_secondbase = self.gamestate.game.on_firstbase
+                                self.gamestate.game.on_firstbase = None
+                            self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                        elif error_check[1] == True:
+                            self.gamestate.game.error_count+=1
+                            secondbase.battingstats.Adder("stolen_bases", 1)
+                            self.gamestate.game.on_thirdbase = self.gamestate.game.on_secondbase
+                            self.gamestate.game.on_secondbase = None
+                            self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                        elif error_check[0] and error_check[1] == False:
+                            if outcome == True:
+                                self.gamestate.game.is_stealsuccess = True
+                                secondbase.battingstats.Adder("stolen_bases", 1)
+                                self.gamestate.game.on_thirdbase = secondbase
+                                self.gamestate.game.on_secondbase = None
+                                self.gamestate.defensiveoutcome = (None, None, None, "stolen base", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                                return True           
+                            if outcome == False:
+                                self.gamestate.game.on_secondbase = None
+                                secondbase.battingstats.Adder("caught_stealing", 1)
+                                self.gamestate.defensiveoutcome = (None, None, None, "caught stealing", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
                 else:
                     pass
                     
@@ -228,27 +248,37 @@ class Steals():
                         self.gamestate.game.is_stealattempt = True
                         #This should be edited because it's basically a player trying to steal against the catcher throwing it to himself. Might need new formula for just home base evals
                         outcome, error_check = Steals.calc_baserunning_math(self, self.gamestate.game.baselines.steal_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.catcher, self.gamestate.game.pitchingteam.firstbase)
-                        if outcome == True:
-                            self.gamestate.defensiveoutcome = (None, None, None, "stolen base", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                            self.gamestate.game.is_stealsuccess = True
-                            self.gamestate.game.on_secondbase = firstbase
+
+                        if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
+                            self.gamestate.game.error_count+=1
+                            if thirdbase != None:
+                                self.gamestate.game.current_runners_home.append(thirdbase)
+                                self.gamestate.game.on_thirdbase = None
+                            if secondbase != None:
+                                self.gamestate.game.on_thirdbase = secondbase
+                                self.gamestate.game.on_secondbase = None
+                            firstbase.battingstats.Adder("stolen_bases", 1)
+                            self.gamestate.game.on_secondbase = self.gamestate.game.on_firstbase
                             self.gamestate.game.on_firstbase = None
-                            if (error_check[0] == True and error_check[1] == True) or error_check[0] == True:
-                                self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                                self.gamestate.game.error_count+=1
-                                if thirdbase != None:
-                                    self.gamestate.game.current_runners_home.append(thirdbase)
-                                    self.gamestate.game.on_thirdbase = None
-                                if secondbase != None:
-                                    self.gamestate.game.on_thirdbase = secondbase
-                                    self.gamestate.game.on_secondbase = None
-                            elif error_check[1] == True:
-                                self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                                self.gamestate.game.error_count+=1
-                                pass
-                            return True           
-                        elif outcome == False:
-                            return True                    
+                            self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                        elif error_check[1] == True:
+                            self.gamestate.game.error_count+=1
+                            firstbase.battingstats.Adder("stolen_bases", 1)
+                            self.gamestate.game.on_secondbase = self.gamestate.game.on_firstbase
+                            self.gamestate.game.on_firstbase = None
+                            self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                        elif error_check[0] and error_check[1] == False:
+                            if outcome == True:
+                                self.gamestate.game.is_stealsuccess = True
+                                self.gamestate.game.on_secondbase = firstbase
+                                firstbase.battingstats.Adder("stolen_bases", 1)
+                                self.gamestate.game.on_firstbase = None
+                                self.gamestate.defensiveoutcome = (None, None, None, "stolen base", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
+                                return True           
+                            if outcome == False:
+                                self.gamestate.game.on_firstbase = None
+                                firstbase.battingstats.Adder("caught_stealing", 1)
+                                self.gamestate.defensiveoutcome = (None, None, None, "caught stealing", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
                 else:
                     pass
         return False
@@ -315,7 +345,7 @@ class Steals():
         
         #print(f"STEAL MAFFS: {diceroll}/{steal_outcome_odds}")
         
-        error_check_t, error_check_c,  d_action = Error_Throw_Catch(self, pitcher, baseman) #self.gamestate.game.baselines.Throw_Catch(pitcher, baseman) 
+        error_check_t, error_check_c,  d_action = Error_Throw_Catch(self, catcher, baseman) #self.gamestate.game.baselines.Throw_Catch(pitcher, baseman) 
         error_check = [error_check_t, error_check_c]
         self.defensiveactions.append(d_action)
         

@@ -39,7 +39,6 @@ class PitchEvent():
         pitch_eye_mod = float (self.pitch.ovr / self.batter.eye)        
         bat_disc_mod = float (self.batter.discipline / self.pitch.ovr)
         pitch_disc_mod = float (self.pitch.ovr / self.batter.discipline)   
-        self.batter.battingstats.Adder("plate_appearances", 1)
         if self.pitchlocation == "Inside":
             swing_w = self.insideswing * pitch_disc_mod
             look_w = self.insidelook * bat_disc_mod
