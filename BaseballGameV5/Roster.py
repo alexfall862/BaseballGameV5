@@ -12,10 +12,10 @@ class Roster():
         for fname in os.listdir(directory):
             if keyword in fname:
                 #print(fname, "has the keyword")
-                return Roster.Load(directory+f"\\"+fname)
+                return Roster.Load(directory+f"\\"+fname, teamname)
                  
 
-    def Load(directoryjson):
+    def Load(directoryjson, teamname):
         with open(str(directoryjson)) as f:
             data=json.load(f)
             
@@ -81,7 +81,8 @@ class Roster():
                         player['lineup'],
                         
                         player['injurystate'],
-                        player['energy']
+                        player['energy'],
+                        teamname
                     )
                )
 

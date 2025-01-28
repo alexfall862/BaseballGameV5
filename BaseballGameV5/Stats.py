@@ -64,8 +64,9 @@ def RunScorer(runner):
         runner.on_base_pitcher.pitchingstats.Adder("unearned_runs", 1)
 
 class PitchingStats():
-    def __init__(self, pid, position, name):
+    def __init__(self, pid, position, name, teamname):
         self.pid = pid
+        self.teamname = teamname
         self.position = position
         self.name = name
         self.win = 0
@@ -101,8 +102,9 @@ class PitchingStats():
         setattr(self, stat_name, new_value)
 
 class FieldingStats():
-    def __init__(self, pid, position, name):
+    def __init__(self, pid, position, name, teamname):
         self.pid = pid
+        self.teamname = teamname
         self.position = position
         self.name = name
         self.throwing_errors = 0
@@ -125,8 +127,9 @@ class FieldingStats():
         setattr(self, stat_name, new_value)
 
 class BattingStats():
-    def __init__(self, pid, position, name):
+    def __init__(self, pid, position, name, teamname):
         self.pid = pid
+        self.teamname = teamname
         self.position = position
         self.name = name
         self.games_started = 0
@@ -219,6 +222,55 @@ def BattingStatPullSave(team, gname):
     export, filename = StatPullBatting(team, gname)
     StatSaverCombo(export, filename)
 
+def StatJSONConverter(game):
+    game.hometeam
+    game.awayteam
+    game.actions
+    game.meta
+    
+    homebat, homepitch, homefield = TeamStatPull(game.hometeam)
+    awaybat, awaypitch, awayfield = TeamStatPull(game.awayteam)
+    #actions = ActionSort(game.actions)
+    actions = game.actions
+
+    homebatJSON = json.dumps([object.__dict__ for object in homebat])
+    homepitchJSON = json.dumps([object.__dict__ for object in homepitch])
+    homefieldJSON = json.dumps([object.__dict__ for object in homefield])
+    awaybatJSON = json.dumps([object.__dict__ for object in awaybat])
+    awaypitchJSON = json.dumps([object.__dict__ for object in awaypitch])
+    awayfieldJSON = json.dumps([object.__dict__ for object in awayfield])
+    actionsJSON = json.dumps([object for object in actions])
+    gamemetaJSON = json.dumps( game.meta.to_dict())
+
+    fullexport = {"result": json.loads(gamemetaJSON), "stats": {"batting": json.loads(homebatJSON) + json.loads(awaybatJSON), "pitching": json.loads(homepitchJSON) + json.loads(awaypitchJSON), "fielding": json.loads(homefieldJSON) + json.loads(awayfieldJSON), "playbyplay": json.loads(actionsJSON)}}
+
+
+    #fullexport = [homebatJSON, homepitchJSON, homefieldJSON, awaybatJSON, awaypitchJSON, awayfieldJSON, actionsJSON]
+
+    return fullexport
+
+def ActionSort(actions):
+    listofactions = []
+    for action in actions:
+        #print(action)
+        listofactions.append(action)    
+    export_dataframe = pd.DataFrame(listofactions)
+    export_dataframe.replace({"None": ""}, inplace=True)
+    return export_dataframe
+
+def TeamStatPull(team):
+    batting, test = StatPullBatting(team, "test")  
+    pitching, test = StatPullPitching(team, "test")  
+    fielding, test = StatPullFielding(team, "test")
+    #batting = pd.DataFrame(batting)
+    #pitching = pd.DataFrame(pitching)
+    #fielding = pd.DataFrame(fielding)
+    return batting, pitching, fielding
+
+
+def SaveJSON(data, filestring):
+    with open(str(filestring + ".json"), 'w') as jsonfile:
+        json.dump(data, jsonfile)
 
 def StatSaverCSV(objects, filename):
     with open(str(filename+".csv"), 'w', newline='') as csvfile:

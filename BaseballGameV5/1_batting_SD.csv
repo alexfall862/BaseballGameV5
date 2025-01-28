@@ -1,10 +1,10 @@
-pid,position,name,games_started,game_appearances,at_bats,plate_appearances,runs,singles,doubles,triples,homeruns,stolen_bases,caught_stealing,walks,strikeouts,hbp,ibb,bases,hits,totalbases,avg,obp,slg,ops
-58370,catcher,John Benzschawel,1,1,736,755,85,2,0,0,80,0,0,19,105,0,0,22,82,322,0.111,0.134,0.438,0.572
-47666,shortstop,Bob Small,1,1,731,755,48,1,1,0,45,1,0,23,88,0,0,24,47,183,0.064,0.093,0.25,0.343
-39758,centerfield,Dave Eckert,1,1,731,754,60,2,0,1,57,1,0,24,94,0,0,25,60,233,0.082,0.111,0.319,0.43
-37689,leftfield,Benny Powell,1,1,730,755,57,1,1,0,50,1,0,25,142,0,0,27,52,203,0.071,0.102,0.278,0.38
-51817,secondbase,Delos Echols,1,1,717,755,59,2,2,0,50,0,0,38,114,0,0,42,54,206,0.075,0.122,0.287,0.409
-45013,rightfield,Oil Can Vardell,1,1,733,754,57,3,0,0,53,0,0,21,209,0,0,24,56,215,0.076,0.102,0.293,0.395
-44251,designatedhitter,Glenn Jones,1,1,736,755,64,1,3,0,60,1,0,19,118,0,0,20,64,247,0.087,0.11,0.336,0.446
-55204,firstbase,Jerry Johnson,1,1,686,754,57,2,1,0,40,4,0,68,75,0,0,72,43,164,0.063,0.147,0.239,0.386
-66286,thirdbase,Teyo Miraldi,1,1,733,754,59,0,1,0,53,1,0,21,224,0,0,23,54,214,0.074,0.099,0.292,0.391
+pid,teamname,position,name,games_started,game_appearances,at_bats,plate_appearances,runs,singles,doubles,triples,homeruns,stolen_bases,caught_stealing,walks,strikeouts,hbp,ibb,bases,hits,totalbases,avg,obp,slg,ops
+58370,SD,catcher,John Benzschawel,1,1,5,5,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0.0,0.0,0.0,0.0
+47666,SD,shortstop,Bob Small,1,1,4,5,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0.0,0.2,0.0,0.2
+39758,SD,centerfield,Dave Eckert,1,1,5,4,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0.0,0.0,0.0,0.0
+37689,SD,leftfield,Benny Powell,1,1,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.0,0.0,0.0,0.0
+51817,SD,secondbase,Delos Echols,1,1,4,5,1,0,0,0,1,0,0,1,1,0,0,1,1,4,0.25,0.4,1.0,1.4
+45013,SD,rightfield,Oil Can Vardell,1,1,4,5,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0.0,0.0,0.0,0.0
+44251,SD,designatedhitter,Glenn Jones,1,1,5,5,1,0,0,0,1,0,0,0,1,0,0,0,1,4,0.2,0.2,0.8,1.0
+55204,SD,firstbase,Jerry Johnson,1,1,3,4,1,0,0,0,1,0,0,1,1,0,0,1,1,4,0.333,0.5,1.333,1.833
+66286,SD,thirdbase,Teyo Miraldi,1,1,4,5,0,0,0,0,0,0,0,1,1,0,0,2,0,0,0.0,0.2,0.0,0.2

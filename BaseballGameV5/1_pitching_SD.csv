@@ -1,2 +1,2 @@
-pid,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
-43617,starter,Darrion Smith,0,0,171,0,1933.333333333173,21213,11628,22808,313,2140,149,0,10,18,0,0,0,0,1,0,0.796,177,0.253,-0.726
+pid,teamname,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
+43617,SD,starter,Darrion Smith,0,0,2,0,12.000000000000004,122,72,118,1,12,2,0,0,0,0,0,0,0,1,0,1.5,2,0.25,0.417

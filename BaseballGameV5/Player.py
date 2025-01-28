@@ -10,7 +10,7 @@ class Player():
                  team, level,
                  sp_rating, rp_rating, c_rating, fb_rating, sb_rating, tb_rating, ss_rating, lf_rating, cf_rating, rf_rating, dh_rating,
                  battingorder, pitchingorder, lineup,
-                 injurystate, energy
+                 injurystate, energy, teamname
                  ): 
         
         self.id = pid
@@ -124,10 +124,10 @@ class Player():
 
 
 
-
-        self.fieldingstats = Stats.FieldingStats(self.id, self.lineup, self.name)
-        self.battingstats = Stats.BattingStats(self.id, self.lineup, self.name)
-        self.pitchingstats = Stats.PitchingStats(self.id, self.lineup, self.name)
+        self.teamname = teamname
+        self.fieldingstats = Stats.FieldingStats(self.id, self.lineup, self.name, self.teamname)
+        self.battingstats = Stats.BattingStats(self.id, self.lineup, self.name, self.teamname)
+        self.pitchingstats = Stats.PitchingStats(self.id, self.lineup, self.name, self.teamname)
         
     def __repr__(self):
         return f"{self.lineup} {self.name}"# {self.earned_bool} {self.on_base_pitcher}" # f"{self.__dict__}\n"

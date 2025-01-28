@@ -49,6 +49,22 @@ class Game():
         self.skip_bool = None
         self.actions = []
         self.overallresults = []
+        self.meta = Game.GameResult(self.gname, self.hometeam, self.awayteam, self.actions)
+
+    class GameResult():
+        def __init__(self, gname, hometeam, awayteam, actions):
+            self.id = gname
+            self.hometeam = hometeam
+            self.awayteam = awayteam
+            self.actions = actions
+        def to_dict(self):
+            return {
+                "id":self.id,
+                "hometeam":self.hometeam.name,
+                "hometeam score": self.hometeam.score,
+                "awayteam":self.awayteam.name,
+                "awayteam score": self.awayteam.score,
+            }
 
     def __repr__(self):
         return f"{str(self.gname)} {str(self.hometeam)} {str(self.awayteam)} {str(self.rules)}"
@@ -92,10 +108,16 @@ class Game():
         export_dataframe.replace({"None": ""}, inplace=True)
         #print(export_dataframe['Error List'])
         export_dataframe.to_csv(f"{self.gname}.csv", na_rep="", index=False)
-        json_string = listofactions
+
+        actions_string = listofactions
+
+        test = stats.StatJSONConverter(self)
+
+        stats.SaveJSON(test, "full_json_test")
+        exit()
         
         with open(f"testoutput_{self.gname}.json", "w") as outfile:
-            json.dump(json_string, outfile)
+            json.dump(actions_string, outfile)
         
         # with open(f"testoutput_{self.gname}.csv", "w", newline="") as outputfile:
         #     dict_writer = csv.DictWriter(outputfile, listofactions[0].keys())
