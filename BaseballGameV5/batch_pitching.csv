@@ -1,0 +1,7 @@
+pid,teamname,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
+52697,SF,starter,Neal Asiodu,0,0,3,0,16.00000000000001,155,88,142,1,13,3,0,0,0,0,0,0,0,1,0,1.687,3,0.25,1.0
+43617,SD,starter,Darrion Smith,0,0,2,0,16.00000000000001,181,84,224,2,26,2,0,0,0,0,0,0,0,1,0,1.125,2,0.25,-1.25
+66199,SF,starter,Bill McCoo,0,0,3,0,12.000000000000004,121,78,106,2,11,3,0,0,0,0,0,0,0,1,0,2.25,3,0.417,1.917
+46524,SD,starter,Toddrick Byrdak,0,0,1,0,12.000000000000004,108,30,144,0,16,1,0,0,0,0,0,0,0,1,0,0.75,1,0.083,-1.583
+52815,SD,starter,Darnell O'Neil,0,0,5,0,16.00000000000001,171,76,194,1,16,4,0,0,0,0,0,0,0,1,0,2.812,4,0.312,1.437
+41649,SF,starter,Ugueth Sutter,0,0,3,0,16.00000000000001,174,124,144,2,12,2,0,0,1,0,0,0,0,1,0,1.687,3,0.312,0.5

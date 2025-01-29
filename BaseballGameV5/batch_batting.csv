@@ -1,0 +1,19 @@
+pid,teamname,position,name,games_started,game_appearances,at_bats,plate_appearances,runs,singles,doubles,triples,homeruns,stolen_bases,caught_stealing,walks,strikeouts,hbp,ibb,bases,hits,totalbases,avg,obp,slg,ops
+55577,SF,catcher,Jared Harris,3,3,16,6,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0.0,0.0,0.0,0.0
+55820,SF,designatedhitter,John Williams,3,3,14,6,1,0,0,0,0,1,0,2,6,0,0,2,0,0,0.0,0.125,0.0,0.125
+66117,SF,secondbase,Stephen Smith,3,3,16,6,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0.0,0.0,0.0,0.0
+45348,SF,rightfield,Tony Everett,3,3,16,6,2,0,0,0,2,0,0,0,6,0,0,0,2,8,0.125,0.125,0.5,0.625
+63233,SF,shortstop,Karlos Smith,3,3,15,6,1,0,0,0,1,0,0,0,8,0,0,0,1,4,0.067,0.067,0.267,0.334
+61452,SF,centerfield,A.J. Oswalt,3,3,16,7,1,0,0,0,1,0,0,0,6,0,0,0,1,4,0.062,0.062,0.25,0.312
+53116,SF,firstbase,John Redmond,3,3,17,6,1,0,0,0,1,0,0,1,5,0,0,1,1,4,0.059,0.111,0.235,0.346
+45707,SF,thirdbase,Steve Delong,3,3,16,6,1,0,0,0,1,0,0,0,7,0,0,0,1,4,0.062,0.062,0.25,0.312
+53288,SF,leftfield,Logan Stephens,3,3,16,6,1,0,0,0,1,0,0,0,7,0,0,0,1,4,0.062,0.062,0.25,0.312
+58370,SD,catcher,John Benzschawel,3,3,16,6,0,0,0,0,0,0,0,1,2,0,0,1,0,0,0.0,0.059,0.0,0.059
+47666,SD,shortstop,Bob Small,3,3,17,6,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0.0,0.0,0.0,0.0
+39758,SD,centerfield,Dave Eckert,3,3,16,6,2,0,0,0,2,0,0,1,6,0,0,1,2,8,0.125,0.176,0.5,0.676
+37689,SD,leftfield,Benny Powell,3,3,17,6,2,0,0,0,2,0,0,0,1,0,0,0,2,8,0.118,0.118,0.471,0.589
+51817,SD,secondbase,Delos Echols,3,3,16,6,2,0,0,0,2,0,0,1,3,0,0,1,2,8,0.125,0.176,0.5,0.676
+45013,SD,rightfield,Oil Can Vardell,3,3,16,6,1,0,0,0,1,0,0,0,7,0,0,0,1,4,0.062,0.062,0.25,0.312
+44251,SD,designatedhitter,Glenn Jones,3,3,17,6,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0.0,0.0,0.0,0.0
+55204,SD,firstbase,Jerry Johnson,3,3,15,6,2,1,0,0,1,1,0,1,4,0,0,1,2,5,0.133,0.188,0.333,0.521
+66286,SD,thirdbase,Teyo Miraldi,3,3,15,6,0,0,0,0,0,0,0,1,6,0,0,1,0,0,0.0,0.062,0.0,0.062
