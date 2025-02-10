@@ -15,6 +15,8 @@ data = db.pullteam("NYY")
 print(data)
 exit()
 
+#TEST COMMIT
+
 rules = "MLB"
 
 directory = f"..\\Game"
