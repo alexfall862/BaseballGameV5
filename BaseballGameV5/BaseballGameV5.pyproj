@@ -25,6 +25,7 @@
     <Compile Include="Action.py" />
     <Compile Include="Baselines.py" />
     <Compile Include="Batch.py" />
+    <Compile Include="DatabaseImporter.py" />
     <Compile Include="Steals.py" />
     <Compile Include="defense.py" />
     <Compile Include="Fatigue.py" />

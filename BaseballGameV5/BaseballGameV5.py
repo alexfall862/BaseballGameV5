@@ -5,6 +5,15 @@ import Action as Act
 import Batch as b
 import Player as p
 import Stats as stats
+import DatabaseImporter as dbimp
+
+db = dbimp.InitializeDB()
+
+
+
+data = db.pullteam("NYY")
+print(data)
+exit()
 
 rules = "MLB"
 
