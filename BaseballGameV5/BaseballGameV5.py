@@ -29,8 +29,12 @@ for game in games.listofgames:
     dictofresults[f"{currentgame.gname}"] = currentgame.ReturnBox()
 
 stats.SaveJSON(dictofresults, "batch_testexport")
-stats.GameJSONCombiner(dictofresults)
-    
+batchresults = stats.GameJSONCombiner(dictofresults)
+
+stats.BatchStatSaverCSV(batchresults['stats']['batting'], "batch_batting")
+stats.BatchStatSaverCSV(batchresults['stats']['pitching'], "batch_pitching")
+stats.BatchStatSaverCSV(batchresults['stats']['fielding'], "batch_fielding")
+stats.BatchStatSaverCSV(batchresults['results'], "batch_results")
 
 
 

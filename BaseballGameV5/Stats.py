@@ -293,8 +293,14 @@ def GameJSONCombiner(resultdict):
     fieldingstats = FieldJSONCombiner(resultdict)
     resultsstats = ResultsJSONCombiner(resultdict)
 
+    bsJSON = json.dumps([player.__dict__ for player in battingstats])
+    psJSON = json.dumps([player.__dict__ for player in pitchingstats])
+    fsJSON = json.dumps([player.__dict__ for player in fieldingstats])
+    reJSON = json.dumps([result.__dict__ for result in resultsstats])
 
+    fullexport = {"results": json.loads(reJSON), "stats": {"batting": json.loads(bsJSON), "pitching": json.loads(psJSON), "fielding": json.loads(fsJSON)}}
 
+    return fullexport
 
 def BatJSONCombiner(resultdict):
     batters = []
@@ -328,19 +334,17 @@ def FieldJSONCombiner(resultdict):
             fielders.append(fieldstat)
     fielders = FieldDeDuper(fielders)
     for fielder in fielders:
-        JSONCombineField(fielder)
+        #JSONCombineField(fielder)
         print(fielder.__dict__)
     return fielders
 
 def ResultsJSONCombiner(resultdict):
     results = []
     for game in resultdict.values():
-        for result in game['result']:
-            result_obj = SCObject(**result)
-            results.append(result_obj)
-    results = ResultsDeDuper(results)
+        result = game['result']
+        result_obj = SCObject(**result)
+        results.append(result_obj)
     for result in results:
-        JSONCombineResults(result)
         print(result.__dict__)
     return results
 
@@ -351,14 +355,51 @@ class SCObject:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-def PitchDeDuper(pitchers):
-    return pitchers
+def PitchDeDuper(players):
+    result = {}
+    for player in players:
+        if player.pid in result:
+            result[player.pid].win += player.win 
+            result[player.pid].loss += player.loss 
+            result[player.pid].earned_runs += player.earned_runs
+            result[player.pid].unearned_runs += player.unearned_runs
+            result[player.pid].innings_pitched += player.innings_pitched
+            result[player.pid].pitches_thrown += player.pitches_thrown
+            result[player.pid].balls += player.balls 
+            result[player.pid].strikes += player.strikes 
+            result[player.pid].walks += player.walks 
+            result[player.pid].strikeouts += player.strikeouts
+            result[player.pid].homeruns += player.homeruns 
+            result[player.pid].triples += player.triples
+            result[player.pid].doubles += player.doubles
+            result[player.pid].singles += player.singles 
+            result[player.pid].hbp += player.hbp
+            result[player.pid].ibb += player.ibb
+            result[player.pid].wildpitches += player.wildpitches
+            result[player.pid].balks += player.balks
+            result[player.pid].games_started += player.games_started
+            result[player.pid].appearances += player.appearances
 
-def FieldDeDuper(fielders):
-    return fielders
+        else:
+            result[player.pid] = player
+    return list(result.values())
 
-def ResultsDeDuper(results):
-    return results
+def FieldDeDuper(players):
+    result = {}
+    for player in players:
+        if player.pid in result:
+            result[player.pid].throwing_errors += player.throwing_errors 
+            result[player.pid].catching_errors += player.catching_errors 
+            result[player.pid].assists += player.assists
+            result[player.pid].putouts += player.putouts
+            result[player.pid].innings_played += player.innings_played
+
+        else:
+            result[player.pid] = player
+    return list(result.values())
+
+#def ResultsDeDuper(results):
+#    return results
 
 def BatDeDuper(players):
     result = {}
@@ -402,3 +443,29 @@ def JSONCombineBat(batstats):
         batstats.obp = round( (batstats.hits + batstats.walks + batstats.hbp)/(batstats.at_bats + batstats.walks + batstats.hbp), 3 )
         batstats.slg = round( batstats.totalbases/batstats.at_bats, 3)
         batstats.ops = round( (batstats.obp + batstats.slg), 3 )
+
+def JSONCombinePitch(pitchstats):
+        pitchstats.era = round( (9*pitchstats.earned_runs / pitchstats.innings_pitched), 3)
+        pitchstats.hits_allowed = (pitchstats.singles + pitchstats.doubles + pitchstats.triples + pitchstats.homeruns)
+        pitchstats.whip = round( ((pitchstats.walks + pitchstats.hits_allowed)/pitchstats.innings_pitched), 3)
+        pitchstats.fip = round( (((13*pitchstats.homeruns) + (3*(pitchstats.walks+pitchstats.hbp)) - (2*pitchstats.strikeouts))/pitchstats.innings_pitched), 3 )
+
+def JSONCombineField(fieldstats):
+        fieldstats.errors = fieldstats.throwing_errors + fieldstats.catching_errors
+        fieldstats.defensive_chances = fieldstats.putouts + fieldstats.assists + fieldstats.errors
+        if fieldstats.defensive_chances == 0:
+            fieldstats.fielding_percentage = None
+        else:
+            fieldstats.fielding_percentage = round(((fieldstats.putouts+fieldstats.assists) / fieldstats.defensive_chances), 3)
+
+def BatchStatSaverCSV(objects, filename):
+    with open(str(filename+".csv"), 'w', newline='') as csvfile:
+      
+        fieldnames = objects[0].keys()
+
+        print(fieldnames)
+
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for object in objects:
+            writer.writerow(object)

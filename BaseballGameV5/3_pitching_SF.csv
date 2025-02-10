@@ -1,2 +1,2 @@
 pid,teamname,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
-41649,SF,starter,Ugueth Sutter,0,0,2,0,10.666666666666668,95,68,60,2,4,2,0,0,0,0,0,0,0,1,0,1.687,2,0.375,2.25
+41649,SF,starter,Ugueth Sutter,0,0,3,0,16.00000000000001,174,124,144,2,12,2,0,0,1,0,0,0,0,1,0,1.687,3,0.312,0.5

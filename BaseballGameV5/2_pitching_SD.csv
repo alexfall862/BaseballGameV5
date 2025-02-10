@@ -1,2 +1,2 @@
 pid,teamname,position,name,win,loss,earned_runs,unearned_runs,innings_pitched,pitches_thrown,balls,strikes,walks,strikeouts,homeruns,triples,doubles,singles,hbp,ibb,wildpitches,balks,games_started,appearances,era,hits_allowed,whip,fip
-46524,SD,starter,Toddrick Byrdak,0,0,2,0,10.666666666666668,97,32,108,0,9,2,0,0,0,0,0,0,0,1,0,1.687,2,0.187,0.75
+46524,SD,starter,Toddrick Byrdak,0,0,1,0,12.000000000000004,108,30,144,0,16,1,0,0,0,0,0,0,0,1,0,0.75,1,0.083,-1.583
