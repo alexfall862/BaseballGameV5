@@ -11,7 +11,6 @@ class Roster():
         keyword = '_'+teamname+'_'
         for fname in os.listdir(directory):
             if keyword in fname:
-                #print(fname, "has the keyword")
                 return Roster.Load(directory+f"\\"+fname, teamname)
                  
 

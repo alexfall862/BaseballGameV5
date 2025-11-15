@@ -60,71 +60,6 @@ class Baselines():
     def __repr__(self):
         return f"{self.leaguetype}"
 
-    # def Throw_Catch(self, thrower, catcher):
-    #     #print("Is this causing it?")
-    #     if thrower == None:
-    #         throw = False
-    #         catch = self.CatchErrorEval(thrower, catcher)
-    #     else:
-    #         throw = self.ThrowErrorEval(thrower)
-    #         catch = self.CatchErrorEval(thrower, catcher)
-    #     return throw, catch
-
-    # def ThrowErrorEval(self, thrower):
-    #     depth = self.Depth(thrower)
-    #     diceroll = np.random.rand()
-    #     tta = (thrower.throwacc - 50)/50
-    #     ttp = (thrower.throwpower - 50)/50
-    #     cscores = [tta, ttp]
-    #     if depth == 'outfield':
-    #         cweights = [2, 1]
-    #     elif depth == 'infield':
-    #         cweights = [1, 0]
-
-    #     error_rate = (1+np.average(cscores, weights=cweights))*self.error_rate
-    #     #print(f"BASELINE ERROR FORM CHECK THROW: {error_rate}/{diceroll}")
-    #     if error_rate > diceroll:
-    #         #print(True)
-    #         thrower.fieldingstats.Adder("throwing_errors", 1)
-    #         return True 
-    #     else: 
-    #         return False
-
-    # def CatchErrorEval(self, thrower, catcher):
-    #     if thrower == None:
-    #         if catcher.lineup == 'leftfield' or catcher.lineup == 'centerfield' or catcher.lineup == 'rightfield':
-    #             depth = 'outfield'
-    #         else:
-    #             depth = 'infield'
-    #     elif thrower != None:
-    #         depth = self.Depth(thrower)
-
-    #     diceroll = np.random.rand()
-    #     cfs = (catcher.fieldspot - 50)/50
-    #     cfr = (catcher.fieldreact - 50)/50
-    #     cfc = (catcher.fieldcatch - 50)/50
-    #     cscores = [cfs, cfr, cfc]
-    #     if depth == 'outfield':
-    #         cweights = [4, 2, 3]
-    #     elif depth == 'infield':
-    #         cweights = [1, 2, 3]
-
-    #     error_rate = (1+np.average(cscores, weights=cweights))*self.error_rate
-    #     #print(f"BASELINE ERROR FORM CHECK CATCH: {error_rate}/{diceroll}")
-    #     if error_rate > diceroll:
-    #         #print(True)
-    #         catcher.fieldingstats.Adder("catching_errors", 1)
-    #         return True 
-    #     else: 
-    #         return False
-
-    # def Depth(self, thrower):
-    #     if thrower.lineup == 'leftfield' or thrower.lineup == 'centerfield' or thrower.lineup == 'rightfield':
-    #         return 'outfield'
-    #     else:
-    #         return 'infield'
-
-
     def LoadBaselineJSON(directory):
         with open(str(directory)) as f:
             data=json.load(f)
@@ -136,22 +71,7 @@ class Baselines():
         keyword = "_" + "baseline" + "_.json"
         for fname in os.listdir(directory):
             if keyword in fname:
-                #print(fname, "has the keyword")
-                #rules = Baselines.pullbaseline(directory+fname)
                 rules = Baselines.LoadBaselineJSON(directory+fname)
-                #print(rules)
                 return rules[0][ruletype]
             
-    # def pullbaseline(directory):
-    #     _baselines = []
-    #     #print(directory)
-    #     with open(directory, 'r', newline='') as csvfile:
-    #         reader = csv.DictReader(csvfile, delimiter=',', )
-    #         for row in reader:
-    #             _baselines.append(row)
-    #     #print(_baselines)
-    #     return _baselines
-
-
-
 

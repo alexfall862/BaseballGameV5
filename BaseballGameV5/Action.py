@@ -63,15 +63,11 @@ class Action():
             "Outs this Action": self.game.outcount,
             "Batter": str(self.game.battingteam.currentbatter),
             "Pitcher":str(self.game.pitchingteam.currentpitcher),
-            #"Current Home Pitcher": str(self.game.hometeam.currentpitcher),
-            #"Current Away Pitcher": str(self.game.awayteam.currentpitcher),
-            #"Current Home Batter": str(self.game.hometeam.currentbatter),
-            #"Current Away Batter": str(self.game.awayteam.currentbatter),
             "Outcomes": str(self.outcome),
             "Batted Ball": str(self.game.batted_ball),
             "Air or Ground": str(self.game.air_or_ground),
             "Targeted Defender": str(self.game.targeted_defender),
-            "Defensive Outcome": str(self.defensiveoutcome[3] if self.defensiveoutcome != None else None), #str(self.defensiveoutcome), 
+            "Defensive Outcome": str(self.defensiveoutcome[3] if self.defensiveoutcome != None else None),
             "Error List": str(self.defensiveoutcome[5] if self.defensiveoutcome != None else None),
             "Defensive Actions": str(self.defensiveoutcome[6] if self.defensiveoutcome != None else None),
             "On First": str(self.game.on_firstbase),
@@ -101,41 +97,23 @@ class Action():
             "Left Field":str(self.game.pitchingteam.leftfield),
             "Center Field":str(self.game.pitchingteam.centerfield),
             "Right Field":str(self.game.pitchingteam.rightfield),
-            #"Skip_Bool": self.game.skip_bool,
-            #"Baselines": str(self.game.baselines)
             }
 
 
         
 
     def PostPitch(self):
-        #print(f"{self.id}{self.defensiveoutcome}")
         if self.game.is_strikeout == False:
             WalkEval(self) 
             if self.defensiveoutcome != None:
                 HitEval(self)        
 
     def Processing(self):
-        #print(self.game.outcount)
-        #self.game.currentouts += self.game.outcount
-        #print(f"Runners Home: {len([])}")#{len(self.game.current_runners_home)}")
         self.game.battingteam.score += len(self.game.current_runners_home)
         for runners in self.game.current_runners_home:
             stats.RunScorer(runners)
-            #print(f"RUNNERS CHECK: {self.id} {runners.name} {runners.earned_bool} {runners.on_base_pitcher}")
-        
-            
-            
-        #stats.OutcomeStatAdder(self.game.pitchingteam.currentpitcher, self.game.battingteam.currentbatter, self.defensiveoutcome[6])
         self.game.actions.append(self.ActionPrint())#[self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
         print(self.ActionPrint())
-        
-        
-        #print(f"
-        #
-        #
-        #
-        #{self.id} {self.defensiveoutcome}")
         NextAction(self)
         NextAtBat(self)        
 
@@ -144,9 +122,7 @@ class Action():
         #fi.Fatigue()
         
 
-def HitEval(self):
-    #print(f"DEFENSIVE OUTCOME: {self.defensiveoutcome[4]}")
-   
+def HitEval(self):   
     self.game.on_firstbase = self.defensiveoutcome[4][0]
     self.game.on_secondbase = self.defensiveoutcome[4][1]
     self.game.on_thirdbase = self.defensiveoutcome[4][2]
@@ -284,15 +260,10 @@ def AtBatOutcomeParser(self):
         self.game.is_walk = True
         
 
-    #print(outcome[1])
-    #print(f"input: {self.outcome[1]}")
-    #print(f"{self.outcome[1] in ('far left' or 'left' or 'center left' or 'dead center' or 'center right' or 'right' or 'far right')} | {self.outcome[1]}")
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
-        #print("event fired")
         self.defensiveoutcome = d.fielding(self).defenseoutcome
         stats.OutcomeStatAdder(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, self.defensiveoutcome[3])
         self.game.ab_over = True
-    #print(f"{self.id}{self.defensiveoutcome}")
 
 
 #GAME STATE

@@ -159,7 +159,6 @@ class BattedBallEvent():
         self.underodds = ((self.underodds * self.underw)/self.leftoverweight)*self.leftoverspace
         self.toppedodds = ((self.toppedodds * self.toppedw)/self.leftoverweight)*self.leftoverspace
         self.weakodds = ((self.weakodds * self.weakw)/self.leftoverweight)*self.leftoverspace        
-        #print(f"{self.barrelodds}\n{self.solidodds}\n{self.flareodds}\n{self.burnerodds}\n{self.underodds}\n{self.toppedodds}\n{self.weakodds}")
 
     def diceroll(self):
         direction = self.direction()
@@ -180,8 +179,6 @@ class BattedBallEvent():
                 self.toppedodds,
                 self.weakodds], 
                                k=1)[0]
-        #print(f"Final Output: {bbeoutcome[0]} | {direction}")
-        #print([bbeoutcome, direction, self.pitchevent.pitch.name])
         return [bbeoutcome, direction, self.pitchevent.pitch.name]
     
     def direction(self):
@@ -191,9 +188,7 @@ class BattedBallEvent():
         center = self.pitchevent.action.game.baselines.spread_center
         centerright = self.pitchevent.action.game.baselines.spread_centerright
         right = self.pitchevent.action.game.baselines.spread_right
-        rightline = self.pitchevent.action.game.baselines.spread_rightline
-        #print(f"{self.barrelodds}\n{self.solidodds}\n{self.flareodds}\n{self.burnerodds}\n{self.underodds}\n{self.toppedodds}\n{self.weakodds}")
-        #print(f"Test: {left}\nTest: {cleft}\nTest: {center}\nTest: {cright}\nTest: {right}\n")     
+        rightline = self.pitchevent.action.game.baselines.spread_rightline    
 
         directionpicker = random.choices(["far left",
                                           "left",

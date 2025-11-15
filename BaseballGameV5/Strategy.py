@@ -7,7 +7,6 @@ class Strategy():
     
     class PlayerStrat():
         def __init__(self, playerstrat):
-            #print(playerstrat)
             self.id = playerstrat['id']
             self.stealfreq = playerstrat['stealfreq']
             self.pickofffreq = playerstrat['pickofffreq']
@@ -43,18 +42,7 @@ class Strategy():
         keyword = '_'+teamname+'_strat.json'
         for fname in os.listdir(directory):
             if keyword in fname:
-                #print(fname, "has the keyword")
                 return Strategy.Load(directory+fname)
-
-    # def LoadStrategy(teamname):
-    #     directory = f'..\\Strategy\\'
-    #     keyword = "_" + teamname + "_strat.csv"
-    #     for fname in os.listdir(directory):
-    #         if keyword in fname:
-    #             #print(fname, "has the keyword")
-    #             strategy = Strategy.pullStrategy(directory+fname)
-    #             #print(strategy)
-    #             return strategy[0]
 
     def Load(directoryjson):
         #print(directoryjson)
@@ -68,7 +56,6 @@ class Strategy():
         
         
         for player in temp_playerlist:
-            #print(player)
             playerstrategy.append(
                     Strategy.PlayerStrat(
                             player                        
@@ -78,11 +65,3 @@ class Strategy():
         teamstrategy = Strategy.TeamStrat(temp_teamlist)
         
         return playerstrategy, teamstrategy
-
-    # def pullStrategy(directory):
-    #     _strategy = []
-    #     with open(directory, 'r', newline='') as csvfile:
-    #         reader = csv.DictReader(csvfile, delimiter=',', )
-    #         for row in reader:
-    #             _strategy.append(row)
-    #     return _strategy

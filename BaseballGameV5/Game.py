@@ -53,7 +53,7 @@ class Game():
 
     def ReturnBox(self):
         test = stats.StatJSONConverter(self)
-        return test #stats.SaveJSON(test, "full_json_test")
+        return test 
 
     class GameResult():
         def __init__(self, gname, hometeam, awayteam, actions):
@@ -73,21 +73,12 @@ class Game():
     def __repr__(self):
         return f"{str(self.gname)} {str(self.hometeam)} {str(self.awayteam)} {str(self.rules)}"
     
-    def RunGame(self):
-        #print(self.hometeam.battinglist)
-        #print(self.hometeam.currentpitcher)
-        #print(self.awayteam.battinglist)
-        #print(self.awayteam.currentpitcher)       
-
+    def RunGame(self):    
         while self.gamedone == False:
             x = Action.Action(self)
         Action.Action.counter = 0
         listofactions = []
-        #print(self.overallresults)
-        thing = stats.create_score_table(self.overallresults)
-        #print(thing)
-        #stats.Inning_Tabulator(self.overallresults)
-        
+        thing = stats.create_score_table(self.overallresults)        
         stats.FieldStatPullSave(self.hometeam, self.gname)
         stats.FieldStatPullSave(self.awayteam, self.gname)
         stats.BattingStatPullSave(self.hometeam, self.gname)
@@ -98,19 +89,15 @@ class Game():
         for player in self.hometeam.roster.playerlist:
             if player.pitchingstats.pitches_thrown > 0:
                 pass
-                #print(f"Pitching: {player.pitchingstats.pid}")
 
         for player in self.hometeam.roster.playerlist:
             if player.battingstats.plate_appearances> 0:
                 pass
-                #print(f"Batting: {player.pitchingstats.pid}")        
 
         for action in self.actions:
-            #print(action)
             listofactions.append(action)    
         export_dataframe = pd.DataFrame(listofactions)
         export_dataframe.replace({"None": ""}, inplace=True)
-        #print(export_dataframe['Error List'])
         export_dataframe.to_csv(f"{self.gname}.csv", na_rep="", index=False)
 
         actions_string = listofactions
@@ -121,10 +108,3 @@ class Game():
         
         with open(f"testoutput_{self.gname}.json", "w") as outfile:
             json.dump(actions_string, outfile)
-        
-        # with open(f"testoutput_{self.gname}.csv", "w", newline="") as outputfile:
-        #     dict_writer = csv.DictWriter(outputfile, listofactions[0].keys())
-        #     dict_writer.writeheader()
-        #     dict_writer.writerows(listofactions)
-        ##print("DONE")
-        #print(listofactions)

@@ -26,7 +26,6 @@ class fielding():
         self.adjustedfieldingweights = fielding.ModWeights(self.fieldingdefender, self.fieldingweights[self.contacttype], self.depth, self.airball_bool, self.gamestate.game.baselines.fieldingmod, self.gamestate.game.baselines.fieldingmultiplier)
         self.batted_ball_outcome = fielding.OutcomeChooser(self)
         self.basepaths = BasePaths(self, self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game)
-        #print(f"BASES BEFORE RUNNING: {self.gamestate.game.battingteam.currentbatter, self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase}")
 
 
         if self.batted_ball_outcome == 'homerun':
@@ -48,11 +47,7 @@ class fielding():
                         fielding.ExecuteThrow(self)
                         
                 elif error_on_catch == False:
-                    #print("NON ERROR IS FIRING")
                     self.basepaths.RunnerOut(self.basepaths.batter)
-
-    #                if len([runner for runner in self.basepaths.baserunner_eval_list if runner.running == True])<=0:
-    #                    fielding.ExecuteThrow(self)
 
 
             if self.batted_ball_outcome != 'out':
@@ -107,12 +102,6 @@ class fielding():
     
         catcher = PickCatchingDefender(self)
 
-        #print(f"Target: {self.target}")
-        #print(f"Target Base: {self.targetbase}")
-        #print(f"Defender: {self.fieldingdefender}")
-        #print(f"Catcher: {catcher}")
-
-        #print(f"Fielding Defender: {self.fieldingdefender}")
         throw, catch, d_action = Error_Throw_Catch(self, self.fieldingdefender, catcher)
         self.defensiveactions.append(d_action)
         if throw == True:
@@ -125,10 +114,6 @@ class fielding():
         
 
     def PickRunnerToRemove(self):
-        #TEMP SOLUTION TO ADD TRY EXCEPT HERE
-        #for runner in self.basepaths.baserunner_eval_list:
-            #print(f"{runner.base} {runner}")
-        #print(self.targetbase)
         if self.targetbase == 0: 
             runner = [runner for runner in self.basepaths.baserunner_eval_list if runner.base == 0][0]
             self.basepaths.RunnerOut(runner)
@@ -198,25 +183,21 @@ class fielding():
         tripleodds = fieldingodds[3]
         sumvalue = sum([outodds, singleodds, doubleodds, tripleodds])
         skills = [defender.fieldcatch, defender.fieldreact, defender.fieldspot, defender.speed]
-        #print(f"Skills {skills}")
         skillsweight = mod[ab][d]
-        #print(f"Weights {skillsweight}")
+
         modifier = (((np.average(skills, weights=skillsweight))/50)+multiplier)/(multiplier+1)
-        #print(f"Mod {modifier}")
-        #print(f"OG Odds {fieldingodds}")
+
         outodds *= modifier
         singleodds /= modifier
         doubleodds /= modifier
         tripleodds /= modifier
         listofodds = [outodds, singleodds, doubleodds, tripleodds]
-        #print(f"Output Odds {listofodds}")
         processedodds = [x / sum(listofodds) for x in listofodds]
         outodds = processedodds[0]
         singleodds = processedodds[1]
         doubleodds = processedodds[2]
         tripleodds = processedodds[3]
         processedlistofodds = [outodds, singleodds, doubleodds, tripleodds]        
-        #print(f"Processed Odds {processedlistofodds}")
         return processedlistofodds
 
     def OutcomeChooser(self):
@@ -229,7 +210,6 @@ class fielding():
         return outcome 
     
 def Error_Throw_Catch(self, thrower, catcher):
-    #print(f"{thrower.lineup, thrower.name} throws to {catcher.lineup, catcher.name}")
     throw, t_action = Error_Catch(self, thrower, catcher)
     catch, c_action = Error_Throw(self, thrower, catcher)
     defensiveaction = str(t_action) + " " + str(c_action)
@@ -342,12 +322,11 @@ class BasePaths():
         self.baserunner_eval_list.remove(player)
 
     def RunnerMover(self, outcome):
-        #print(f"Inside Runner Mover: {self.batter, self.firstbase, self.secondbase, self.thirdbase}")
-        #print(f"{self.baserunner_eval_list}")
+
         def AdvanceRunners(self):
-            #this is the place to add speed as a modifier
+
             for runner in self.baserunner_eval_list:
-                #print(f"RUNNER {runner.base} {runner}")
+
 
 
                 runner.base+=1
@@ -378,7 +357,6 @@ class BasePaths():
             runner.running = None               
                 
     def RunnerConverter(self):
-        #print(f" |||||||| BEFORE: {self.batter, self.firstbase, self.secondbase, self.thirdbase}")            
         try:
             self.firstbase = [runner for runner in self.baserunner_eval_list if runner.base == 1][0]            
         except:
@@ -393,11 +371,9 @@ class BasePaths():
             self.thirdbase = [runner for runner in self.baserunner_eval_list if runner.base == 3][0]            
         except:
             self.thirdbase = None
-        #print(f" |||||||| AFTER: {None, self.firstbase, self.secondbase, self.thirdbase, self.at_home}")
         return [ self.firstbase, self.secondbase, self.thirdbase, self.at_home]
 
     def RunnerCheck(self, target, targetbase):
-        #print(f"DEFENDER {self.defense.fieldingdefender.lineup} {self.defense.fieldingdefender.throwpower} {self.defense.fieldingdefender.throwacc}")
         for runner in self.baserunner_eval_list:
             #print(runner.base, runner.name, runner.speed, runner.baserunning)
             runner.running = None
@@ -429,11 +405,6 @@ class BasePaths():
                 
         target, targetbase = CheckForForce(self, highestbase)
         return target, targetbase
-
-        #Return highest base having number
-        #If outs aren't 1 less than total outs needed, 
-            #Take player with that base
-            #else throw to first
     def HandleHomeRun(self):
         for runner in self.baserunner_eval_list:
             self.at_home.append(runner)
@@ -443,14 +414,10 @@ class BasePaths():
 
     def DecideToRun(self):
         for baserunner in self.baserunner_eval_list:
-            #print(f"If Forced Eval: {baserunner}")
-            #print(f"{self.baserunner_eval_list}")
+
             needadvance = [baserunner for runner in self.baserunner_eval_list if (baserunner.base - 1) == runner.base]
-            #print(f"Output: {needadvance}")
             if needadvance != []:
                 baserunner.running = True
-            #print(f"{baserunner.running}")
         if (self.gamestate.game.currentouts + self.gamestate.game.outcount) == self.gamestate.game.rules.outs -1:
             for baserunner in self.baserunner_eval_list:
                 baserunner.running = True
-            #print(f"Whether to Run Criteria: Def {self.defense.fieldingdefender} Depth {self.defense.depth} Direction {self.defense.direction} Airtime {self.defense.ball_airtime} Baserunner {baserunner}")

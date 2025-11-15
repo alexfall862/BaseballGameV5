@@ -111,7 +111,6 @@ class Team():
             
         sub = switch(subbedplayer.lineup)
         subid = find_index(self.benchplayers, 'id', sub.id)
-        #print(f"{subid}: {sub}")
         sub = self.benchplayers.pop(subid)
         
         sub.lineup = subbedplayer.lineup
@@ -135,8 +134,6 @@ class Team():
 
     def TickPitcherStamina(self):
         f.TickEnergy(self.baselines, self.currentpitcher)
-        # self.currentpitcher.energy = self.currentpitcher.energy - 1
-        #print(f"{self.currentpitcher.name}: {self.currentpitcher.energy}")
         
     def TickBatterStamina(self):
         pass

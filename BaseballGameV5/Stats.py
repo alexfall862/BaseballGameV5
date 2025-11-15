@@ -262,9 +262,6 @@ def TeamStatPull(team):
     batting, test = StatPullBatting(team, "test")  
     pitching, test = StatPullPitching(team, "test")  
     fielding, test = StatPullFielding(team, "test")
-    #batting = pd.DataFrame(batting)
-    #pitching = pd.DataFrame(pitching)
-    #fielding = pd.DataFrame(fielding)
     return batting, pitching, fielding
 
 
@@ -334,7 +331,6 @@ def FieldJSONCombiner(resultdict):
             fielders.append(fieldstat)
     fielders = FieldDeDuper(fielders)
     for fielder in fielders:
-        #JSONCombineField(fielder)
         print(fielder.__dict__)
     return fielders
 

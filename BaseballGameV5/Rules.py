@@ -24,8 +24,5 @@ class Rules():
         keyword = "_" + "rules" + "_.json"
         for fname in os.listdir(directory):
             if keyword in fname:
-                #print(fname, "has the keyword")
-                #rules = Baselines.pullbaseline(directory+fname)
                 rules = Rules.LoadBaselineJSON(directory+fname)
-                #print(rules)
                 return rules[0][ruletype]
