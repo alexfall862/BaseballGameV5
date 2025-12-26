@@ -29,42 +29,51 @@ class PitchEvent():
             5,4,3,2,1
             ]
         pitchchoice = random.choices([*pitchlist],[*pitchodds], k=1)[0]
-        pitchlocation = random.choices(["Inside", "Outside"], [1, 1], k=1)[0]
+        pitchlocation = random.choices(["Inside", "Outside"], [1, 1.2], k=1)[0]
         return pitchchoice, pitchlocation
     
     def runpitcheval(self):
-        bat_cont_mod = float (self.batter.contact / self.pitch.ovr)
-        pitch_cont_mod = float (self.pitch.ovr / self.batter.contact)
-        bat_eye_mod = float (self.batter.eye / self.pitch.ovr)
-        pitch_eye_mod = float (self.pitch.ovr / self.batter.eye)        
-        bat_disc_mod = float (self.batter.discipline / self.pitch.ovr)
-        pitch_disc_mod = float (self.pitch.ovr / self.batter.discipline)   
+        # Ensure no division by zero - use minimum value of 1
+        pitch_ovr = max(self.pitch.ovr, 1)
+        batter_contact = max(self.batter.contact, 1)
+        batter_eye = max(self.batter.eye, 1)
+        batter_discipline = max(self.batter.discipline, 1)
+
+        bat_cont_mod = float(batter_contact / pitch_ovr)
+        pitch_cont_mod = float(pitch_ovr / batter_contact)
+        bat_eye_mod = float(batter_eye / pitch_ovr)
+        pitch_eye_mod = float(pitch_ovr / batter_eye)
+        bat_disc_mod = float(batter_discipline / pitch_ovr)
+        pitch_disc_mod = float(pitch_ovr / batter_discipline)
+
         if self.pitchlocation == "Inside":
             swing_w = self.insideswing * pitch_disc_mod
             look_w = self.insidelook * bat_disc_mod
-
-            swing_w = swing_w/(swing_w+look_w)
-            look_w = look_w/(swing_w+look_w)
-
         elif self.pitchlocation == "Outside":
             swing_w = self.outsideswing * bat_disc_mod
             look_w = self.outsidelook * pitch_disc_mod
+        else:
+            swing_w = 0.5
+            look_w = 0.5
 
-            swing_w = swing_w/(swing_w+look_w)
-            look_w = look_w/(swing_w+look_w)
+        # Normalize weights, with fallback for zero sum
+        total_w = swing_w + look_w
+        if total_w <= 0:
+            swing_w = 0.5
+            look_w = 0.5
+        else:
+            swing_w = swing_w / total_w
+            look_w = look_w / total_w
 
         firstpassoutcome = random.choices(
-            [
-                "Swing",
-                "Look",
-                ], [swing_w, look_w], k=1
-            )[0]
+            ["Swing", "Look"], [swing_w, look_w], k=1
+        )[0]
 
         #first send outcome chance
         if firstpassoutcome == "Look":
             if self.pitchlocation == "Outside":
                 self.outcome = ["Ball", "Looking", self.pitch.name]
-                self.pitcher.pitchingstats.Adder("balls", 1)                
+                self.pitcher.pitchingstats.Adder("balls", 1)
                 return self.outcome
             elif self.pitchlocation == "Inside":
                 self.outcome = ["Strike", "Looking", self.pitch.name]
@@ -80,14 +89,20 @@ class PitchEvent():
                 Whiff = (1 - self.insidecontact) * pitch_eye_mod
                 InPlay = (self.insidecontact / 2) * bat_cont_mod
                 Foul = (self.insidecontact / 2) * pitch_cont_mod
+            else:
+                Whiff = 0.33
+                InPlay = 0.33
+                Foul = 0.34
+
+        # Ensure valid weights for second pass
+        second_weights = [Whiff, InPlay, Foul]
+        second_weights = [max(0, w) if w == w else 0 for w in second_weights]
+        if sum(second_weights) <= 0:
+            second_weights = [1, 1, 1]
 
         secondpassoutcome = random.choices(
-            [
-                "Whiff",
-                "InPlay",
-                "Foul"
-                ], [Whiff, InPlay, Foul], k=1
-                )[0]
+            ["Whiff", "InPlay", "Foul"], second_weights, k=1
+        )[0]
 
         if secondpassoutcome == "Whiff":
             self.outcome = ["Strike", "Swinging", self.pitch.name]
@@ -136,20 +151,30 @@ class BattedBallEvent():
                 self.batter.eye = min(self.batter.eye + modamount, maxa)
                 self.batter.discipline = min(self.batter.discipline + modamount, maxa)                  
     def setweights(self):
-        self.barrelw: float = ((((self.batter.contact) + (self.batter.power*4))/5)/self.pitchevent.pitch.ovr)**self.modexp
-        self.solidw: float = ((((self.batter.contact) + (self.batter.power*2))/3)/self.pitchevent.pitch.ovr)**self.modexp
+        # Ensure pitch ovr and batter stats are never zero to prevent division issues
+        pitch_ovr = max(self.pitchevent.pitch.ovr, 1)
+        batter_contact = max(self.batter.contact, 1)
+        batter_power = max(self.batter.power, 1)
+
+        self.barrelw: float = ((((batter_contact) + (batter_power*4))/5)/pitch_ovr)**self.modexp
+        self.solidw: float = ((((batter_contact) + (batter_power*2))/3)/pitch_ovr)**self.modexp
         self.leftoverspace = 1 - (min((self.barrelodds * self.barrelw)/100, .4) + min((self.solidodds * self.solidw)/100, .4))
-        self.flarew: float = ((self.batter.contact/self.pitchevent.pitch.ovr)**self.modexp)
-        self.burnerw: float = ((self.batter.contact/self.pitchevent.pitch.ovr)**self.modexp)
-        self.underw: float = ((self.pitchevent.pitch.ovr/self.batter.contact)**self.modexp)
-        self.toppedw: float = ((self.pitchevent.pitch.ovr/self.batter.contact)**self.modexp)
-        self.weakw: float = ((self.pitchevent.pitch.ovr/self.batter.contact)**self.modexp)
+        # Ensure leftoverspace is positive
+        self.leftoverspace = max(self.leftoverspace, 0.1)
+
+        self.flarew: float = ((batter_contact/pitch_ovr)**self.modexp)
+        self.burnerw: float = ((batter_contact/pitch_ovr)**self.modexp)
+        self.underw: float = ((pitch_ovr/batter_contact)**self.modexp)
+        self.toppedw: float = ((pitch_ovr/batter_contact)**self.modexp)
+        self.weakw: float = ((pitch_ovr/batter_contact)**self.modexp)
         self.leftoverweight = ((self.flarew*self.flareodds) +
-                               (self.burnerw*self.burnerodds) + 
-                               (self.underw*self.underodds) + 
-                               (self.toppedw*self.toppedodds) + 
+                               (self.burnerw*self.burnerodds) +
+                               (self.underw*self.underodds) +
+                               (self.toppedw*self.toppedodds) +
                                (self.weakw*self.weakodds)
-                               )        
+                               )
+        # Ensure leftoverweight is never zero to prevent division by zero
+        self.leftoverweight = max(self.leftoverweight, 0.001)        
     def runcalc(self):
         self.setweights()
         self.barrelodds = min((self.barrelodds * self.barrelw)/100, .4)
@@ -162,23 +187,22 @@ class BattedBallEvent():
 
     def diceroll(self):
         direction = self.direction()
-        bbeoutcome = random.choices([
-            "barrel", 
-            "solid", 
-            "flare", 
-            "burner", 
-            "under", 
-            "topped", 
-            "weak"  
-            ], weights=[
-                self.barrelodds,
-                self.solidodds,
-                self.flareodds,
-                self.burnerodds,
-                self.underodds,
-                self.toppedodds,
-                self.weakodds], 
-                               k=1)[0]
+        outcomes = ["barrel", "solid", "flare", "burner", "under", "topped", "weak"]
+        weights = [
+            self.barrelodds,
+            self.solidodds,
+            self.flareodds,
+            self.burnerodds,
+            self.underodds,
+            self.toppedodds,
+            self.weakodds
+        ]
+        # Ensure all weights are valid numbers and non-negative
+        weights = [max(0, w) if w == w else 0 for w in weights]  # NaN check: w != w means NaN
+        # If all weights are zero, use equal weights as fallback
+        if sum(weights) <= 0:
+            weights = [1, 1, 1, 1, 1, 1, 1]
+        bbeoutcome = random.choices(outcomes, weights=weights, k=1)[0]
         return [bbeoutcome, direction, self.pitchevent.pitch.name]
     
     def direction(self):
@@ -188,15 +212,16 @@ class BattedBallEvent():
         center = self.pitchevent.action.game.baselines.spread_center
         centerright = self.pitchevent.action.game.baselines.spread_centerright
         right = self.pitchevent.action.game.baselines.spread_right
-        rightline = self.pitchevent.action.game.baselines.spread_rightline    
+        rightline = self.pitchevent.action.game.baselines.spread_rightline
 
-        directionpicker = random.choices(["far left",
-                                          "left",
-                                          "center left",
-                                          "dead center",
-                                          "center right",
-                                          "right",
-                                          "far right"], weights=[leftline, left, centerleft, center, centerright, right, rightline], k=1)[0]
+        directions = ["far left", "left", "center left", "dead center", "center right", "right", "far right"]
+        weights = [leftline, left, centerleft, center, centerright, right, rightline]
+        # Ensure all weights are valid and non-negative
+        weights = [max(0, w) if w == w else 0 for w in weights]
+        # Fallback if all weights are zero
+        if sum(weights) <= 0:
+            weights = [14, 14, 14, 14, 14, 14, 14]  # Default spread
+        directionpicker = random.choices(directions, weights=weights, k=1)[0]
         return directionpicker
 
     def __repr__(self):

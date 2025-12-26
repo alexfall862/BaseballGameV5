@@ -8,6 +8,23 @@ import itertools
 import Stats as stats
 
 
+def player_ref(player):
+    """Convert a player object to a serializable reference dict."""
+    if player is None:
+        return None
+    return {
+        "player_id": getattr(player, 'id', None),
+        "player_name": f"{getattr(player, 'firstname', '')} {getattr(player, 'lastname', '')}"
+    }
+
+
+def player_list_ref(players):
+    """Convert a list of players to serializable reference dicts."""
+    if not players:
+        return []
+    return [player_ref(p) for p in players if p is not None]
+
+
 class Action():
     counter = 0
     def __init__(self, game):
@@ -27,6 +44,28 @@ class Action():
     def AttributeInjuryCheck(self):
         self.game.hometeam.ActionAdjustments()
         self.game.awayteam.ActionAdjustments()
+
+        # Check for in-game injuries if injury system is available
+        if hasattr(self.game, 'injury_adapter') and self.game.injury_adapter:
+            from injury_system import InjurySystem
+            if not hasattr(self.game, '_injury_system'):
+                self.game._injury_system = InjurySystem(self.game.injury_adapter)
+
+            # Check batter for injury
+            batter = self.game.battingteam.currentbatter
+            injury = self.game._injury_system.check_for_injury(batter, "atbat")
+            if injury:
+                if not hasattr(self.game, 'ingame_injury_reports'):
+                    self.game.ingame_injury_reports = []
+                self.game.ingame_injury_reports.append(injury)
+
+            # Check pitcher for injury
+            pitcher = self.game.pitchingteam.currentpitcher
+            injury = self.game._injury_system.check_for_injury(pitcher, "pitch")
+            if injury:
+                if not hasattr(self.game, 'ingame_injury_reports'):
+                    self.game.ingame_injury_reports = []
+                self.game.ingame_injury_reports.append(injury)
 
     def PrePitch(self):
         self.game.error_count=0
@@ -52,29 +91,29 @@ class Action():
         return {
             "ID": self.id,
             "Inning": self.game.currentinning,
-            "Inning Half": self.game.topofinning,
+            "Inning Half": "Top" if self.game.topofinning else "Bottom",
             "Home Team": self.game.hometeam.name,
             "Home Score": self.game.hometeam.score,
             "Away Team": self.game.awayteam.name,
             "Away Score": self.game.awayteam.score,
             "Ball Count": self.game.currentballs,
-            "Strike Count": self.game.currentstrikes,  
-            "Out Count": self.game.currentouts,   
+            "Strike Count": self.game.currentstrikes,
+            "Out Count": self.game.currentouts,
             "Outs this Action": self.game.outcount,
-            "Batter": str(self.game.battingteam.currentbatter),
-            "Pitcher":str(self.game.pitchingteam.currentpitcher),
+            "Batter": player_ref(self.game.battingteam.currentbatter),
+            "Pitcher": player_ref(self.game.pitchingteam.currentpitcher),
             "Outcomes": str(self.outcome),
             "Batted Ball": str(self.game.batted_ball),
             "Air or Ground": str(self.game.air_or_ground),
-            "Targeted Defender": str(self.game.targeted_defender),
+            "Targeted Defender": player_ref(self.game.targeted_defender) if hasattr(self.game.targeted_defender, 'id') else str(self.game.targeted_defender),
             "Defensive Outcome": str(self.defensiveoutcome[3] if self.defensiveoutcome != None else None),
             "Error List": str(self.defensiveoutcome[5] if self.defensiveoutcome != None else None),
             "Defensive Actions": str(self.defensiveoutcome[6] if self.defensiveoutcome != None else None),
-            "On First": str(self.game.on_firstbase),
-            "On Second": str(self.game.on_secondbase),
-            "On Third": str(self.game.on_thirdbase),
-            "Home": str(self.game.current_runners_home),
-            "Is_Walk": self.game.is_walk ,
+            "On First": player_ref(self.game.on_firstbase),
+            "On Second": player_ref(self.game.on_secondbase),
+            "On Third": player_ref(self.game.on_thirdbase),
+            "Home": player_list_ref(self.game.current_runners_home),
+            "Is_Walk": self.game.is_walk,
             "Is_Strikeout": self.game.is_strikeout,
             "Is_InPlay": self.game.is_inplay,
             "Is_Hit": self.game.is_hit,
@@ -89,15 +128,15 @@ class Action():
             "Is_Triple": self.game.is_triple,
             "Is_Homerun": self.game.is_homerun,
             "AB_Over": self.game.ab_over,
-            "Catcher":str(self.game.pitchingteam.catcher),
-            "First Base":str(self.game.pitchingteam.firstbase),
-            "Second Base":str(self.game.pitchingteam.secondbase),
-            "Third Base":str(self.game.pitchingteam.thirdbase),
-            "Shortstop":str(self.game.pitchingteam.shortstop),
-            "Left Field":str(self.game.pitchingteam.leftfield),
-            "Center Field":str(self.game.pitchingteam.centerfield),
-            "Right Field":str(self.game.pitchingteam.rightfield),
-            }
+            "Catcher": player_ref(self.game.pitchingteam.catcher),
+            "First Base": player_ref(self.game.pitchingteam.firstbase),
+            "Second Base": player_ref(self.game.pitchingteam.secondbase),
+            "Third Base": player_ref(self.game.pitchingteam.thirdbase),
+            "Shortstop": player_ref(self.game.pitchingteam.shortstop),
+            "Left Field": player_ref(self.game.pitchingteam.leftfield),
+            "Center Field": player_ref(self.game.pitchingteam.centerfield),
+            "Right Field": player_ref(self.game.pitchingteam.rightfield),
+        }
 
 
         
@@ -193,6 +232,7 @@ def NextAction(self):
     self.game.is_pickoff = False
     self.game.is_stealattempt = False
     self.game.is_stealsuccess = False
+    self.game.is_inplay = False
     self.game.batted_ball = None
     self.game.air_or_ground = None
     self.game.targeted_defender = None
@@ -261,7 +301,33 @@ def AtBatOutcomeParser(self):
         
 
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
-        self.defensiveoutcome = d.fielding(self).defenseoutcome
+        fielding_result = d.fielding(self)
+        self.defensiveoutcome = fielding_result.defenseoutcome
+
+        # Set game state fields from fielding result
+        self.game.batted_ball = fielding_result.contacttype
+        self.game.air_or_ground = "air" if fielding_result.airball_bool else "ground"
+        self.game.targeted_defender = fielding_result.fieldingdefender
+        self.game.is_inplay = True
+
+        # Set hit type flags based on defensive outcome
+        outcome = self.defensiveoutcome[3]
+        if outcome == "single":
+            self.game.is_hit = True
+            self.game.is_single = True
+        elif outcome == "double":
+            self.game.is_hit = True
+            self.game.is_double = True
+        elif outcome == "triple":
+            self.game.is_hit = True
+            self.game.is_triple = True
+        elif outcome == "homerun":
+            self.game.is_hit = True
+            self.game.is_homerun = True
+
+        # Set error count from error list
+        self.game.error_count = len(self.defensiveoutcome[5]) if self.defensiveoutcome[5] else 0
+
         stats.OutcomeStatAdder(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, self.defensiveoutcome[3])
         self.game.ab_over = True
 

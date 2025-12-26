@@ -2,15 +2,17 @@ import Stats
 
 class Player():
     def __init__(self, pid, ptype, firstname, lastname, handedness, armangle, injuryrisk, durability,
-                 contact, power, discipline, eye, 
-                 basereaction, baserunning, speed, 
-                 throwpower, throwacc, fieldcatch, fieldreact, fieldspot, 
-                 catchframe, catchsequence, 
+                 contact, power, discipline, eye,
+                 basereaction, baserunning, speed,
+                 throwpower, throwacc, fieldcatch, fieldreact, fieldspot,
+                 catchframe, catchsequence,
                  pendurance, pthrowpower, pgencontrol, pickoff, psequencing, pitch1, pitch2, pitch3, pitch4, pitch5,
                  team, level,
                  sp_rating, rp_rating, c_rating, fb_rating, sb_rating, tb_rating, ss_rating, lf_rating, cf_rating, rf_rating, dh_rating,
                  battingorder, pitchingorder, lineup,
-                 injurystate, energy, teamname
+                 injurystate, energy, teamname,
+                 # Strategy attributes (from endpoint)
+                 stealfreq=10.0, pickofffreq=10.0, plate_approach="normal", pitchchoices=None
                  ): 
         
         self.id = pid
@@ -74,7 +76,13 @@ class Player():
 
         self.injurystate = injurystate
         self.energy = energy
-        
+
+        # Strategy attributes
+        self.stealfreq = stealfreq
+        self.pickofffreq = pickofffreq
+        self.plate_approach = plate_approach
+        self.pitchchoices = pitchchoices if pitchchoices is not None else []
+
         self.base = None
         self.running = None
         self.out = None

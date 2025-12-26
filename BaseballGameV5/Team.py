@@ -23,21 +23,135 @@ class Team():
         self.rightfield = Team.GrabPositionPlayer(self, 'rightfield')
         self.designatedhitter = Team.GrabPositionPlayer(self, 'designatedhitter')
         self.battinglist = sorted([
-            self.catcher, 
-            self.firstbase, 
-            self.secondbase, 
-            self.thirdbase, 
-            self.shortstop, 
-            self.leftfield, 
-            self.centerfield, 
-            self.rightfield, 
-            self.designatedhitter, 
+            self.catcher,
+            self.firstbase,
+            self.secondbase,
+            self.thirdbase,
+            self.shortstop,
+            self.leftfield,
+            self.centerfield,
+            self.rightfield,
+            self.designatedhitter,
             ], key=lambda x: x.battingorder)
         self.currentbatspot = 1
         self.currentbatter = Team.GrabBatter(self, self.currentbatspot)
         self.currentpitcher = Team.GrabStartingPitcher(self, pitchervalue)
         self.reliefpitchers = Team.GrabReliefPitchers(self)
         self.benchplayers = Team.GrabBenchBats(self)
+
+    @classmethod
+    def from_players(cls, name: str, players: list, baselines, use_dh: bool = True,
+                     travelstatus: str = "home"):
+        """
+        Create a Team instance from a pre-built list of Player objects.
+
+        Args:
+            name: Team name/abbreviation
+            players: List of Player objects (already adapted from endpoint)
+            baselines: Baselines instance
+            use_dh: Whether DH rule is in effect
+            travelstatus: Travel status (home/away)
+
+        Returns:
+            Team instance
+        """
+        instance = object.__new__(cls)
+        instance.name = name
+        instance.baselines = baselines
+        instance.travelstatus = travelstatus
+        instance.score = 0
+
+        # Store all players for reference
+        instance._all_players = players
+
+        # Create a mock roster object with playerlist
+        class MockRoster:
+            def __init__(self, playerlist):
+                self.playerlist = playerlist
+        instance.roster = MockRoster(players)
+
+        # Create a mock strategy object
+        class MockStrategy:
+            def __init__(self, players):
+                self.playerstrategy = []
+                for p in players:
+                    class PlayerStrat:
+                        def __init__(self, player):
+                            self.id = player.id
+                            # Use player's usage_preference if available
+                            pref = getattr(player, 'usage_preference', 'normal')
+                            self.pitchpull = 100 if pref == 'normal' else (80 if pref == 'short' else 120)
+                            self.pulltend = pref if pref in ['normal', 'quick', 'long'] else 'normal'
+                            # Strategy values from player (endpoint data)
+                            self.stealfreq = getattr(player, 'stealfreq', 10.0)
+                            self.pickofffreq = getattr(player, 'pickofffreq', 10.0)
+                            self.plate_approach = getattr(player, 'plate_approach', 'normal')
+                            self.pitchchoices = getattr(player, 'pitchchoices', [])
+                    self.playerstrategy.append(PlayerStrat(p))
+        instance.strategy = MockStrategy(players)
+
+        # Grab position players
+        instance.catcher = instance._grab_position_from_list(players, 'catcher')
+        instance.firstbase = instance._grab_position_from_list(players, 'firstbase')
+        instance.secondbase = instance._grab_position_from_list(players, 'secondbase')
+        instance.thirdbase = instance._grab_position_from_list(players, 'thirdbase')
+        instance.shortstop = instance._grab_position_from_list(players, 'shortstop')
+        instance.leftfield = instance._grab_position_from_list(players, 'leftfield')
+        instance.centerfield = instance._grab_position_from_list(players, 'centerfield')
+        instance.rightfield = instance._grab_position_from_list(players, 'rightfield')
+
+        # Handle DH or pitcher batting
+        if use_dh:
+            instance.designatedhitter = instance._grab_position_from_list(players, 'designatedhitter')
+        else:
+            # Pitcher bats 9th when no DH
+            starter = instance._grab_starting_pitcher_from_list(players)
+            starter.battingorder = 9
+            starter.lineup = "designatedhitter"  # For batting list purposes
+            instance.designatedhitter = starter
+
+        # Build batting list
+        batting_players = [
+            instance.catcher,
+            instance.firstbase,
+            instance.secondbase,
+            instance.thirdbase,
+            instance.shortstop,
+            instance.leftfield,
+            instance.centerfield,
+            instance.rightfield,
+            instance.designatedhitter,
+        ]
+        instance.battinglist = sorted(batting_players, key=lambda x: x.battingorder)
+
+        instance.currentbatspot = 1
+        instance.currentbatter = instance.battinglist[0]
+
+        # Grab pitchers
+        instance.currentpitcher = instance._grab_starting_pitcher_from_list(players)
+        instance.currentpitcher.pitchingstats.Adder("games_started", 1)
+
+        instance.reliefpitchers = [p for p in players if p.lineup == "relief" and p.energy >= 75]
+        instance.benchplayers = [p for p in players if p.lineup == "bench"]
+
+        return instance
+
+    def _grab_position_from_list(self, players: list, position: str):
+        """Grab a position player from the player list."""
+        matches = [p for p in players if p.lineup == position]
+        if matches:
+            starter = matches[0]
+            starter.battingstats.Adder("games_started", 1)
+            starter.battingstats.Adder("game_appearances", 1)
+            return starter
+        return None
+
+    def _grab_starting_pitcher_from_list(self, players: list):
+        """Grab the starting pitcher from the player list."""
+        matches = [p for p in players if p.lineup == "starter"]
+        if matches:
+            return matches[0]
+        return None
     
     def TickBatter(self):
         self.TickBatSpot()

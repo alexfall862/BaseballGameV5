@@ -1,0 +1,12 @@
+# Baseball Game Simulation API - Dependencies
+
+# Web framework
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# Data validation
+pydantic>=2.5.0
+
+# Existing dependencies (already in project)
+numpy
+pandas
