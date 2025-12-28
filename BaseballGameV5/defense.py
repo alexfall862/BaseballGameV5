@@ -570,17 +570,11 @@ class fielding():
         "weak": [0.0, 0.0, 0.02, 0.08, 0.10, 0.30, 0.35, 0.12, 0.03],
     }
 
-    # Default fielding weights (fallback)
-    # Order: out, single, double, triple
-    DEFAULT_FIELDINGWEIGHTS = {
-        "barrel": [100.25, 0.30, 0.30, 0.15],
-        "solid": [100.40, 0.35, 0.20, 0.05],
-        "flare": [100.55, 0.35, 0.08, 0.02],
-        "burner": [100.65, 0.30, 0.04, 0.01],
-        "under": [100.50, 0.35, 0.12, 0.03],
-        "topped": [100.75, 0.22, 0.02, 0.01],
-        "weak": [100.80, 0.18, 0.01, 0.01],
-    }
+    # Situation categories derived from depth + direction
+    GAP_DIRECTIONS = ["center left", "center right"]
+    LINE_DIRECTIONS = ["far left", "far right"]
+    OUTFIELD_DEPTHS = ["deep_of", "middle_of", "shallow_of"]
+    INFIELD_DEPTHS = ["deep_if", "middle_if", "shallow_if", "mound", "catcher"]
 
     def __init__(self, gamestate):
         self.gamestate = gamestate
@@ -588,10 +582,13 @@ class fielding():
         self.distweights = self.gamestate.game.baselines.distweights
         self.distoutcomes = self.gamestate.game.baselines.distoutcomes
         self.defensivealignment = self.gamestate.game.baselines.defensivealignment
-        self.fieldingweights = self.gamestate.game.baselines.fieldingweights
-        self.fieldingoutcomes = self.gamestate.game.baselines.fieldingoutcomes
+        # Load catch_rates (new system)
+        self.catch_rates = getattr(
+            self.gamestate.game.baselines, 'catch_rates', {}
+        )
         self.errorlist = []
         self.defensiveactions = []
+        self.catch_probability = None  # Set in _is_out_play if applicable
 
         self.contacttype = self.gamestate.outcome[0]
         self.direction = self.gamestate.outcome[1]
@@ -602,17 +599,9 @@ class fielding():
         self.depth = fielding.PickDepth(self)
         self.fieldingdefender = fielding.PickDefender(self)
         self.airball_bool = fielding.AirballBool(self.contacttype)
-        self.adjustedfieldingweights = fielding.ModWeights(
-            self.fieldingdefender,
-            self._get_fieldingweights(self.contacttype),
-            self.depth,
-            self.airball_bool,
-            self.gamestate.game.baselines.fieldingmod,
-            self.gamestate.game.baselines.fieldingmultiplier
-        )
 
-        # Determine initial outcome (preserved - determines if ball is fieldable)
-        self.initial_outcome = fielding.OutcomeChooser(self)
+        # Derive situation category from depth + direction
+        self.situation = self._derive_situation()
 
         # Initialize play state with new decision tree system
         self.play_state = self._initialize_play_state()
@@ -708,66 +697,57 @@ class fielding():
             contact_type=self.contacttype
         )
 
-    def _is_catchable_play(self) -> bool:
+    def _is_out_play(self) -> bool:
         """
-        Determine if this is a catchable fly ball based on physics.
+        Determine if the defense makes the play using catch_rates config.
 
-        Ground balls can never be caught - they must be fielded.
-        Air balls can be caught based on trajectory and fielder position.
+        This applies to ALL contact types:
+        - Fly balls: probability fielder catches the ball
+        - Ground balls: probability fielder fields cleanly and makes the throw
+
+        The catch_rates config provides tunable out probabilities per
+        contact type and situation (derived from depth + direction).
 
         Returns:
-            True if ball is in the air and can be caught, False otherwise
+            True if defense makes the play (pending error checks), False otherwise
         """
-        # Ground ball contact types - these can NEVER be caught
-        GROUND_BALL_TYPES = ["topped", "weak"]
-
-        # If it's a ground ball, it can't be caught
-        if self.contacttype in GROUND_BALL_TYPES:
-            return False
-
         # If depth is homerun, it's gone (handled separately)
         if self.depth == 'homerun':
             return False
 
-        # For air balls, check if fielder can reach it
-        # Gap hits and line drives are harder to catch
-        is_gap = self.direction in ["center left", "center right"]
-        is_line = self.direction in ["far left", "far right"]
-        is_deep = "deep" in self.depth.lower()
+        # Look up out rate from config
+        # Format: catch_rates[contacttype][situation] = probability
+        contact_rates = self.catch_rates.get(self.contacttype, {})
+        out_probability = contact_rates.get(self.situation)
 
-        # Hard-hit balls to gaps/lines are less likely to be caught
-        if self.contacttype in ["barrel", "solid"]:
-            if is_gap and is_deep:
-                # Deep gap - very hard to catch
-                return random.random() < 0.3
-            elif is_gap:
-                # Gap hit - hard to catch
-                return random.random() < 0.5
-            elif is_line:
-                # Down the line - hard to catch
-                return random.random() < 0.5
-            elif is_deep:
-                # Deep fly - moderately hard
-                return random.random() < 0.6
+        # If no config found, use sensible defaults based on situation
+        if out_probability is None:
+            DEFAULT_CATCH_RATES = {
+                "deep_gap": 0.30,
+                "gap": 0.50,
+                "deep_line": 0.45,
+                "line": 0.55,
+                "deep": 0.60,
+                "routine_of": 0.92,
+                "routine_if": 0.97,
+            }
+            out_probability = DEFAULT_CATCH_RATES.get(self.situation, 0.70)
 
-        # Flares and burners to outfield gaps
-        if self.contacttype in ["flare", "burner"]:
-            if is_gap:
-                return random.random() < 0.4
-            elif is_line:
-                return random.random() < 0.5
+        # Store probability for debugging output
+        self.catch_probability = out_probability
 
-        # Default: use OutcomeChooser result for infield flies and routine plays
-        return self.initial_outcome == 'out'
+        # Roll against out probability
+        return random.random() < out_probability
 
     def _process_play(self) -> str:
         """
         Process the entire play using decision tree logic.
 
-        Uses physics-based determination of catch vs hit:
-        - Ground balls always go to timing-based fielding
-        - Air balls to gaps/lines have reduced catch probability
-        - Routine fly balls can be caught
+        Uses catch_rates to determine if defense makes the play:
+        - All contact types use catch_rates for out probability
+        - Fly balls: error check on catch
+        - Ground balls: error check on throw and catch
+        - Non-outs use physics timing for XBH determination
 
         Returns:
             Final outcome string (out, single, double, triple, homerun)
@@ -787,31 +767,53 @@ class fielding():
             )
         else:
             # No fielder (shouldn't happen except for HR)
-            return self.initial_outcome
+            return 'single'
 
-        # Determine if this is a catchable fly ball using physics
-        is_catch_attempt = self._is_catchable_play()
+        # Calculate field time for runner advancement
+        total_time = TimeCalculator.total_field_time(
+            self.contacttype,
+            self.depth,
+            self.direction,
+            fielder_state.position,
+            fielder_state.player
+        )
 
-        if is_catch_attempt:
-            # FLY BALL CATCH ATTEMPT
-            # Runners only advance during ball flight (tag up rules)
-            ball_time = TimeCalculator.ball_travel_time(self.contacttype, self.depth)
-            self._advance_runners_during_flight(ball_time)
+        # Determine if defense makes the play (applies to ALL contact types)
+        is_out_attempt = self._is_out_play()
 
-            error_on_catch, d_action = Error_Catch(self, None, self.fieldingdefender)
-            self.defensiveactions.append(d_action)
+        if is_out_attempt:
+            # DEFENSE MAKES THE PLAY - check for errors
+            if self.airball_bool:
+                # FLY BALL - runners advance during flight (tag up rules)
+                ball_time = TimeCalculator.ball_travel_time(self.contacttype, self.depth)
+                self._advance_runners_during_flight(ball_time)
 
-            if error_on_catch:
-                # Fielding error - ball gets away, becomes a hit
+                # Check for catching error only
+                error_on_play, d_action = Error_Catch(self, None, self.fieldingdefender)
+                self.defensiveactions.append(d_action)
+            else:
+                # GROUND BALL - runners advance while ball is fielded
+                self._advance_non_batter_runners(total_time)
+
+                # Check for throwing AND catching errors
+                first_baseman = self.gamestate.game.pitchingteam.firstbase
+                error_throw, error_catch, d_action = Error_Throw_Catch(
+                    self, self.fieldingdefender, first_baseman
+                )
+                self.defensiveactions.append(d_action)
+                error_on_play = error_throw or error_catch
+
+            if error_on_play:
+                # Error - ball gets away, becomes a hit
                 self._mark_runs_unearned()
+                self.errorlist.append(self.fieldingdefender)
                 self._advance_all_runners(1)  # Extra base on error
                 return 'single'
             else:
-                # Successful catch - ball fielded
+                # Successful play - batter is out
                 fielder_state.has_ball = True
                 self.play_state.ball_holder = fielder_state
 
-                # On fly ball out, batter is out immediately
                 batter_runner = next(
                     (r for r in self.play_state.runners if r.current_base == 0),
                     None
@@ -820,34 +822,33 @@ class fielding():
                     batter_runner.is_out = True
                     self.play_state.outs_this_play += 1
                     self.gamestate.game.outcount += 1
-                    self.defensiveactions.append(f"out at bat (fly)")
 
-                    # Award putout to fielder who caught the fly ball
-                    if hasattr(self.fieldingdefender, 'fieldingstats'):
-                        self.fieldingdefender.fieldingstats.Adder("putouts", 1)
+                    if self.airball_bool:
+                        self.defensiveactions.append("out at bat (fly)")
+                        # Award putout to fielder who caught
+                        if hasattr(self.fieldingdefender, 'fieldingstats'):
+                            self.fieldingdefender.fieldingstats.Adder("putouts", 1)
+                    else:
+                        self.defensiveactions.append("out at 1st (ground ball)")
+                        # Award putout to first baseman, assist to fielder
+                        first_baseman = self.gamestate.game.pitchingteam.firstbase
+                        if hasattr(first_baseman, 'fieldingstats'):
+                            first_baseman.fieldingstats.Adder("putouts", 1)
+                        if hasattr(self.fieldingdefender, 'fieldingstats'):
+                            self.fieldingdefender.fieldingstats.Adder("assists", 1)
 
                     # Update force state
                     DefenseDecisionTree.update_force_state_after_out(
                         self.play_state, 1
                     )
 
-                # Check if more outs possible (tag up situations)
+                # Check if more outs possible (tag up or double play)
                 if self._can_continue_play():
                     self._defense_loop()
 
                 return 'out'
         else:
-            # HIT PLAY - Ball lands fair (ground ball, gap hit, or dropped)
-            # Calculate TOTAL time until fielder can throw
-            # This includes: ball flight + fielder reach + ball retrieval
-            total_time = TimeCalculator.total_field_time(
-                self.contacttype,
-                self.depth,
-                self.direction,
-                fielder_state.position,
-                fielder_state.player
-            )
-
+            # HIT PLAY - Defense doesn't make the play
             # Advance runners for the FULL time window
             # This is what allows doubles and triples to occur naturally
             self._advance_runners_for_time(total_time)
@@ -856,7 +857,7 @@ class fielding():
             fielder_state.has_ball = True
             self.play_state.ball_holder = fielder_state
 
-            # Run the defense loop for any throw plays
+            # Run the defense loop for any throw plays on runners
             self._defense_loop()
 
             # Determine final outcome based on where batter ended up
@@ -1137,7 +1138,50 @@ class fielding():
             else:
                 return 'single'
 
-        return self.initial_outcome
+        # Fallback (should never reach here in normal play)
+        return 'single'
+
+    def _advance_non_batter_runners(self, available_time: float):
+        """
+        Advance runners other than the batter for the given time.
+
+        Used after a ground ball out - other runners still advance
+        during the play.
+
+        Args:
+            available_time: Time in seconds runners can advance
+        """
+        for runner in self.play_state.runners:
+            if runner.is_out:
+                continue
+            # Skip the batter (current_base == 0 or already marked out)
+            if runner.current_base == 0:
+                continue
+
+            time_remaining = available_time
+
+            while time_remaining > 0 and runner.current_base < 4:
+                base_key = (runner.current_base, runner.target_base)
+                base_time = TimeCalculator.BASE_RUNNING_TIMES.get(base_key, 4.0)
+
+                speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.01)
+                speed_mod = max(speed_mod, 0.5)
+
+                time_to_next = base_time * speed_mod * (1 - runner.progress)
+
+                if time_remaining >= time_to_next:
+                    runner.current_base = runner.target_base
+                    runner.progress = 0.0
+                    time_remaining -= time_to_next
+
+                    if runner.current_base < 4:
+                        runner.target_base = runner.current_base + 1
+                else:
+                    if (base_time * speed_mod) > 0:
+                        progress_made = time_remaining / (base_time * speed_mod)
+                        runner.progress += progress_made
+                        runner.progress = min(runner.progress, 0.99)
+                    break
 
     def _build_base_situation(self) -> list:
         """
@@ -1189,33 +1233,47 @@ class fielding():
         # Ultimate fallback - generic weights favoring middle outcomes
         return [0.05, 0.15, 0.25, 0.25, 0.12, 0.10, 0.05, 0.02, 0.01]
 
-    def _get_fieldingweights(self, contacttype: str) -> list:
+    def _derive_situation(self) -> str:
         """
-        Get fielding weights for a contact type with fallback to defaults.
+        Derive situation category from depth + direction for catch_rates lookup.
 
-        Args:
-            contacttype: The type of contact (barrel, solid, flare, etc.)
+        Situation categories:
+        - deep_gap: Deep outfield + gap direction (hardest to catch)
+        - gap: Non-deep outfield + gap direction
+        - deep_line: Deep outfield + line direction
+        - line: Non-deep outfield + line direction
+        - deep: Deep outfield + straight-away
+        - routine_of: Shallow/middle outfield + straight-away
+        - routine_if: Infield fly ball
 
         Returns:
-            List of weights for fielding outcomes
+            Situation category string
         """
-        # Try to get from config
-        weights = self.fieldingweights.get(contacttype)
+        is_gap = self.direction in fielding.GAP_DIRECTIONS
+        is_line = self.direction in fielding.LINE_DIRECTIONS
+        is_deep = self.depth == "deep_of"
+        is_outfield = self.depth in fielding.OUTFIELD_DEPTHS
+        is_infield = self.depth in fielding.INFIELD_DEPTHS
 
-        # Check if weights exist and have valid values
-        if weights and len(weights) >= 4:
-            return weights
+        # Infield first - simplest case
+        if is_infield:
+            return "routine_if"
 
-        # Fall back to defaults
-        default = fielding.DEFAULT_FIELDINGWEIGHTS.get(contacttype)
-        if default:
-            return default
+        # Outfield situations
+        if is_outfield:
+            if is_gap:
+                return "deep_gap" if is_deep else "gap"
+            elif is_line:
+                return "deep_line" if is_deep else "line"
+            else:
+                # Straight-away (center, left, right but not gap/line)
+                return "deep" if is_deep else "routine_of"
 
-        # Ultimate fallback - favor outs
-        return [100.50, 0.35, 0.12, 0.03]
+        # Fallback for homerun or unknown depths
+        return "deep"
 
     # =========================================================================
-    # PRESERVED HELPER METHODS (used by both old and new systems)
+    # PRESERVED HELPER METHODS
     # =========================================================================
 
     def PickDepth(self):
@@ -1267,72 +1325,14 @@ class fielding():
     def AirballBool(contacttype):
         if contacttype == "homerun":
             airball_bool = None
-        elif contacttype == "barrel" or "solid" or "flare" or "under":
+        elif contacttype in ("barrel", "solid", "flare", "under"):
             airball_bool = True
         else:
+            # topped, weak, burner = ground balls
             airball_bool = False
         return airball_bool
 
-    def ModWeights(defender, fieldingodds, depth, airball_bool, mod, multiplier):
-        if defender == None:
-            return [0,0,0,0]
-        
-        if airball_bool == True:
-            ab = 'air'
-        else:
-            ab = 'ground'
-        if '_of' in depth:
-            d = 'outfield'
-        else:
-            d = 'infield'
 
-        #print(f"Type:{ab} In/Out:{d}")
-
-        outodds = fieldingodds[0]
-        singleodds = fieldingodds[1]
-        doubleodds = fieldingodds[2]
-        tripleodds = fieldingodds[3]
-        sumvalue = sum([outodds, singleodds, doubleodds, tripleodds])
-        skills = [defender.fieldcatch, defender.fieldreact, defender.fieldspot, defender.speed]
-        skillsweight = mod[ab][d]
-
-        modifier = (((np.average(skills, weights=skillsweight))/50)+multiplier)/(multiplier+1)
-
-        outodds *= modifier
-        singleodds /= modifier
-        doubleodds /= modifier
-        tripleodds /= modifier
-        listofodds = [outodds, singleodds, doubleodds, tripleodds]
-        # Ensure no division by zero
-        total_odds = sum(listofodds)
-        if total_odds <= 0:
-            processedodds = [0.25, 0.25, 0.25, 0.25]  # Equal distribution fallback
-        else:
-            processedodds = [x / total_odds for x in listofodds]
-        outodds = processedodds[0]
-        singleodds = processedodds[1]
-        doubleodds = processedodds[2]
-        tripleodds = processedodds[3]
-        processedlistofodds = [outodds, singleodds, doubleodds, tripleodds]
-        return processedlistofodds
-
-    def OutcomeChooser(self):
-        if self.depth == 'homerun':
-            outcome = 'homerun'
-        else:
-            outcomes = self.gamestate.game.baselines.fieldingoutcomes
-            weights = self.adjustedfieldingweights
-
-            # Ensure valid weights (non-negative, no NaN)
-            weights = [max(0, w) if w == w else 0 for w in weights]
-
-            # Fallback if all weights are zero
-            if sum(weights) <= 0:
-                weights = [1] * len(outcomes) if outcomes else [1, 1, 1, 1]
-
-            outcome = random.choices(outcomes, weights, k=1)[0]
-        return outcome 
-    
 def Error_Throw_Catch(self, thrower, catcher):
     throw, t_action = Error_Catch(self, thrower, catcher)
     catch, c_action = Error_Throw(self, thrower, catcher)

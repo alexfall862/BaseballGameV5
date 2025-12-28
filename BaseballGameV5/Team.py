@@ -234,17 +234,16 @@ class Team():
         self.battinglist[starterid] = sub
 
     def TickInningsPlayed(self):
-        
         defenders = [defender for defender in self.battinglist if defender.lineup!="designatedhitter"]
 
         for defender in defenders:
-            defender.fieldingstats.Adder("innings_played", 1/3)
-            
+            defender.fieldingstats.Adder("outs_played", 1)
+
         self.TickInningsPitched()
-            
+
     def TickInningsPitched(self):
-        self.currentpitcher.pitchingstats.Adder("innings_pitched", 1/3)
-        self.currentpitcher.fieldingstats.Adder("innings_played", 1/3)
+        self.currentpitcher.pitchingstats.Adder("outs_pitched", 1)
+        self.currentpitcher.fieldingstats.Adder("outs_played", 1)
 
     def TickPitcherStamina(self):
         f.TickEnergy(self.baselines, self.currentpitcher)

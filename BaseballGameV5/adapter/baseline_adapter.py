@@ -20,7 +20,7 @@ class BaselineAdapter:
         "deep_if", "middle_if", "shallow_if", "mound", "catcher"
     ]
 
-    # Order of fielding outcomes for array conversion
+    # Order of fielding outcomes for array conversion (deprecated - kept for backwards compat)
     FIELDING_OUTCOMES = ["out", "single", "double", "triple"]
 
     # Field zone to spread key mapping
@@ -32,6 +32,78 @@ class BaselineAdapter:
         "center_right": "centerright",
         "right": "right",
         "far_right": "rightline"
+    }
+
+    # Situation categories for catch rates
+    # These are derived from depth + direction combinations
+    CATCH_SITUATIONS = ["deep_gap", "gap", "deep_line", "line", "deep", "routine_of", "routine_if"]
+
+    # Default catch rates per contact type per situation
+    # These replace the hardcoded values in defense.py _is_out_play()
+    DEFAULT_CATCH_RATES = {
+        "barrel": {
+            "deep_gap": 0.30,    # Deep gap - very hard to catch
+            "gap": 0.50,         # Gap hit - hard to catch
+            "deep_line": 0.45,   # Deep down the line
+            "line": 0.50,        # Down the line
+            "deep": 0.60,        # Deep fly (straight at fielder)
+            "routine_of": 0.92,  # Routine outfield fly
+            "routine_if": 0.97,  # Routine infield fly
+        },
+        "solid": {
+            "deep_gap": 0.35,
+            "gap": 0.55,
+            "deep_line": 0.50,
+            "line": 0.55,
+            "deep": 0.65,
+            "routine_of": 0.94,
+            "routine_if": 0.98,
+        },
+        "flare": {
+            "deep_gap": 0.45,
+            "gap": 0.40,
+            "deep_line": 0.55,
+            "line": 0.50,
+            "deep": 0.70,
+            "routine_of": 0.85,
+            "routine_if": 0.95,
+        },
+        "burner": {
+            "deep_gap": 0.50,
+            "gap": 0.55,
+            "deep_line": 0.55,
+            "line": 0.60,
+            "deep": 0.75,
+            "routine_of": 0.88,
+            "routine_if": 0.92,
+        },
+        "under": {
+            "deep_gap": 0.60,
+            "gap": 0.70,
+            "deep_line": 0.65,
+            "line": 0.70,
+            "deep": 0.80,
+            "routine_of": 0.95,
+            "routine_if": 0.98,
+        },
+        "topped": {
+            "deep_gap": 0.80,
+            "gap": 0.85,
+            "deep_line": 0.80,
+            "line": 0.85,
+            "deep": 0.90,
+            "routine_of": 0.95,
+            "routine_if": 0.90,  # Ground balls, can beat throw
+        },
+        "weak": {
+            "deep_gap": 0.85,
+            "gap": 0.90,
+            "deep_line": 0.85,
+            "line": 0.90,
+            "deep": 0.92,
+            "routine_of": 0.97,
+            "routine_if": 0.88,  # Weak dribblers, sometimes beat throw
+        },
     }
 
     @classmethod
@@ -51,14 +123,18 @@ class BaselineAdapter:
         game_settings = level_config.get("game", {})
         distance_weights = level_config.get("distance_weights", {})
         fielding_weights = level_config.get("fielding_weights", {})
+        catch_rates = level_config.get("catch_rates", {})
 
         return {
             "baselines": cls._build_baselines(batting, contact_odds, game_settings),
             "spread": cls._build_spread(game_constants.get("field_zones", [])),
             "distweights": cls._convert_distweights(distance_weights),
             "distoutcomes": cls.DIST_OUTCOMES.copy(),
+            # Deprecated - kept for backwards compatibility
             "fieldingweights": cls._convert_fieldingweights(fielding_weights),
             "fieldingoutcomes": cls.FIELDING_OUTCOMES.copy(),
+            # New catch_rates system - replaces fieldingweights for outcome determination
+            "catch_rates": cls._convert_catch_rates(catch_rates),
             "fieldingmod": cls._convert_fieldingmod(
                 game_constants.get("fielding_modifier", {})
             ),
@@ -218,6 +294,32 @@ class BaselineAdapter:
             for depth, level in depths.items():
                 if level == difficulty_level:
                     result.append([engine_direction, depth])
+        return result
+
+    @classmethod
+    def _convert_catch_rates(cls, catch_rates: dict) -> dict:
+        """
+        Convert catch_rates from endpoint format, merging with defaults.
+
+        Endpoint format:
+        {
+            "barrel": {"deep_gap": 0.25, "gap": 0.45, ...},
+            "solid": {...},
+            ...
+        }
+
+        Returns full catch_rates dict with defaults for missing values.
+        """
+        import copy
+        result = copy.deepcopy(cls.DEFAULT_CATCH_RATES)
+
+        # Merge in any provided values from endpoint
+        for contact_type, situations in catch_rates.items():
+            if contact_type not in result:
+                result[contact_type] = {}
+            for situation, rate in situations.items():
+                result[contact_type][situation] = float(rate)
+
         return result
 
     @classmethod

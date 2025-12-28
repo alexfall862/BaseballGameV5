@@ -178,7 +178,9 @@ class Steals():
                             if outcome == False:
                                 thirdbase.battingstats.Adder("caught_stealing", 1)
                                 self.gamestate.game.on_thirdbase = None
+                                self.gamestate.game.outcount += 1
                                 self.gamestate.defensiveoutcome = (None, None, None, "caught stealing", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
+                                return True
                 else:
                     pass
                         #return True
@@ -219,10 +221,12 @@ class Steals():
                             if outcome == False:
                                 self.gamestate.game.on_secondbase = None
                                 secondbase.battingstats.Adder("caught_stealing", 1)
+                                self.gamestate.game.outcount += 1
                                 self.gamestate.defensiveoutcome = (None, None, None, "caught stealing", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
+                                return True
                 else:
                     pass
-                    
+
                 if firstbase != None:
                     stealfreqrating = Steals.pull_stealfreq(self.firstbase, self.runnerstrategy.playerstrategy)
                     diceroll = np.random.rand() * 100
@@ -259,7 +263,9 @@ class Steals():
                             if outcome == False:
                                 self.gamestate.game.on_firstbase = None
                                 firstbase.battingstats.Adder("caught_stealing", 1)
+                                self.gamestate.game.outcount += 1
                                 self.gamestate.defensiveoutcome = (None, None, None, "caught stealing", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
+                                return True
                 else:
                     pass
         return False

@@ -38,8 +38,9 @@ class Baselines():
 
         self.distweights = load["distweights"]
         self.distoutcomes = load["distoutcomes"]
-        self.fieldingweights = load["fieldingweights"]
-        self.fieldingoutcomes = load["fieldingoutcomes"]
+        self.fieldingweights = load["fieldingweights"]  # Deprecated
+        self.fieldingoutcomes = load["fieldingoutcomes"]  # Deprecated
+        self.catch_rates = load.get("catch_rates", {})  # New system
         self.defensivealignment = load["defensivealignment"]
         self.fieldingmod = load["fieldingmod"]
         self.fieldingmultiplier = load["fieldingmultiplier"]
@@ -105,8 +106,9 @@ class Baselines():
 
         instance.distweights = data.get("distweights", {})
         instance.distoutcomes = data.get("distoutcomes", [])
-        instance.fieldingweights = data.get("fieldingweights", {})
-        instance.fieldingoutcomes = data.get("fieldingoutcomes", [])
+        instance.fieldingweights = data.get("fieldingweights", {})  # Deprecated
+        instance.fieldingoutcomes = data.get("fieldingoutcomes", [])  # Deprecated
+        instance.catch_rates = data.get("catch_rates", {})  # New system
         instance.defensivealignment = data.get("defensivealignment", {})
         instance.fieldingmod = data.get("fieldingmod", {})
         instance.fieldingmultiplier = data.get("fieldingmultiplier", 0)

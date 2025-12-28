@@ -79,7 +79,8 @@ class Action():
             Action.AtBat(self)
     
     def AtBat(self):
-        self.outcome = ie.PitchEvent(self).outcome
+        self.pitch_event = ie.PitchEvent(self)
+        self.outcome = self.pitch_event.outcome
         #print(f"{self.game.currentinning:<3}{self.game.topofinning}|{self.game.currentouts:<1}-{self.game.outcount}| {self.game.hometeam.name:<3}{self.game.hometeam.score:>2} / {self.game.awayteam.name:<3}{self.game.awayteam.score:>2} ||| B: {self.game.battingteam.name:>3}{self.game.battingteam.currentbatspot} P: {self.game.pitchingteam.name:>3}{self.game.pitchingteam.currentbatspot}  CAB:{self.game.currentstrikes}/{self.game.currentballs} {self.outcome}")
         #print(self.outcome)
         #outcome = random.choices(['ball', 'strike', 'contact', 'hbp'], [0, 3, 1, 0], k=1)[0]
@@ -88,6 +89,18 @@ class Action():
         #print(f"{self.game.skip_bool} {self.id}{self.defensiveoutcome}")
 
     def ActionPrint(self):
+        # Get modifier snapshot if ball was put in play
+        at_bat_modifiers = None
+        if (hasattr(self, 'pitch_event') and
+            self.pitch_event is not None and
+            self.pitch_event.batted_ball_event is not None):
+            at_bat_modifiers = self.pitch_event.batted_ball_event.get_modifier_snapshot()
+
+        # Get interaction phase data
+        interaction_data = None
+        if hasattr(self, 'pitch_event') and self.pitch_event is not None:
+            interaction_data = self.pitch_event.get_phase_snapshot()
+
         return {
             "ID": self.id,
             "Inning": self.game.currentinning,
@@ -105,6 +118,10 @@ class Action():
             "Outcomes": str(self.outcome),
             "Batted Ball": str(self.game.batted_ball),
             "Air or Ground": str(self.game.air_or_ground),
+            "Hit Depth": str(getattr(self.game, 'hit_depth', None)),
+            "Hit Direction": str(getattr(self.game, 'hit_direction', None)),
+            "Hit Situation": str(getattr(self.game, 'hit_situation', None)),
+            "Catch Probability": getattr(self.game, 'catch_probability', None),
             "Targeted Defender": player_ref(self.game.targeted_defender) if hasattr(self.game.targeted_defender, 'id') else str(self.game.targeted_defender),
             "Defensive Outcome": str(self.defensiveoutcome[3] if self.defensiveoutcome != None else None),
             "Error List": str(self.defensiveoutcome[5] if self.defensiveoutcome != None else None),
@@ -136,6 +153,8 @@ class Action():
             "Left Field": player_ref(self.game.pitchingteam.leftfield),
             "Center Field": player_ref(self.game.pitchingteam.centerfield),
             "Right Field": player_ref(self.game.pitchingteam.rightfield),
+            "At_Bat_Modifiers": at_bat_modifiers,
+            "Interaction_Data": interaction_data,
         }
 
 
@@ -236,6 +255,10 @@ def NextAction(self):
     self.game.batted_ball = None
     self.game.air_or_ground = None
     self.game.targeted_defender = None
+    self.game.hit_depth = None
+    self.game.hit_direction = None
+    self.game.hit_situation = None
+    self.game.catch_probability = None
     self.game.current_runners_home = []
   
 def NextAtBat(self):
@@ -253,6 +276,7 @@ def NextAtBat(self):
         self.game.is_triple = False
         self.game.is_homerun = False        
         self.game.is_walk = False
+        self.game.is_hbp = False
         self.game.is_strikeout = False
         self.game.ab_over = False
         if self.game.on_firstbase != None:
@@ -298,7 +322,11 @@ def AtBatOutcomeParser(self):
         stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)
         self.game.ab_over = True
         self.game.is_walk = True
-        
+
+    if self.outcome[0] == 'HBP':
+        self.game.ab_over = True
+        self.game.is_hbp = True
+        stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)
 
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
         fielding_result = d.fielding(self)
@@ -309,6 +337,12 @@ def AtBatOutcomeParser(self):
         self.game.air_or_ground = "air" if fielding_result.airball_bool else "ground"
         self.game.targeted_defender = fielding_result.fieldingdefender
         self.game.is_inplay = True
+
+        # Additional debugging fields from new catch_rates system
+        self.game.hit_depth = fielding_result.depth
+        self.game.hit_direction = fielding_result.direction
+        self.game.hit_situation = fielding_result.situation
+        self.game.catch_probability = getattr(fielding_result, 'catch_probability', None)
 
         # Set hit type flags based on defensive outcome
         outcome = self.defensiveoutcome[3]
@@ -344,12 +378,24 @@ def WalkoffCheck(self):
         self.game.gamedone = True
 
 def OutProcessor(self):
-    self.game.pitchingteam.TickInningsPlayed()
-    WalkoffCheck(self)  
-    if (self.game.currentouts) < self.game.rules.outs:
-        self.game.currentouts += self.game.outcount 
-        self.game.outcount = 0
-    elif (self.game.currentouts + self.game.outcount) >= self.game.rules.outs:
+    # Calculate how many outs can actually be credited this half-inning
+    # Can't credit more outs than needed to end the inning (handles double/triple plays)
+    outs_remaining_in_inning = self.game.rules.outs - self.game.currentouts
+    outs_to_credit = min(self.game.outcount, outs_remaining_in_inning)
+
+    # Credit innings only for outs that "count"
+    for _ in range(outs_to_credit):
+        self.game.pitchingteam.TickInningsPlayed()
+
+    # Add the actual outs made to the count
+    self.game.currentouts += self.game.outcount
+    self.game.outcount = 0
+
+    # Check for walkoff
+    WalkoffCheck(self)
+
+    # Check if inning should flip (now correctly triggers at 3 outs, not 4)
+    if self.game.currentouts >= self.game.rules.outs:
         InningFlip(self)    
 
 def InningFlip(self):

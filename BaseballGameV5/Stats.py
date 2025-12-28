@@ -63,6 +63,20 @@ def RunScorer(runner):
     else:
         runner.on_base_pitcher.pitchingstats.Adder("unearned_runs", 1)
 
+def outs_to_innings(outs):
+    """Convert outs count to baseball innings notation (e.g., 27 outs = 9.0, 28 outs = 9.1)."""
+    full_innings = outs // 3
+    partial = outs % 3
+    return full_innings + (partial / 10.0)
+
+
+def innings_to_outs(innings):
+    """Convert baseball innings notation to outs count (e.g., 9.1 = 28 outs)."""
+    full_innings = int(innings)
+    partial = round((innings - full_innings) * 10)
+    return (full_innings * 3) + partial
+
+
 class PitchingStats():
     def __init__(self, pid, position, name, teamname):
         self.pid = pid
@@ -73,7 +87,7 @@ class PitchingStats():
         self.loss = 0
         self.earned_runs = 0
         self.unearned_runs = 0
-        self.innings_pitched = 0 #incremented in thirds?
+        self.outs_pitched = 0  # Store as integer outs
         self.pitches_thrown = 0
         self.balls = 0
         self.strikes = 0
@@ -89,17 +103,31 @@ class PitchingStats():
         self.balks = 0
         self.games_started = 0
         self.appearances = 0
-        
+
+    @property
+    def innings_pitched(self):
+        """Convert outs to baseball innings notation for display."""
+        return outs_to_innings(self.outs_pitched)
+
     def Combiner(self):
-        self.era = round( (9*self.earned_runs / self.innings_pitched), 3)
+        # Use actual innings (outs/3) for rate calculations, not display notation
+        actual_innings = self.outs_pitched / 3 if self.outs_pitched > 0 else 1
+        self.era = round((9 * self.earned_runs / actual_innings), 3)
         self.hits_allowed = (self.singles + self.doubles + self.triples + self.homeruns)
-        self.whip = round( ((self.walks + self.hits_allowed)/self.innings_pitched), 3)
-        self.fip = round( (((13*self.homeruns) + (3*(self.walks+self.hbp)) - (2*self.strikeouts))/self.innings_pitched), 3 )
+        self.whip = round(((self.walks + self.hits_allowed) / actual_innings), 3)
+        self.fip = round((((13 * self.homeruns) + (3 * (self.walks + self.hbp)) - (2 * self.strikeouts)) / actual_innings), 3)
 
     def Adder(self, stat_name, amount):
         current_value = getattr(self, stat_name)
-        new_value = current_value+amount
+        new_value = current_value + amount
         setattr(self, stat_name, new_value)
+
+    def to_dict(self):
+        """Return dict with innings_pitched as display value instead of outs."""
+        d = self.__dict__.copy()
+        d['innings_pitched'] = self.innings_pitched  # Add computed property
+        del d['outs_pitched']  # Remove internal outs tracking
+        return d
 
 class FieldingStats():
     def __init__(self, pid, position, name, teamname):
@@ -111,20 +139,32 @@ class FieldingStats():
         self.catching_errors = 0
         self.assists = 0
         self.putouts = 0
-        self.innings_played = 0
-      
+        self.outs_played = 0  # Store as integer outs
+
+    @property
+    def innings_played(self):
+        """Convert outs to baseball innings notation for display."""
+        return outs_to_innings(self.outs_played)
+
     def Combiner(self):
         self.errors = self.throwing_errors + self.catching_errors
         self.defensive_chances = self.putouts + self.assists + self.errors
         if self.defensive_chances == 0:
             self.fielding_percentage = None
         else:
-            self.fielding_percentage = round(((self.putouts+self.assists) / self.defensive_chances), 3)
-            
+            self.fielding_percentage = round(((self.putouts + self.assists) / self.defensive_chances), 3)
+
     def Adder(self, stat_name, amount):
         current_value = getattr(self, stat_name)
-        new_value = current_value+amount
+        new_value = current_value + amount
         setattr(self, stat_name, new_value)
+
+    def to_dict(self):
+        """Return dict with innings_played as display value instead of outs."""
+        d = self.__dict__.copy()
+        d['innings_played'] = self.innings_played  # Add computed property
+        del d['outs_played']  # Remove internal outs tracking
+        return d
 
 class BattingStats():
     def __init__(self, pid, position, name, teamname):
@@ -177,10 +217,10 @@ def ResetPitcherStatus(player):
     player.on_base_pitcher = None
 
 def StatPullFielding(team, gname):
-    export = [] 
-    filename = str(f"{gname}_defense_{team.name}")    
+    export = []
+    filename = str(f"{gname}_defense_{team.name}")
     for player in team.roster.playerlist:
-        if player.fieldingstats.innings_played > 0:
+        if player.fieldingstats.outs_played > 0:
             player.fieldingstats.Combiner()
             export.append(player.fieldingstats)
             #print(f"
@@ -233,12 +273,12 @@ def StatJSONConverter(game):
     #actions = ActionSort(game.actions)
     actions = game.actions
 
-    homebatJSON = json.dumps([object.__dict__ for object in homebat])
-    homepitchJSON = json.dumps([object.__dict__ for object in homepitch])
-    homefieldJSON = json.dumps([object.__dict__ for object in homefield])
-    awaybatJSON = json.dumps([object.__dict__ for object in awaybat])
-    awaypitchJSON = json.dumps([object.__dict__ for object in awaypitch])
-    awayfieldJSON = json.dumps([object.__dict__ for object in awayfield])
+    homebatJSON = json.dumps([obj.__dict__ for obj in homebat])
+    homepitchJSON = json.dumps([obj.to_dict() for obj in homepitch])
+    homefieldJSON = json.dumps([obj.to_dict() for obj in homefield])
+    awaybatJSON = json.dumps([obj.__dict__ for obj in awaybat])
+    awaypitchJSON = json.dumps([obj.to_dict() for obj in awaypitch])
+    awayfieldJSON = json.dumps([obj.to_dict() for obj in awayfield])
     actionsJSON = json.dumps([object for object in actions])
     gamemetaJSON = json.dumps( game.meta.to_dict())
 
@@ -269,16 +309,25 @@ def SaveJSON(data, filestring):
     with open(str(filestring + ".json"), 'w') as jsonfile:
         json.dump(data, jsonfile)
 
+def _get_stat_dict(obj):
+    """Get dict representation, using to_dict() if available."""
+    if hasattr(obj, 'to_dict'):
+        return obj.to_dict()
+    return obj.__dict__
+
+
 def StatSaverCSV(objects, filename):
-    with open(str(filename+".csv"), 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=objects[0].__dict__.keys())
+    with open(str(filename + ".csv"), 'w', newline='') as csvfile:
+        first_dict = _get_stat_dict(objects[0])
+        writer = csv.DictWriter(csvfile, fieldnames=first_dict.keys())
         writer.writeheader()
-        for object in objects:
-            writer.writerow(object.__dict__)
+        for obj in objects:
+            writer.writerow(_get_stat_dict(obj))
+
 
 def StatSaverJSON(objects, filename):
     with open(str(filename + ".json"), 'w') as jsonfile:
-        json.dump([object.__dict__ for object in objects], jsonfile)
+        json.dump([_get_stat_dict(obj) for obj in objects], jsonfile)
         
 def StatSaverCombo(objects, filename):
     StatSaverCSV(objects, filename)
@@ -355,20 +404,23 @@ def PitchDeDuper(players):
     result = {}
     for player in players:
         if player.pid in result:
-            result[player.pid].win += player.win 
-            result[player.pid].loss += player.loss 
+            result[player.pid].win += player.win
+            result[player.pid].loss += player.loss
             result[player.pid].earned_runs += player.earned_runs
             result[player.pid].unearned_runs += player.unearned_runs
-            result[player.pid].innings_pitched += player.innings_pitched
+            # Convert display innings to outs, add, then back to display
+            existing_outs = innings_to_outs(result[player.pid].innings_pitched)
+            new_outs = innings_to_outs(player.innings_pitched)
+            result[player.pid].innings_pitched = outs_to_innings(existing_outs + new_outs)
             result[player.pid].pitches_thrown += player.pitches_thrown
-            result[player.pid].balls += player.balls 
-            result[player.pid].strikes += player.strikes 
-            result[player.pid].walks += player.walks 
+            result[player.pid].balls += player.balls
+            result[player.pid].strikes += player.strikes
+            result[player.pid].walks += player.walks
             result[player.pid].strikeouts += player.strikeouts
-            result[player.pid].homeruns += player.homeruns 
+            result[player.pid].homeruns += player.homeruns
             result[player.pid].triples += player.triples
             result[player.pid].doubles += player.doubles
-            result[player.pid].singles += player.singles 
+            result[player.pid].singles += player.singles
             result[player.pid].hbp += player.hbp
             result[player.pid].ibb += player.ibb
             result[player.pid].wildpitches += player.wildpitches
@@ -384,11 +436,14 @@ def FieldDeDuper(players):
     result = {}
     for player in players:
         if player.pid in result:
-            result[player.pid].throwing_errors += player.throwing_errors 
-            result[player.pid].catching_errors += player.catching_errors 
+            result[player.pid].throwing_errors += player.throwing_errors
+            result[player.pid].catching_errors += player.catching_errors
             result[player.pid].assists += player.assists
             result[player.pid].putouts += player.putouts
-            result[player.pid].innings_played += player.innings_played
+            # Convert display innings to outs, add, then back to display
+            existing_outs = innings_to_outs(result[player.pid].innings_played)
+            new_outs = innings_to_outs(player.innings_played)
+            result[player.pid].innings_played = outs_to_innings(existing_outs + new_outs)
 
         else:
             result[player.pid] = player
@@ -441,10 +496,13 @@ def JSONCombineBat(batstats):
         batstats.ops = round( (batstats.obp + batstats.slg), 3 )
 
 def JSONCombinePitch(pitchstats):
-        pitchstats.era = round( (9*pitchstats.earned_runs / pitchstats.innings_pitched), 3)
+        # Convert display innings (9.1) to actual innings (9.333) for rate calculations
+        outs = innings_to_outs(pitchstats.innings_pitched)
+        actual_innings = outs / 3 if outs > 0 else 1
+        pitchstats.era = round((9 * pitchstats.earned_runs / actual_innings), 3)
         pitchstats.hits_allowed = (pitchstats.singles + pitchstats.doubles + pitchstats.triples + pitchstats.homeruns)
-        pitchstats.whip = round( ((pitchstats.walks + pitchstats.hits_allowed)/pitchstats.innings_pitched), 3)
-        pitchstats.fip = round( (((13*pitchstats.homeruns) + (3*(pitchstats.walks+pitchstats.hbp)) - (2*pitchstats.strikeouts))/pitchstats.innings_pitched), 3 )
+        pitchstats.whip = round(((pitchstats.walks + pitchstats.hits_allowed) / actual_innings), 3)
+        pitchstats.fip = round((((13 * pitchstats.homeruns) + (3 * (pitchstats.walks + pitchstats.hbp)) - (2 * pitchstats.strikeouts)) / actual_innings), 3)
 
 def JSONCombineField(fieldstats):
         fieldstats.errors = fieldstats.throwing_errors + fieldstats.catching_errors

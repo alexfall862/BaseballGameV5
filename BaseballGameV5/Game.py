@@ -200,7 +200,7 @@ class Game():
         Run the game simulation and return results.
 
         Returns:
-            Dict with game results, boxscore, play-by-play, injuries
+            Dict with game results, boxscore, play-by-play, injuries, tuning data
         """
         # Run the game
         while self.gamedone == False:
@@ -219,8 +219,107 @@ class Game():
             },
             "boxscore": self.ReturnBox(),
             "play_by_play": self.actions,
-            "injuries": self.pregame_injury_reports + getattr(self, 'ingame_injury_reports', [])
+            "injuries": self.pregame_injury_reports + getattr(self, 'ingame_injury_reports', []),
+            "tuning_data": self._build_tuning_data()
         }
+
+    def _build_tuning_data(self):
+        """Build tuning data for analysis and debugging."""
+        return {
+            "lineup_stats": {
+                "away": self._get_lineup_stats(self.awayteam),
+                "home": self._get_lineup_stats(self.hometeam)
+            },
+            "starting_pitcher_stats": {
+                "away": self._get_pitcher_stats(self.awayteam),
+                "home": self._get_pitcher_stats(self.hometeam)
+            },
+            "contact_distribution": self._get_contact_distribution()
+        }
+
+    def _get_lineup_stats(self, team):
+        """Get batting stats for lineup players."""
+        lineup_stats = []
+        for player in team.battinglist:
+            lineup_stats.append({
+                "player_id": getattr(player, 'id', None),
+                "player_name": f"{player.firstname} {player.lastname}",
+                "batting_order": player.battingorder,
+                "position": player.lineup,
+                "contact": round(player.contact, 1),
+                "power": round(player.power, 1),
+                "eye": round(player.eye, 1),
+                "discipline": round(player.discipline, 1)
+            })
+        # Calculate lineup averages
+        if lineup_stats:
+            avg_contact = sum(p["contact"] for p in lineup_stats) / len(lineup_stats)
+            avg_power = sum(p["power"] for p in lineup_stats) / len(lineup_stats)
+            avg_eye = sum(p["eye"] for p in lineup_stats) / len(lineup_stats)
+            avg_discipline = sum(p["discipline"] for p in lineup_stats) / len(lineup_stats)
+        else:
+            avg_contact = avg_power = avg_eye = avg_discipline = 0
+
+        return {
+            "players": lineup_stats,
+            "averages": {
+                "contact": round(avg_contact, 1),
+                "power": round(avg_power, 1),
+                "eye": round(avg_eye, 1),
+                "discipline": round(avg_discipline, 1)
+            }
+        }
+
+    def _get_pitcher_stats(self, team):
+        """Get stats for the starting pitcher and pitches used."""
+        pitcher = team.currentpitcher
+        pitches = []
+        for i in range(1, 6):
+            pitch = getattr(pitcher, f'pitch{i}', None)
+            if pitch and pitch.ovr > 0:
+                pitches.append({
+                    "pitch_name": pitch.name,
+                    "pitch_ovr": round(pitch.ovr, 1)
+                })
+
+        # Calculate weighted average OVR (weighted by usage order)
+        if pitches:
+            weights = [5, 4, 3, 2, 1][:len(pitches)]
+            weighted_sum = sum(p["pitch_ovr"] * w for p, w in zip(pitches, weights))
+            total_weight = sum(weights)
+            weighted_avg = weighted_sum / total_weight
+        else:
+            weighted_avg = 0
+
+        return {
+            "player_id": getattr(pitcher, 'id', None),
+            "player_name": f"{pitcher.firstname} {pitcher.lastname}",
+            "pitches": pitches,
+            "weighted_pitch_ovr": round(weighted_avg, 1)
+        }
+
+    def _get_contact_distribution(self):
+        """Calculate contact type distribution from play-by-play."""
+        contact_types = ["barrel", "solid", "flare", "burner", "under", "topped", "weak"]
+        counts = {ct: 0 for ct in contact_types}
+        total = 0
+
+        for action in self.actions:
+            batted_ball = action.get("Batted Ball")
+            if batted_ball and batted_ball != "None":
+                if batted_ball in counts:
+                    counts[batted_ball] += 1
+                    total += 1
+
+        # Calculate percentages
+        distribution = {}
+        for ct in contact_types:
+            count = counts[ct]
+            pct = round((count / total * 100), 1) if total > 0 else 0
+            distribution[ct] = {"count": count, "pct": pct}
+
+        distribution["total_batted_balls"] = total
+        return distribution
 
     def ReturnBox(self):
         test = stats.StatJSONConverter(self)

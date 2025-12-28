@@ -194,7 +194,12 @@ class PlayerAdapter:
             stealfreq=float(player_data.get("stealfreq", 10.0)),
             pickofffreq=float(player_data.get("pickofffreq", 10.0)),
             plate_approach=player_data.get("plate_approach", "normal"),
-            pitchchoices=player_data.get("pitchchoices", [])
+            pitchchoices=player_data.get("pitchchoices", []),
+
+            # Spray chart splits (sum to 1.0)
+            left_split=float(player_data.get("left_split", 0.33)),
+            center_split=float(player_data.get("center_split", 0.34)),
+            right_split=float(player_data.get("right_split", 0.33))
         )
 
     @classmethod
