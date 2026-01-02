@@ -29,7 +29,15 @@ class PitchEvent:
     HBP_BASE_RATE = 0.003
     FRAME_MIN = 0.01
     FRAME_MAX = 0.05
-    FOUL_RATE = 0.30
+    FOUL_RATE = 0.45
+
+    # Relative advantage system constants
+    ADVANTAGE_DIVISOR = 50  # Maps 30-point edge to ~0.6 advantage
+    DISCIPLINE_SWING_MODIFIER = 0.20  # ±12% per 30-point edge
+    EYE_CONTACT_MODIFIER = 0.20  # ±12% per 30-point edge
+    BASE_SWING_ON_STRIKE = 0.70  # Base swing rate on strikes
+    BASE_SWING_ON_BALL = 0.30  # Base chase rate on balls
+    BASE_CONTACT_RATE = 0.75  # Base contact rate at parity
 
     def __init__(self, action):
         self.action = action
@@ -59,6 +67,9 @@ class PitchEvent:
         self.contact_prob = None
         self.consist_degrade = None
 
+        # Matchup advantages (calculated after consistency roll)
+        self.advantages = None
+
         # Run the pipeline
         self.outcome = self.run_pipeline()
         self.pitcher.pitchingstats.Adder("pitches_thrown", 1)
@@ -74,6 +85,9 @@ class PitchEvent:
 
         # Phase 0.75: Handedness Adjustment
         self.phase075_handedness_adjustment()
+
+        # Calculate matchup advantages (after effective stats are set)
+        self.advantages = self.calculate_matchup_advantages()
 
         # Phase 1: Location Quality + HBP check
         result = self.phase1_location_quality()
@@ -115,7 +129,7 @@ class PitchEvent:
         pitchodds = [5, 4, 3, 2, 1]
 
         pitch = random.choices(pitchlist, pitchodds, k=1)[0]
-        location = random.choices(["Inside", "Outside"], [1, 1.5], k=1)[0]
+        location = random.choices(["Inside", "Outside"], [1, 1], k=1)[0]
 
         return pitch, location
 
@@ -146,7 +160,7 @@ class PitchEvent:
 
     def phase075_handedness_adjustment(self):
         """Modify batter stats based on handedness matchup."""
-        mod_amount = 5
+        mod_amount = 2
         min_stat = 1
         max_stat = 99
 
@@ -166,6 +180,26 @@ class PitchEvent:
             self.eff_power = min(self.batter.power + mod_amount, max_stat)
             self.eff_eye = min(self.batter.eye + mod_amount, max_stat)
             self.eff_discipline = min(self.batter.discipline + mod_amount, max_stat)
+
+    def calculate_matchup_advantages(self):
+        """
+        Calculate relative advantages for all attribute pairings.
+
+        Returns dict with advantage values (approximately -1.2 to +1.2 range).
+        Positive = batter advantage, Negative = pitcher advantage.
+
+        Pairings:
+        - Discipline vs pcntrl → BB% (swing decisions on balls)
+        - Eye vs pbrk → K% (whiff rate when swinging)
+        - Contact vs pcntrl → AVG (batted ball tier quality)
+        - Power vs pacc → ISO (barrel vs solid split within quality tier)
+        """
+        return {
+            'discipline': (self.eff_discipline - self.eff_pcntrl) / self.ADVANTAGE_DIVISOR,
+            'eye': (self.eff_eye - self.eff_pbrk) / self.ADVANTAGE_DIVISOR,
+            'contact': (self.eff_contact - self.eff_pcntrl) / self.ADVANTAGE_DIVISOR,
+            'power': (self.eff_power - self.eff_pacc) / self.ADVANTAGE_DIVISOR,
+        }
 
     def phase1_location_quality(self):
         """
@@ -200,27 +234,34 @@ class PitchEvent:
 
     def phase3_swing_decision(self):
         """
-        Determine if batter swings or takes.
-        Uses InsideSwing/OutsideSwing as config anchors.
+        Determine if batter swings or takes using discipline advantage.
+
+        Discipline advantage (batter.discipline vs pitcher.pcntrl) determines:
+        - On strikes (Inside): Higher discipline → more swings (recognizes hittable pitches)
+        - On balls (Outside): Higher discipline → fewer swings (avoids chasing)
+
+        Recognition score also modifies the effective advantage.
         Returns "Swing" or "Take".
         """
-        pitcher_control = (self.pitcher.pgencontrol + self.eff_pcntrl) / 2
-        pitcher_control = max(pitcher_control, 1)  # Prevent division by zero
+        # Get discipline advantage from matchup advantages
+        discipline_adv = self.advantages['discipline']
 
-        discipline_ratio = self.eff_discipline / pitcher_control
+        # Recognition affects the effective discipline advantage
+        # Good recognition amplifies discipline, poor recognition mutes it
+        effective_discipline_adv = discipline_adv * self.recognition_score
 
-        # Recognition affects discipline effectiveness
-        effective_discipline_ratio = discipline_ratio * self.recognition_score
-
-        # Calculate bounded shift
-        shift = (effective_discipline_ratio - 1.0) * self.SWING_SHIFT_MAX
-        shift = clamp(shift, -self.SWING_SHIFT_MAX, self.SWING_SHIFT_MAX)
+        # Calculate swing probability modifier
+        # +0.6 advantage (30-point batter edge) → +12% modifier
+        discipline_modifier = effective_discipline_adv * self.DISCIPLINE_SWING_MODIFIER
 
         if self.final_location == "Inside":
-            self.swing_prob = clamp(self.insideswing + shift, 0.05, 0.95)
-        else:  # Outside
-            # Good discipline = LESS chasing on balls outside the zone
-            self.swing_prob = clamp(self.outsideswing - shift, 0.05, 0.95)
+            # On strikes: high discipline → MORE likely to swing
+            base_rate = self.BASE_SWING_ON_STRIKE
+            self.swing_prob = clamp(base_rate + discipline_modifier, 0.05, 0.95)
+        else:  # Outside (balls)
+            # On balls: high discipline → LESS likely to chase
+            base_rate = self.BASE_SWING_ON_BALL
+            self.swing_prob = clamp(base_rate - discipline_modifier, 0.05, 0.95)
 
         if random.random() < self.swing_prob:
             return "Swing"
@@ -248,26 +289,37 @@ class PitchEvent:
 
     def phase4_contact_execution(self):
         """
-        Determine contact outcome when swinging.
-        Uses InsideContact/OutsideContact as config anchors.
+        Determine contact outcome when swinging using eye advantage.
+
+        Eye advantage (batter.eye vs pitcher.pbrk) determines:
+        - Higher eye → better hand-eye coordination → more contact, fewer whiffs
+        - Lower eye → worse hand-eye coordination → more whiffs → higher K%
+
+        Recognition score also modifies the effective advantage.
         Returns "Whiff", "Foul", or "InPlay".
         """
-        pitcher_difficulty = (self.eff_pbrk + self.eff_pcntrl) / 2
-        pitcher_difficulty = max(pitcher_difficulty, 1)  # Prevent division by zero
+        # Get eye advantage from matchup advantages
+        eye_adv = self.advantages['eye']
 
-        contact_ratio = self.eff_contact / pitcher_difficulty
+        # Recognition affects the effective eye advantage
+        # Good recognition helps make contact, poor recognition hurts
+        effective_eye_adv = eye_adv * self.recognition_score
 
-        # Recognition also affects contact
-        effective_contact_ratio = contact_ratio * self.recognition_score
+        # Calculate contact probability modifier
+        # +0.6 advantage (30-point batter edge) → +12% contact rate
+        eye_modifier = effective_eye_adv * self.EYE_CONTACT_MODIFIER
 
-        # Calculate bounded shift
-        shift = (effective_contact_ratio - 1.0) * self.CONTACT_SHIFT_MAX
-        shift = clamp(shift, -self.CONTACT_SHIFT_MAX, self.CONTACT_SHIFT_MAX)
-
+        # Apply location-based adjustment
         if self.final_location == "Inside":
-            self.contact_prob = clamp(self.insidecontact + shift, 0.20, 0.98)
+            # Inside pitches are generally easier to make contact on
+            location_bonus = 0.05
         else:  # Outside
-            self.contact_prob = clamp(self.outsidecontact + shift, 0.20, 0.98)
+            # Outside pitches are harder to make solid contact
+            location_bonus = -0.05
+
+        # Calculate final contact probability
+        self.contact_prob = self.BASE_CONTACT_RATE + eye_modifier + location_bonus
+        self.contact_prob = clamp(self.contact_prob, 0.40, 0.95)
 
         # Roll for contact
         if random.random() < self.contact_prob:
@@ -310,6 +362,12 @@ class PitchEvent:
             # Pitcher general control
             "pgencontrol": round(self.pitcher.pgencontrol, 1) if hasattr(self, 'pitcher') else None,
 
+            # Matchup advantages (batter vs pitcher)
+            "adv_discipline": round(self.advantages['discipline'], 3) if self.advantages else None,
+            "adv_eye": round(self.advantages['eye'], 3) if self.advantages else None,
+            "adv_contact": round(self.advantages['contact'], 3) if self.advantages else None,
+            "adv_power": round(self.advantages['power'], 3) if self.advantages else None,
+
             # Phase 2: Recognition
             "recognition_score": round(self.recognition_score, 3) if hasattr(self, 'recognition_score') else None,
 
@@ -329,13 +387,22 @@ class PitchEvent:
 class BattedBallEvent:
     """
     Phase 5 & 6: Contact Type and Direction.
-    Power shifts config distribution, batter spray splits determine direction.
+
+    Contact Type Determination (Tier System):
+    - Contact advantage shifts probability between tiers (Quality/Neutral/Poor)
+    - Power advantage affects Barrel vs Solid split within Quality tier only
+    - All base rates come from config data
+
+    Tier Structure:
+    - Quality: Barrel, Solid (~13% base)
+    - Neutral: Flare, Burner (~25% base)
+    - Poor: Topped, Under, Weak (~62% base)
     """
 
-    # Config constants
-    POWER_BASELINE = 50
-    POWER_RANGE = 40
-    POWER_MAX_REDISTRIBUTION = 0.08
+    # Tier redistribution constants
+    CONTACT_TIER_SHIFT_FACTOR = 0.40  # 40% shift per 30-point advantage
+    POWER_BARREL_SHIFT = 0.30  # ±18% barrel share per 30-point edge
+    MIN_PROBABILITY = 0.001  # Minimum probability floor
 
     def __init__(self, pitchevent):
         self.pitchevent = pitchevent
@@ -343,8 +410,8 @@ class BattedBallEvent:
         self.pitcher = pitchevent.pitcher
         self.game = pitchevent.game
 
-        # Get effective power (with handedness adjustment already applied)
-        self.eff_power = pitchevent.eff_power
+        # Get matchup advantages from PitchEvent
+        self.advantages = pitchevent.advantages
 
         # Config baseline contact odds
         baselines = pitchevent.game.baselines
@@ -358,6 +425,9 @@ class BattedBallEvent:
             "weak": baselines.weakodds
         }
 
+        # Calculate base tier probabilities from config
+        self._calculate_base_tiers()
+
         # Store raw stats for tuning export
         self.raw_batter_contact = self.batter.contact
         self.raw_batter_power = self.batter.power
@@ -368,86 +438,191 @@ class BattedBallEvent:
         self.direction = self.phase6_direction()
         self.outcome = [self.contact_type, self.direction, pitchevent.pitch.name]
 
-    def phase5_contact_type(self):
-        """
-        Determine quality of contact.
-        Power shifts probability between quality tiers.
-        """
-        # Normalize base odds to sum to 1
+    def _calculate_base_tiers(self):
+        """Calculate base tier probabilities from config odds."""
         total = sum(self.base_odds.values())
         if total <= 0:
             total = 1
 
+        # Normalize odds
         odds = {k: v / total for k, v in self.base_odds.items()}
 
-        # Calculate power shift
-        power_shift = (self.eff_power - self.POWER_BASELINE) / self.POWER_RANGE
-        power_shift = clamp(power_shift, -1.0, 1.0)
+        # Calculate tier base probabilities
+        self.quality_base = odds["barrel"] + odds["solid"]
+        self.neutral_base = odds["flare"] + odds["burner"]
+        self.poor_base = odds["topped"] + odds["under"] + odds["weak"]
 
-        # Amount to redistribute
-        redistribution = abs(power_shift) * self.POWER_MAX_REDISTRIBUTION
-
-        # Tier definitions
-        quality_tier = ["barrel", "solid"]
-        neutral_tier = ["flare", "burner"]
-        poor_tier = ["under", "topped", "weak"]
-
-        if power_shift > 0:
-            # High power: steal from neutral/poor, give to quality
-            # Calculate how much to take from each tier
-            neutral_total = sum(odds[k] for k in neutral_tier)
-            poor_total = sum(odds[k] for k in poor_tier)
-            source_total = neutral_total + poor_total
-
-            if source_total > 0:
-                # Take proportionally from neutral and poor
-                for key in neutral_tier + poor_tier:
-                    take_fraction = odds[key] / source_total
-                    odds[key] -= redistribution * take_fraction
-                    odds[key] = max(odds[key], 0.001)
-
-                # Give proportionally to quality
-                quality_total = sum(odds[k] for k in quality_tier)
-                if quality_total > 0:
-                    for key in quality_tier:
-                        give_fraction = odds[key] / quality_total
-                        odds[key] += redistribution * give_fraction
+        # Store within-tier shares from config
+        if self.quality_base > 0:
+            self.barrel_share_of_quality = odds["barrel"] / self.quality_base
         else:
-            # Low power: steal from quality, give to neutral
-            quality_total = sum(odds[k] for k in quality_tier)
+            self.barrel_share_of_quality = 0.5
 
-            if quality_total > 0:
-                # Take proportionally from quality
-                for key in quality_tier:
-                    take_fraction = odds[key] / quality_total
-                    odds[key] -= redistribution * take_fraction
-                    odds[key] = max(odds[key], 0.001)
+        if self.neutral_base > 0:
+            self.flare_share_of_neutral = odds["flare"] / self.neutral_base
+        else:
+            self.flare_share_of_neutral = 0.5
 
-                # Give proportionally to neutral
-                neutral_total = sum(odds[k] for k in neutral_tier)
-                if neutral_total > 0:
-                    for key in neutral_tier:
-                        give_fraction = odds[key] / neutral_total
-                        odds[key] += redistribution * give_fraction
+        if self.poor_base > 0:
+            self.topped_share_of_poor = odds["topped"] / self.poor_base
+            self.under_share_of_poor = odds["under"] / self.poor_base
+            # weak is the remainder
+        else:
+            self.topped_share_of_poor = 0.33
+            self.under_share_of_poor = 0.33
 
-        # Normalize again after redistribution
-        total = sum(odds.values())
-        odds = {k: v / total for k, v in odds.items()}
+    def phase5_contact_type(self):
+        """
+        Determine batted ball contact type using tier system.
 
-        # Store final odds for tuning export
-        self.final_odds = {k: round(v, 4) for k, v in odds.items()}
+        Pipeline:
+        1. Get contact advantage (batter.contact vs pitch.pcntrl)
+        2. Redistribute tier probabilities based on contact advantage
+        3. Roll for tier (Quality/Neutral/Poor)
+        4. Roll for type within tier:
+           - Quality: Power advantage determines Barrel vs Solid split
+           - Neutral: Config ratio determines Flare vs Burner
+           - Poor: Config ratio determines Topped vs Under vs Weak
+        """
+        # Get advantages
+        contact_adv = self.advantages['contact']
+        power_adv = self.advantages['power']
 
-        # Roll for contact type
-        outcomes = list(odds.keys())
-        weights = list(odds.values())
+        # Step 1: Redistribute tiers based on contact advantage
+        quality_prob, neutral_prob, poor_prob = self._redistribute_tiers(contact_adv)
 
-        # Safety check for valid weights
-        weights = [max(0, w) if w == w else 0 for w in weights]
-        if sum(weights) <= 0:
-            weights = [1] * len(weights)
+        # Store tier probabilities for tuning export
+        self.tier_probs = {
+            'quality': round(quality_prob, 4),
+            'neutral': round(neutral_prob, 4),
+            'poor': round(poor_prob, 4)
+        }
 
-        contact_type = random.choices(outcomes, weights=weights, k=1)[0]
+        # Step 2: Roll for tier
+        roll = random.random()
+        if roll < quality_prob:
+            tier = 'quality'
+        elif roll < quality_prob + neutral_prob:
+            tier = 'neutral'
+        else:
+            tier = 'poor'
+
+        self.selected_tier = tier
+
+        # Step 3: Roll for type within tier
+        if tier == 'quality':
+            contact_type = self._roll_quality_tier(power_adv)
+        elif tier == 'neutral':
+            contact_type = self._roll_neutral_tier()
+        else:
+            contact_type = self._roll_poor_tier()
+
+        # Store final odds for tuning export (reconstructed from tier system)
+        self.final_odds = self._reconstruct_final_odds(quality_prob, neutral_prob, poor_prob, power_adv)
+
         return contact_type
+
+    def _redistribute_tiers(self, contact_adv):
+        """
+        Apply contact advantage to shift tier probabilities.
+
+        Positive contact advantage (batter edge):
+        - Shifts probability from Poor → Neutral and Quality
+
+        Negative contact advantage (pitcher edge):
+        - Shifts probability from Quality and Neutral → Poor
+        """
+        quality = self.quality_base
+        neutral = self.neutral_base
+        poor = self.poor_base
+
+        if contact_adv > 0:
+            # Batter advantage: shift from Poor to Neutral/Quality
+            shift = contact_adv * self.CONTACT_TIER_SHIFT_FACTOR
+            poor_reduction = poor * shift
+
+            # 40% of shifted probability goes to Quality, 60% to Neutral
+            quality_gain = poor_reduction * 0.4
+            neutral_gain = poor_reduction * 0.6
+
+            quality = quality + quality_gain
+            neutral = neutral + neutral_gain
+            poor = poor - poor_reduction
+        else:
+            # Pitcher advantage: shift from Quality/Neutral to Poor
+            shift = abs(contact_adv) * self.CONTACT_TIER_SHIFT_FACTOR
+
+            quality_reduction = quality * shift
+            neutral_reduction = neutral * shift * 0.5
+
+            quality = quality - quality_reduction
+            neutral = neutral - neutral_reduction
+            poor = poor + quality_reduction + neutral_reduction
+
+        # Ensure minimums
+        quality = max(quality, self.MIN_PROBABILITY)
+        neutral = max(neutral, self.MIN_PROBABILITY)
+        poor = max(poor, self.MIN_PROBABILITY)
+
+        # Normalize to sum to 1.0
+        total = quality + neutral + poor
+        return quality / total, neutral / total, poor / total
+
+    def _roll_quality_tier(self, power_adv):
+        """
+        Roll within Quality tier, applying power advantage.
+
+        Power advantage affects Barrel vs Solid split:
+        - Positive power advantage → more Barrel
+        - Negative power advantage → more Solid
+        """
+        # Base barrel share from config
+        base_barrel = self.barrel_share_of_quality
+
+        # Power shifts barrel/solid split
+        # +0.6 advantage (30-point edge) → +18% barrel share
+        barrel_share = base_barrel + (power_adv * self.POWER_BARREL_SHIFT)
+        barrel_share = clamp(barrel_share, 0.05, 0.95)
+
+        self.barrel_share = barrel_share  # Store for tuning export
+
+        if random.random() < barrel_share:
+            return 'barrel'
+        else:
+            return 'solid'
+
+    def _roll_neutral_tier(self):
+        """Roll within Neutral tier using config ratios."""
+        if random.random() < self.flare_share_of_neutral:
+            return 'flare'
+        else:
+            return 'burner'
+
+    def _roll_poor_tier(self):
+        """Roll within Poor tier using config ratios."""
+        roll = random.random()
+        if roll < self.topped_share_of_poor:
+            return 'topped'
+        elif roll < self.topped_share_of_poor + self.under_share_of_poor:
+            return 'under'
+        else:
+            return 'weak'
+
+    def _reconstruct_final_odds(self, quality_prob, neutral_prob, poor_prob, power_adv):
+        """Reconstruct individual type odds for tuning export."""
+        # Calculate barrel share based on power advantage
+        barrel_share = self.barrel_share_of_quality + (power_adv * self.POWER_BARREL_SHIFT)
+        barrel_share = clamp(barrel_share, 0.05, 0.95)
+
+        return {
+            'barrel': round(quality_prob * barrel_share, 4),
+            'solid': round(quality_prob * (1 - barrel_share), 4),
+            'flare': round(neutral_prob * self.flare_share_of_neutral, 4),
+            'burner': round(neutral_prob * (1 - self.flare_share_of_neutral), 4),
+            'topped': round(poor_prob * self.topped_share_of_poor, 4),
+            'under': round(poor_prob * self.under_share_of_poor, 4),
+            'weak': round(poor_prob * (1 - self.topped_share_of_poor - self.under_share_of_poor), 4)
+        }
 
     def phase6_direction(self):
         """
@@ -489,8 +664,14 @@ class BattedBallEvent:
             "batter_contact": round(self.raw_batter_contact, 1),
             "batter_power": round(self.raw_batter_power, 1),
             "pitch_ovr": round(self.raw_pitch_ovr, 1),
-            "effective_power": round(self.eff_power, 1),
-            "power_shift": round((self.eff_power - self.POWER_BASELINE) / self.POWER_RANGE, 3),
+            # Matchup advantages
+            "contact_advantage": round(self.advantages['contact'], 3),
+            "power_advantage": round(self.advantages['power'], 3),
+            # Tier system results
+            "tier_probs": self.tier_probs,
+            "selected_tier": self.selected_tier,
+            "barrel_share": round(getattr(self, 'barrel_share', self.barrel_share_of_quality), 3),
+            # Final reconstructed odds
             "final_odds": self.final_odds
         }
 

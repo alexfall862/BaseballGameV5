@@ -33,8 +33,15 @@ class Action():
         self.game = game
         self.outcome = None
         self.defensiveoutcome = None
+
+        # Capture pre-play state for baserunning analytics
+        self.pre_r1 = game.on_firstbase
+        self.pre_r2 = game.on_secondbase
+        self.pre_r3 = game.on_thirdbase
+        self.pre_outs = game.currentouts
+
         Action.AttributeInjuryCheck(self)
-        Action.PrePitch(self)        
+        Action.PrePitch(self)
         Action.Processing(self)
 
 
@@ -140,6 +147,7 @@ class Action():
             "Is_StealSuccess": self.game.is_stealsuccess,
             "Error_Count": self.game.error_count,
             "Is_Liveball": self.game.is_liveball,
+            "Is_Foul": self.outcome is not None and len(self.outcome) > 1 and self.outcome[1] == "Foul",
             "Is_Single": self.game.is_single,
             "Is_Double": self.game.is_double,
             "Is_Triple": self.game.is_triple,
@@ -155,10 +163,24 @@ class Action():
             "Right Field": player_ref(self.game.pitchingteam.rightfield),
             "At_Bat_Modifiers": at_bat_modifiers,
             "Interaction_Data": interaction_data,
+            "Timing_Diagnostics": self.defensiveoutcome[7] if (self.defensiveoutcome is not None and len(self.defensiveoutcome) > 7) else None,
+            # Pre-play state for baserunning analytics
+            "Pre_R1": player_ref(self.pre_r1),
+            "Pre_R2": player_ref(self.pre_r2),
+            "Pre_R3": player_ref(self.pre_r3),
+            "Pre_Outs": self.pre_outs,
+            # Runners who scored this play
+            "Runners_Scored": len(self.game.current_runners_home),
+            "Runners_Scored_IDs": [getattr(r, 'id', None) for r in self.game.current_runners_home],
+            # Double play / Triple play tracking
+            "Is_DP_Opportunity": self.pre_r1 is not None and self.pre_outs < 2 and self.game.air_or_ground == "ground",
+            "Is_DP": (self.pre_r1 is not None and self.pre_outs < 2 and self.game.air_or_ground == "ground" and self.game.outcount >= 2),
+            "Is_TP_Opportunity": self.pre_r1 is not None and self.pre_r2 is not None and self.pre_outs == 0 and self.game.air_or_ground == "ground",
+            "Is_TP": (self.pre_r1 is not None and self.pre_r2 is not None and self.pre_outs == 0 and self.game.air_or_ground == "ground" and self.game.outcount >= 3),
         }
 
 
-        
+
 
     def PostPitch(self):
         if self.game.is_strikeout == False:
@@ -180,12 +202,15 @@ class Action():
         #fi.Fatigue()
         
 
-def HitEval(self):   
+def HitEval(self):
     self.game.on_firstbase = self.defensiveoutcome[4][0]
     self.game.on_secondbase = self.defensiveoutcome[4][1]
     self.game.on_thirdbase = self.defensiveoutcome[4][2]
-    if self.defensiveoutcome[3] == "single" or self.defensiveoutcome[3] == "double" or self.defensiveoutcome[3] == "triple" or self.defensiveoutcome[3] == "homerun":
-        listofrunners = self.defensiveoutcome[4][3]#.copy()
+
+    # Process scored runners for hits OR sac flies/tag-ups (runners can score on outs too)
+    outcome = self.defensiveoutcome[3]
+    if outcome in ("single", "double", "triple", "homerun", "out"):
+        listofrunners = self.defensiveoutcome[4][3]
         for runner in listofrunners:
             self.game.current_runners_home.append(runner)
 

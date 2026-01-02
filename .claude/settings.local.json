@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for:*)",
+      "Bash(do wc -l \"$f\")",
+      "Bash(done)",
+      "Bash(cat:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(python:*)"
+    ]
+  }
+}

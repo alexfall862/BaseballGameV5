@@ -8,11 +8,15 @@ Batch: Multiple games across subweeks a/b/c/d
 Usage:
     python run_local.py <json_file>
     python run_local.py ../exampleresponse.json
+    python run_local.py input.json -o output.json --compact --no-debug
+    python run_local.py input.json -o output.json.gz --compress
+    python run_local.py input.json --split  # Creates output_a.json, output_b.json, etc.
 """
 
 import os
 import sys
 import json
+import gzip
 import argparse
 
 # Add current directory to path
@@ -55,7 +59,8 @@ def load_json_file(filepath: str) -> dict:
 
 
 def run_single_game(game_data: dict, rules: dict, level_config: dict,
-                    game_constants: dict, injury_types: list = None) -> dict:
+                    game_constants: dict, injury_types: list = None,
+                    include_debug: bool = True) -> dict:
     """
     Run a single game simulation.
 
@@ -65,6 +70,7 @@ def run_single_game(game_data: dict, rules: dict, level_config: dict,
         level_config: Level-specific configuration
         game_constants: Shared game constants
         injury_types: Injury type definitions
+        include_debug: Whether to include debug data in output
 
     Returns:
         Game result dictionary
@@ -77,16 +83,24 @@ def run_single_game(game_data: dict, rules: dict, level_config: dict,
         injury_types=injury_types
     )
 
-    return game.run_simulation()
+    result = game.run_simulation()
+
+    # Remove debug section if not requested (saves significant memory/disk)
+    if not include_debug and 'debug' in result:
+        del result['debug']
+
+    return result
 
 
-def process_payload(payload: dict, verbose: bool = False) -> dict:
+def process_payload(payload: dict, verbose: bool = False,
+                    include_debug: bool = True) -> dict:
     """
     Process a unified payload (works for both single game and batch).
 
     Args:
         payload: The unified payload structure
         verbose: Print detailed output
+        include_debug: Whether to include debug data in output
 
     Returns:
         Results dict with subweeks, counts, errors
@@ -126,7 +140,8 @@ def process_payload(payload: dict, verbose: bool = False) -> dict:
                     rules=rules,
                     level_config=level_config,
                     game_constants=game_constants,
-                    injury_types=injury_types
+                    injury_types=injury_types,
+                    include_debug=include_debug
                 )
 
                 results[subweek_name].append(result)
@@ -161,6 +176,92 @@ def process_payload(payload: dict, verbose: bool = False) -> dict:
     }
 
 
+def write_json_output(data: dict, output_path: str, compact: bool = False,
+                      compress: bool = False):
+    """
+    Write JSON output with optional compression and formatting.
+
+    Args:
+        data: Data to write
+        output_path: Output file path
+        compact: If True, no indentation (smaller file)
+        compress: If True, use gzip compression
+    """
+    indent = None if compact else 2
+
+    if compress:
+        # Ensure .gz extension
+        if not output_path.endswith('.gz'):
+            output_path += '.gz'
+        with gzip.open(output_path, 'wt', encoding='utf-8') as f:
+            json.dump(data, f, indent=indent, default=str)
+    else:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=indent, default=str)
+
+    return output_path
+
+
+def write_split_output(results: dict, base_path: str, compact: bool = False,
+                       compress: bool = False):
+    """
+    Write results split by subweek into separate files.
+
+    Args:
+        results: Full results dict with subweeks
+        base_path: Base output path (e.g., "output" -> "output_a.json")
+        compact: If True, no indentation
+        compress: If True, use gzip compression
+
+    Returns:
+        List of written file paths
+    """
+    # Remove extension from base path
+    base, ext = os.path.splitext(base_path)
+    if ext == '.gz':
+        base, _ = os.path.splitext(base)  # Handle .json.gz
+        ext = '.json.gz' if compress else '.json'
+    elif not ext:
+        ext = '.json.gz' if compress else '.json'
+    elif compress and not ext.endswith('.gz'):
+        ext += '.gz'
+
+    written_files = []
+    subweeks = results.get('subweeks', {})
+
+    for subweek_name, games in subweeks.items():
+        if not games:
+            continue
+
+        # Create per-subweek result
+        subweek_result = {
+            "subweek": subweek_name,
+            "games": games,
+            "game_count": len(games),
+            "total_games": results.get('total_games', 0),
+            "successful_games": results.get('successful_games', 0),
+        }
+
+        output_path = f"{base}_{subweek_name}{ext}"
+        actual_path = write_json_output(subweek_result, output_path, compact, compress)
+        written_files.append(actual_path)
+        print(f"  Written: {actual_path} ({len(games)} games)")
+
+    # Write summary/errors file
+    summary = {
+        "total_games": results.get('total_games', 0),
+        "successful_games": results.get('successful_games', 0),
+        "errors": results.get('errors', []),
+        "subweek_files": written_files
+    }
+    summary_path = f"{base}_summary{ext}"
+    write_json_output(summary, summary_path, compact, compress)
+    written_files.append(summary_path)
+    print(f"  Written: {summary_path} (summary)")
+
+    return written_files
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run baseball simulations from JSON files"
@@ -171,12 +272,32 @@ def main():
     )
     parser.add_argument(
         "-o", "--output",
-        help="Output file path (defaults to stdout summary)"
+        help="Output file path (defaults to output_test.json)"
     )
     parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Print detailed output including injuries and tracebacks"
+    )
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Write compact JSON without indentation (smaller files)"
+    )
+    parser.add_argument(
+        "--compress",
+        action="store_true",
+        help="Write gzip-compressed output (.gz)"
+    )
+    parser.add_argument(
+        "--no-debug",
+        action="store_true",
+        help="Exclude debug section from output (significantly reduces size)"
+    )
+    parser.add_argument(
+        "--split",
+        action="store_true",
+        help="Split output into separate files per subweek"
     )
 
     args = parser.parse_args()
@@ -191,6 +312,18 @@ def main():
     )
     print(f"Total games in payload: {total_games}")
 
+    # Recommend options for large batches
+    if total_games > 50:
+        suggestions = []
+        if not args.no_debug:
+            suggestions.append("--no-debug")
+        if not args.compact:
+            suggestions.append("--compact")
+        if not args.compress:
+            suggestions.append("--compress")
+        if suggestions:
+            print(f"TIP: For large batches, consider: {' '.join(suggestions)}")
+
     # Show subweeks
     subweeks = payload.get("subweeks", {})
     for sw, games in subweeks.items():
@@ -198,7 +331,8 @@ def main():
             print(f"  Subweek {sw}: {len(games)} game(s)")
 
     # Process payload
-    results = process_payload(payload, verbose=args.verbose)
+    include_debug = not args.no_debug
+    results = process_payload(payload, verbose=args.verbose, include_debug=include_debug)
 
     # Summary
     print()
@@ -210,11 +344,35 @@ def main():
         for err in results['errors']:
             print(f"  - Game {err['game_id']}: {err['error']}")
 
-    # Save output - always save for debugging, use specified path or default
+    # Save output
     output_path = args.output or "output_test.json"
-    with open(output_path, 'w') as f:
-        json.dump(results, f, indent=2, default=str)
-    print(f"\nResults saved to: {output_path}")
+
+    print(f"\nWriting output...")
+    if args.split:
+        written_files = write_split_output(
+            results, output_path,
+            compact=args.compact,
+            compress=args.compress
+        )
+        print(f"Split output into {len(written_files)} files")
+    else:
+        actual_path = write_json_output(
+            results, output_path,
+            compact=args.compact,
+            compress=args.compress
+        )
+        # Get file size for feedback
+        try:
+            size_bytes = os.path.getsize(actual_path)
+            if size_bytes > 1024 * 1024:
+                size_str = f"{size_bytes / (1024*1024):.1f} MB"
+            elif size_bytes > 1024:
+                size_str = f"{size_bytes / 1024:.1f} KB"
+            else:
+                size_str = f"{size_bytes} bytes"
+            print(f"Results saved to: {actual_path} ({size_str})")
+        except OSError:
+            print(f"Results saved to: {actual_path}")
 
 
 if __name__ == "__main__":

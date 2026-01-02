@@ -21,6 +21,8 @@ class RunnerState:
     progress: float = 0.0  # 0.0 to 1.0 (percentage to target)
     is_forced: bool = False
     speed_rating: float = 50.0
+    basereaction: float = 50.0  # Reaction to ball contact (jump timing)
+    baserunning: float = 50.0   # Route efficiency and decision quality
     is_out: bool = False
     earned_run: bool = True  # True until error occurs
 
@@ -78,13 +80,41 @@ class TimeCalculator:
 
     # Time additions (seconds) - TUNABLE for game balance
     TIMING_CONSTANTS = {
-        "gap_reach_bonus": 2.5,      # Extra time for gap hits (between OF)
-        "line_reach_bonus": 2.0,     # Extra time down the line
-        "deep_chase_bonus": 1.5,     # Ball over fielder's head
-        "outfield_retrieval": 1.5,   # Pick up and set in OF
-        "infield_retrieval": 0.4,    # Pick up and set in IF
+        "gap_reach_bonus": 3.5,      # Extra time for gap hits (between OF)
+        "line_reach_bonus": 3.0,     # Extra time down the line
+        "deep_chase_bonus": 2.0,     # Ball over fielder's head
+        "outfield_retrieval": 2.0,   # Pick up and set in OF
+        "infield_retrieval": 0.8,    # Pick up and set in IF (was 0.4 - too fast)
         "hard_hit_bonus": 0.5,       # Less reaction time on barrels/solids
         "base_reach_time": 0.5,      # Fielder already in position
+
+        # Reaction time settings (fieldreact impact)
+        "base_reaction_time": 0.5,   # Reaction time for 50-rated fieldreact
+        "reaction_time_range": 0.6,  # Total range (0.2s to 0.8s across 20-80 rating)
+
+        # Variance settings (per-play randomness)
+        "defense_variance_std": 0.1, # Std dev for defense timing (±0.2s is ~2 std devs)
+        "runner_variance_std": 0.1,  # Std dev for runner timing
+
+        # Baserunning settings
+        "runner_jump_per_point": 0.01,   # Seconds per basereaction point (±0.3s for 80/20)
+        "route_efficiency_per_point": 0.00167,  # ~5% range over 60 points (80 vs 20)
+
+        # Tag-up settings
+        "tag_up_delay_base": 0.3,    # Base delay to tag up (50-rated basereaction)
+        "tag_up_delay_range": 0.4,   # Range: 0.1s (80 rating) to 0.5s (20 rating)
+    }
+
+    # Depths where tag-up is viable (fly balls deep enough to tag up)
+    TAG_UP_DEPTHS = ["deep_of", "middle_of", "shallow_of"]
+
+    # Throw distance multiplier by depth for tag-up plays
+    # Standard THROW_DISTANCES assume fielder at normal depth
+    # Tag-ups happen at varying depths - deeper catches give more time
+    TAG_UP_DEPTH_MULTIPLIER = {
+        "deep_of": 1.8,      # Deep catches give runner very good chance to tag
+        "middle_of": 1.5,    # Medium catches give runner good chance to tag
+        "shallow_of": 1.2,   # Shallow OF catches - risky but possible for fast runners
     }
 
     # Depth zones considered outfield
@@ -143,15 +173,16 @@ class TimeCalculator:
     }
 
     @staticmethod
-    def runner_time(runner: RunnerState) -> float:
+    def runner_time(runner: RunnerState, include_variance: bool = True) -> Tuple[float, float]:
         """
         Calculate time for runner to reach their target base.
 
         Args:
             runner: RunnerState with current_base, target_base, speed_rating, progress
+            include_variance: Whether to include per-play variance (default True)
 
         Returns:
-            Time in seconds for runner to reach target
+            Tuple of (time in seconds, variance applied)
         """
         base_key = (runner.current_base, runner.target_base)
         base_time = TimeCalculator.BASE_RUNNING_TIMES.get(base_key, 4.0)
@@ -163,7 +194,13 @@ class TimeCalculator:
         # Account for progress already made
         remaining = 1.0 - runner.progress
 
-        return base_time * speed_mod * remaining
+        base_result = base_time * speed_mod * remaining
+
+        # Add variance if requested
+        variance = TimeCalculator.runner_variance() if include_variance else 0.0
+        result = base_result + variance
+
+        return max(result, 0.1), variance  # Floor at 0.1s
 
     @staticmethod
     def throw_time(fielder_pos: str, target_base: int, throw_power: float) -> float:
@@ -207,6 +244,133 @@ class TimeCalculator:
         catch_mod = 1.0 - ((catch_rating - 50) * 0.005)
 
         return base_time * catch_mod
+
+    @staticmethod
+    def reaction_time(fieldreact: float) -> float:
+        """
+        Calculate fielder reaction time based on fieldreact rating.
+
+        Args:
+            fieldreact: Player's fieldreact rating (1-99, baseline 50)
+
+        Returns:
+            Reaction time in seconds
+            - fieldreact 80: ~0.2s (fast first step)
+            - fieldreact 50: ~0.5s (average)
+            - fieldreact 20: ~0.8s (slow to react)
+        """
+        tc = TimeCalculator.TIMING_CONSTANTS
+        base = tc["base_reaction_time"]
+
+        # Linear scale: each point away from 50 = 1% of range
+        modifier = (50 - fieldreact) / 50
+        reaction = base + (modifier * tc["reaction_time_range"] / 2)
+
+        return max(reaction, 0.1)  # Floor at 0.1s
+
+    @staticmethod
+    def fieldspot_modifier(fieldspot: float) -> float:
+        """
+        Calculate reach time modifier based on fieldspot rating.
+
+        Better fieldspot = better routes = faster arrival.
+        Only applies to non-caught balls (HIT PATH).
+
+        Args:
+            fieldspot: Player's fieldspot rating (1-99, baseline 50)
+
+        Returns:
+            Multiplier for reach time (0.925 to 1.075 for ratings 80-20)
+        """
+        # 0.25% per point
+        return 1.0 - ((fieldspot - 50) * 0.0025)
+
+    @staticmethod
+    def defense_variance() -> float:
+        """
+        Generate per-play variance for defense timing.
+        Normal distribution with std dev ~0.1s (so ±0.2s is ~2 std devs).
+
+        Returns:
+            Variance in seconds (typically -0.2 to +0.2)
+        """
+        tc = TimeCalculator.TIMING_CONSTANTS
+        variance = random.gauss(0, tc["defense_variance_std"])
+        return max(-0.3, min(0.3, variance))  # Clamp to ±0.3s
+
+    @staticmethod
+    def runner_variance() -> float:
+        """
+        Generate per-play variance for runner timing.
+        Normal distribution with std dev ~0.1s.
+
+        Returns:
+            Variance in seconds (typically -0.2 to +0.2)
+        """
+        tc = TimeCalculator.TIMING_CONSTANTS
+        variance = random.gauss(0, tc["runner_variance_std"])
+        return max(-0.3, min(0.3, variance))  # Clamp to ±0.3s
+
+    @staticmethod
+    def route_efficiency_modifier(baserunning: float) -> float:
+        """
+        Calculate base-to-base time modifier from route efficiency.
+
+        Better baserunning = more efficient routes = faster times.
+
+        Args:
+            baserunning: Player's baserunning rating (1-99, baseline 50)
+
+        Returns:
+            Multiplier for base-to-base time
+            - baserunning 80: ~0.95x (5% faster)
+            - baserunning 50: 1.00x (baseline)
+            - baserunning 20: ~1.05x (5% slower)
+        """
+        tc = TimeCalculator.TIMING_CONSTANTS
+        return 1.0 - ((baserunning - 50) * tc["route_efficiency_per_point"])
+
+    @staticmethod
+    def runner_jump_bonus(basereaction: float) -> float:
+        """
+        Calculate time bonus/penalty from runner's reaction to contact.
+
+        Better basereaction = quicker read = effective head start.
+
+        Args:
+            basereaction: Player's basereaction rating (1-99, baseline 50)
+
+        Returns:
+            Time bonus in seconds (positive = more time to advance)
+            - basereaction 80: +0.3s head start
+            - basereaction 50: +0.0s (baseline)
+            - basereaction 20: -0.3s delayed start
+        """
+        tc = TimeCalculator.TIMING_CONSTANTS
+        return (basereaction - 50) * tc["runner_jump_per_point"]
+
+    @staticmethod
+    def tag_up_delay(basereaction: float) -> float:
+        """
+        Calculate time for runner to read fly ball catch and begin sprint.
+
+        Better basereaction = tags up faster after catch.
+
+        Args:
+            basereaction: Player's basereaction rating (1-99, baseline 50)
+
+        Returns:
+            Tag-up delay in seconds
+            - basereaction 80: ~0.1s (quick read)
+            - basereaction 50: ~0.3s (average)
+            - basereaction 20: ~0.5s (slow read)
+        """
+        tc = TimeCalculator.TIMING_CONSTANTS
+        base = tc["tag_up_delay_base"]
+        # Linear scale: each point away from 50 adjusts delay
+        modifier = (50 - basereaction) / 50
+        delay = base + (modifier * tc["tag_up_delay_range"] / 2)
+        return max(delay, 0.05)  # Floor at 0.05s
 
     @staticmethod
     def ball_travel_time(contact_type: str, depth: str) -> float:
@@ -342,14 +506,17 @@ class TimeCalculator:
 
     @staticmethod
     def total_field_time(contact_type: str, depth: str, direction: str,
-                         fielder_pos: str, fielder_player) -> float:
+                         fielder_pos: str, fielder_player,
+                         include_variance: bool = True) -> Tuple[float, dict]:
         """
         Total time from bat contact until fielder can throw.
 
         This is the key method for determining XBH - it calculates
         the full time window during which runners can advance.
 
-        total_time = ball_travel_time + fielder_reach_time + ball_retrieval_time
+        NEW FORMULA:
+        total_time = ball_travel + reaction + (reach × speed_mod × fieldspot_mod)
+                     + retrieval + defense_variance
 
         Args:
             contact_type: Type of contact (barrel, flare, etc.)
@@ -357,24 +524,55 @@ class TimeCalculator:
             direction: Ball direction (center left, far right, etc.)
             fielder_pos: Position of primary fielder
             fielder_player: Player object for the fielder
+            include_variance: Whether to include per-play variance (default True)
 
         Returns:
-            Total time in seconds until fielder can throw
+            Tuple of (total_time in seconds, components_dict for diagnostics)
         """
-        # 1. Ball travel time (existing method)
+        # Get fielder attributes
+        fielder_speed = getattr(fielder_player, 'speed', 50) if fielder_player else 50
+        fielder_react = getattr(fielder_player, 'fieldreact', 50) if fielder_player else 50
+        fielder_spot = getattr(fielder_player, 'fieldspot', 50) if fielder_player else 50
+
+        # 1. Ball travel time
         ball_time = TimeCalculator.ball_travel_time(contact_type, depth)
 
-        # 2. Fielder reach time (new)
-        fielder_speed = getattr(fielder_player, 'speed', 50) if fielder_player else 50
+        # 2. Reaction time (NEW - fieldreact based)
+        react_time = TimeCalculator.reaction_time(fielder_react)
+
+        # 3. Fielder reach time with speed modifier
         reach_time = TimeCalculator.fielder_reach_time(
             depth, direction, fielder_pos, contact_type, fielder_speed
         )
 
-        # 3. Ball retrieval time (new)
+        # 4. Apply fieldspot modifier to reach time (NEW)
+        fieldspot_mod = TimeCalculator.fieldspot_modifier(fielder_spot)
+        reach_time_modified = reach_time * fieldspot_mod
+
+        # 5. Ball retrieval time
         is_outfield = depth in TimeCalculator.OUTFIELD_DEPTHS
         retrieval_time = TimeCalculator.ball_retrieval_time(contact_type, is_outfield)
 
-        return ball_time + reach_time + retrieval_time
+        # 6. Per-play variance (NEW)
+        defense_var = TimeCalculator.defense_variance() if include_variance else 0.0
+
+        total = ball_time + react_time + reach_time_modified + retrieval_time + defense_var
+
+        # Build components dict for diagnostics
+        components = {
+            'ball_travel': round(ball_time, 3),
+            'reaction_time': round(react_time, 3),
+            'reach_time_base': round(reach_time, 3),
+            'fieldspot_modifier': round(fieldspot_mod, 3),
+            'reach_time_modified': round(reach_time_modified, 3),
+            'retrieval_time': round(retrieval_time, 3),
+            'defense_variance': round(defense_var, 3),
+            'fielder_fieldreact': fielder_react,
+            'fielder_fieldspot': fielder_spot,
+            'fielder_speed': fielder_speed,
+        }
+
+        return max(total, 0.5), components  # Floor at 0.5s
 
 
 # ============================================================================
@@ -470,7 +668,7 @@ class DefenseDecisionTree:
             catch_time = TimeCalculator.catch_transfer_time(fielder.player, is_force)
 
             total_defense_time = throw_time + catch_time
-            runner_time = TimeCalculator.runner_time(runner)
+            runner_time, _ = TimeCalculator.runner_time(runner, include_variance=False)
 
             # Margin = how much longer runner takes than defense
             # Positive margin = defense beats runner
@@ -520,7 +718,7 @@ class DefenseDecisionTree:
         )
 
         total_defense_time = throw_time + catch_time
-        runner_time = TimeCalculator.runner_time(runner)
+        runner_time, _ = TimeCalculator.runner_time(runner, include_variance=False)
 
         # Advance if runner beats throw by comfortable margin
         return runner_time < total_defense_time - 0.3
@@ -558,6 +756,9 @@ class DefenseDecisionTree:
 
 
 class fielding():
+    # Enable timing diagnostics for tuning analysis
+    ENABLE_TIMING_DIAGNOSTICS = True
+
     # Default distance weights for each contact type (fallback when not in config)
     # Order: homerun, deep_of, middle_of, shallow_of, deep_if, middle_if, shallow_if, mound, catcher
     DEFAULT_DISTWEIGHTS = {
@@ -589,6 +790,7 @@ class fielding():
         self.errorlist = []
         self.defensiveactions = []
         self.catch_probability = None  # Set in _is_out_play if applicable
+        self.timing_diagnostics = None  # Set if ENABLE_TIMING_DIAGNOSTICS is True
 
         self.contacttype = self.gamestate.outcome[0]
         self.direction = self.gamestate.outcome[1]
@@ -612,7 +814,7 @@ class fielding():
         # Convert play state back to base_situation format for compatibility
         self.base_situation = self._build_base_situation()
 
-        # Build the defenseoutcome tuple (format unchanged)
+        # Build the defenseoutcome tuple (extended with timing diagnostics)
         self.defenseoutcome = (
             self.contacttype,
             self.direction,
@@ -620,7 +822,8 @@ class fielding():
             self.batted_ball_outcome,
             self.base_situation,
             self.errorlist,
-            self.defensiveactions
+            self.defensiveactions,
+            self.timing_diagnostics  # New: timing data for tuning analysis
         )
 
     def _initialize_play_state(self) -> PlayState:
@@ -640,6 +843,8 @@ class fielding():
                 progress=0.0,
                 is_forced=True,  # Batter always forced to run
                 speed_rating=getattr(batter, 'speed', 50),
+                basereaction=getattr(batter, 'basereaction', 50),
+                baserunning=getattr(batter, 'baserunning', 50),
                 earned_run=True
             ))
 
@@ -653,6 +858,8 @@ class fielding():
                 progress=0.0,
                 is_forced=True,  # Forced by batter
                 speed_rating=getattr(game.on_firstbase, 'speed', 50),
+                basereaction=getattr(game.on_firstbase, 'basereaction', 50),
+                baserunning=getattr(game.on_firstbase, 'baserunning', 50),
                 earned_run=True
             ))
 
@@ -667,6 +874,8 @@ class fielding():
                 progress=0.0,
                 is_forced=is_forced,
                 speed_rating=getattr(game.on_secondbase, 'speed', 50),
+                basereaction=getattr(game.on_secondbase, 'basereaction', 50),
+                baserunning=getattr(game.on_secondbase, 'baserunning', 50),
                 earned_run=True
             ))
 
@@ -681,6 +890,8 @@ class fielding():
                 progress=0.0,
                 is_forced=is_forced,
                 speed_rating=getattr(game.on_thirdbase, 'speed', 50),
+                basereaction=getattr(game.on_thirdbase, 'basereaction', 50),
+                baserunning=getattr(game.on_thirdbase, 'baserunning', 50),
                 earned_run=True
             ))
 
@@ -769,13 +980,14 @@ class fielding():
             # No fielder (shouldn't happen except for HR)
             return 'single'
 
-        # Calculate field time for runner advancement
-        total_time = TimeCalculator.total_field_time(
+        # Calculate field time for runner advancement (now returns tuple with components)
+        total_time, field_components = TimeCalculator.total_field_time(
             self.contacttype,
             self.depth,
             self.direction,
             fielder_state.position,
-            fielder_state.player
+            fielder_state.player,
+            include_variance=True
         )
 
         # Determine if defense makes the play (applies to ALL contact types)
@@ -828,6 +1040,11 @@ class fielding():
                         # Award putout to fielder who caught
                         if hasattr(self.fieldingdefender, 'fieldingstats'):
                             self.fieldingdefender.fieldingstats.Adder("putouts", 1)
+
+                        # Handle tag-up opportunities for runners on base
+                        # (sac flies, advancing on deep flies)
+                        ball_time = TimeCalculator.ball_travel_time(self.contacttype, self.depth)
+                        self._handle_tag_up(ball_time)
                     else:
                         self.defensiveactions.append("out at 1st (ground ball)")
                         # Award putout to first baseman, assist to fielder
@@ -851,11 +1068,92 @@ class fielding():
             # HIT PLAY - Defense doesn't make the play
             # Advance runners for the FULL time window
             # This is what allows doubles and triples to occur naturally
+
+            # Capture batter speed BEFORE advancement for diagnostics
+            batter_runner = next(
+                (r for r in self.play_state.runners if r.current_base == 0),
+                None
+            )
+            batter_speed = batter_runner.speed_rating if batter_runner else 50
+
+            # First, advance ALL runners during field time
             self._advance_runners_for_time(total_time)
+
+            # On outfield hits, non-batter runners get EXTRA time during the throw
+            # This is critical for R2 scoring on singles, R1 advancing to 3rd, etc.
+            # The batter's advancement is limited by throw to their target base,
+            # but existing runners can keep advancing during the throw home
+            is_outfield_hit = self.depth in TimeCalculator.OUTFIELD_DEPTHS
+            if is_outfield_hit:
+                # Calculate throw time from outfielder to home (longest throw)
+                throw_time_home = TimeCalculator.throw_time(
+                    fielder_state.position, 4, fielder_state.player.throwpower
+                )
+                # Non-batter runners advance during the full throw time
+                # They keep running until the ball reaches the infield
+                self._advance_non_batter_runners(throw_time_home)
 
             # Now fielder has the ball
             fielder_state.has_ball = True
             self.play_state.ball_holder = fielder_state
+
+            # Capture timing diagnostics BEFORE defense loop
+            if fielding.ENABLE_TIMING_DIAGNOSTICS and batter_runner:
+                # Calculate what the throw-out timing would be
+                throw_time = TimeCalculator.throw_time(
+                    fielder_state.position, 1, fielder_state.player.throwpower
+                )
+                catch_time = TimeCalculator.catch_transfer_time(
+                    self.gamestate.game.pitchingteam.firstbase, True
+                )
+                defense_time = throw_time + catch_time
+                runner_time_remaining, runner_var = TimeCalculator.runner_time(batter_runner, include_variance=True)
+
+                # Calculate extra time given to non-batter runners on outfield hits
+                extra_runner_time = 0
+                if is_outfield_hit:
+                    throw_time_home = TimeCalculator.throw_time(
+                        fielder_state.position, 4, fielder_state.player.throwpower
+                    )
+                    extra_runner_time = throw_time_home
+
+                self.timing_diagnostics = {
+                    # Batter/runner info
+                    'batter_speed': batter_speed,
+                    'runner_progress': round(batter_runner.progress, 3),
+                    'runner_time_remaining': round(runner_time_remaining, 3),
+                    'runner_variance': round(runner_var, 3),
+
+                    # Field time breakdown (from field_components)
+                    'field_time': round(total_time, 3),
+                    'ball_travel': field_components.get('ball_travel', 0),
+                    'reaction_time': field_components.get('reaction_time', 0),
+                    'reach_time_base': field_components.get('reach_time_base', 0),
+                    'fieldspot_modifier': field_components.get('fieldspot_modifier', 1.0),
+                    'reach_time_modified': field_components.get('reach_time_modified', 0),
+                    'retrieval_time': field_components.get('retrieval_time', 0),
+                    'defense_variance': field_components.get('defense_variance', 0),
+
+                    # Extra advancement time for non-batter runners (throw time)
+                    'extra_runner_time': round(extra_runner_time, 3),
+                    'total_runner_time': round(total_time + extra_runner_time, 3),
+
+                    # Fielder attributes
+                    'fielder_position': fielder_state.position,
+                    'fielder_throw_power': getattr(fielder_state.player, 'throwpower', 50),
+                    'fielder_fieldreact': field_components.get('fielder_fieldreact', 50),
+                    'fielder_fieldspot': field_components.get('fielder_fieldspot', 50),
+                    'fielder_speed': field_components.get('fielder_speed', 50),
+
+                    # Throw timing
+                    'throw_time': round(throw_time, 3),
+                    'catch_time': round(catch_time, 3),
+                    'defense_total': round(defense_time, 3),
+
+                    # Final margin calculation
+                    'timing_margin': round(runner_time_remaining - defense_time, 3),
+                    'would_be_out': runner_time_remaining > defense_time,
+                }
 
             # Run the defense loop for any throw plays on runners
             self._defense_loop()
@@ -983,7 +1281,7 @@ class fielding():
         catch_time = TimeCalculator.catch_transfer_time(covering_player, is_force)
 
         total_defense_time = throw_time + catch_time
-        runner_time = TimeCalculator.runner_time(target_runner)
+        runner_time, runner_var = TimeCalculator.runner_time(target_runner, include_variance=True)
 
         # Update ball holder to catching fielder
         self.play_state.ball_holder = FielderState(
@@ -1043,6 +1341,10 @@ class fielding():
         This allows runners to reach 2nd, 3rd, or even score during
         the time it takes the fielder to retrieve and throw.
 
+        Now includes:
+        - Jump bonus from basereaction (faster reaction = more effective time)
+        - Route efficiency from baserunning (better routes = faster base-to-base)
+
         Args:
             available_time: Total time in seconds that runners can advance
         """
@@ -1050,7 +1352,13 @@ class fielding():
             if runner.is_out:
                 continue
 
-            time_remaining = available_time
+            # Apply jump bonus based on basereaction
+            # High basereaction = runner gets a head start (more effective time)
+            jump_bonus = TimeCalculator.runner_jump_bonus(runner.basereaction)
+            time_remaining = available_time + jump_bonus
+
+            # Get route efficiency modifier based on baserunning
+            route_mod = TimeCalculator.route_efficiency_modifier(runner.baserunning)
 
             while time_remaining > 0 and runner.current_base < 4:
                 # Calculate time to next base
@@ -1063,7 +1371,8 @@ class fielding():
                 speed_mod = max(speed_mod, 0.5)  # Cap at 50% faster
 
                 # Time needed to complete remaining progress to next base
-                time_to_next = base_time * speed_mod * (1 - runner.progress)
+                # Now includes route efficiency modifier
+                time_to_next = base_time * speed_mod * route_mod * (1 - runner.progress)
 
                 if time_remaining >= time_to_next:
                     # Runner makes it to next base
@@ -1076,8 +1385,9 @@ class fielding():
                         runner.target_base = runner.current_base + 1
                 else:
                     # Partial progress toward next base
-                    if (base_time * speed_mod) > 0:
-                        progress_made = time_remaining / (base_time * speed_mod)
+                    effective_base_time = base_time * speed_mod * route_mod
+                    if effective_base_time > 0:
+                        progress_made = time_remaining / effective_base_time
                         runner.progress += progress_made
                         runner.progress = min(runner.progress, 0.99)  # Don't complete base
                     time_remaining = 0
@@ -1148,6 +1458,10 @@ class fielding():
         Used after a ground ball out - other runners still advance
         during the play.
 
+        Now includes:
+        - Jump bonus from basereaction (faster reaction = more effective time)
+        - Route efficiency from baserunning (better routes = faster base-to-base)
+
         Args:
             available_time: Time in seconds runners can advance
         """
@@ -1158,7 +1472,12 @@ class fielding():
             if runner.current_base == 0:
                 continue
 
-            time_remaining = available_time
+            # Apply jump bonus based on basereaction
+            jump_bonus = TimeCalculator.runner_jump_bonus(runner.basereaction)
+            time_remaining = available_time + jump_bonus
+
+            # Get route efficiency modifier based on baserunning
+            route_mod = TimeCalculator.route_efficiency_modifier(runner.baserunning)
 
             while time_remaining > 0 and runner.current_base < 4:
                 base_key = (runner.current_base, runner.target_base)
@@ -1167,7 +1486,8 @@ class fielding():
                 speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.01)
                 speed_mod = max(speed_mod, 0.5)
 
-                time_to_next = base_time * speed_mod * (1 - runner.progress)
+                # Include route efficiency modifier
+                time_to_next = base_time * speed_mod * route_mod * (1 - runner.progress)
 
                 if time_remaining >= time_to_next:
                     runner.current_base = runner.target_base
@@ -1177,11 +1497,152 @@ class fielding():
                     if runner.current_base < 4:
                         runner.target_base = runner.current_base + 1
                 else:
-                    if (base_time * speed_mod) > 0:
-                        progress_made = time_remaining / (base_time * speed_mod)
+                    effective_base_time = base_time * speed_mod * route_mod
+                    if effective_base_time > 0:
+                        progress_made = time_remaining / effective_base_time
                         runner.progress += progress_made
                         runner.progress = min(runner.progress, 0.99)
                     break
+
+    def _handle_tag_up(self, ball_flight_time: float):
+        """
+        Handle tag-up opportunities after a fly ball catch.
+
+        Runners who can tag up and beat the throw will advance.
+        Evaluated from lead runner backward (3rd → 2nd → 1st) to prevent
+        invalid states like R2 staying while R1 advances past them.
+
+        Only applies when:
+        - Less than 2 outs before the catch
+        - Fly ball caught in deep enough territory (deep_of, middle_of)
+
+        Args:
+            ball_flight_time: Time the ball was in the air (affects tag timing)
+        """
+        # Only allow tag-up on deep enough flies
+        if self.depth not in TimeCalculator.TAG_UP_DEPTHS:
+            # DEBUG
+            # print(f"TAG-UP: depth {self.depth} not in {TimeCalculator.TAG_UP_DEPTHS}")
+            return
+
+        # Need less than 3 outs to tag up (the fly out just added one)
+        current_outs = self.gamestate.game.currentouts + self.play_state.outs_this_play
+        if current_outs >= 3:
+            # DEBUG
+            # print(f"TAG-UP: too many outs ({current_outs})")
+            return
+
+        # Get the outfielder who caught the ball (will throw home or to base)
+        catcher_player = self.gamestate.game.pitchingteam.catcher
+        fielder_pos = self.fieldingdefender.lineup if self.fieldingdefender else "centerfield"
+        fielder_throw_power = getattr(self.fieldingdefender, 'throwpower', 50) if self.fieldingdefender else 50
+
+        # Sort runners by current base (descending) to evaluate lead runners first
+        # This prevents R2 from staying while R1 advances past them
+        eligible_runners = [
+            r for r in self.play_state.runners
+            if not r.is_out and r.current_base > 0 and r.current_base < 4
+        ]
+        eligible_runners.sort(key=lambda r: r.current_base, reverse=True)
+
+        # Track which bases become blocked (runner ahead didn't advance)
+        blocked_bases = set()
+
+        for runner in eligible_runners:
+            target_base = runner.current_base + 1
+
+            # Can't advance if the base ahead is blocked
+            if target_base in blocked_bases:
+                blocked_bases.add(runner.current_base)  # This base now blocks runners behind
+                continue
+
+            # Calculate tag-up timing
+            # 1. Return time - if runner went partway during flight, they need to get back
+            #    In reality, runners on fly balls don't run full speed - they go partway
+            #    and freeze to see if it's caught. Cap progress at 0.4 (40% of the way)
+            #    for more realistic return times.
+            base_key = (runner.current_base, runner.target_base)
+            base_time = TimeCalculator.BASE_RUNNING_TIMES.get(base_key, 4.0)
+            speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.01)
+            speed_mod = max(speed_mod, 0.5)
+            route_mod = TimeCalculator.route_efficiency_modifier(runner.baserunning)
+
+            # Cap progress for tag-up - runners don't run full speed on fly balls
+            effective_progress = min(runner.progress, 0.4)
+            return_time = base_time * speed_mod * route_mod * effective_progress
+
+            # 2. Tag-up delay - time to read the catch and start running
+            tag_delay = TimeCalculator.tag_up_delay(runner.basereaction)
+
+            # 3. Sprint time to next base (full base-to-base)
+            sprint_time = base_time * speed_mod * route_mod
+
+            # Total runner time = return + tag delay + sprint
+            total_runner_time = return_time + tag_delay + sprint_time
+
+            # Calculate defense time (throw from outfielder to target base)
+            # Apply depth multiplier - catches at middle_of/deep_of are further from home
+            base_throw_time = TimeCalculator.throw_time(fielder_pos, target_base, fielder_throw_power)
+            depth_mult = TimeCalculator.TAG_UP_DEPTH_MULTIPLIER.get(self.depth, 1.0)
+            throw_time = base_throw_time * depth_mult
+
+            # Receiver at target base
+            if target_base == 4:
+                receiver = catcher_player
+            elif target_base == 3:
+                receiver = self.gamestate.game.pitchingteam.thirdbase
+            elif target_base == 2:
+                receiver = self.gamestate.game.pitchingteam.shortstop
+            else:
+                receiver = self.gamestate.game.pitchingteam.firstbase
+
+            catch_time = TimeCalculator.catch_transfer_time(receiver, is_force=False)
+            total_defense_time = throw_time + catch_time
+
+            # Decision: Does the runner attempt the tag-up?
+            # High baserunning = better at reading if they can make it
+            # Add some margin based on baserunning for decision quality
+            decision_margin = (runner.baserunning - 50) * 0.005  # ±0.15s at 80/20
+
+            # Runner attempts if they think they can beat the throw
+            margin = total_defense_time - total_runner_time + decision_margin
+
+            if margin > 0.1:  # Safe margin - definitely go
+                # Runner advances successfully
+                runner.current_base = target_base
+                runner.target_base = min(target_base + 1, 4)
+                runner.progress = 0.0
+
+                if target_base == 4:
+                    self.defensiveactions.append(f"scores on sac fly")
+                else:
+                    self.defensiveactions.append(f"tags to {target_base}")
+            elif margin > -0.2:
+                # Close play - add variance to determine outcome
+                # High baserunning reduces risk of bad read
+                variance = TimeCalculator.runner_variance()
+                adjusted_margin = margin + variance
+
+                if adjusted_margin > 0:
+                    # Runner makes it
+                    runner.current_base = target_base
+                    runner.target_base = min(target_base + 1, 4)
+                    runner.progress = 0.0
+
+                    if target_base == 4:
+                        self.defensiveactions.append(f"scores on sac fly (close)")
+                    else:
+                        self.defensiveactions.append(f"tags to {target_base} (close)")
+                else:
+                    # Runner held or thrown out (for now, just hold)
+                    # Could add thrown out logic later
+                    blocked_bases.add(runner.current_base)
+            else:
+                # Not worth the risk - runner stays
+                blocked_bases.add(runner.current_base)
+
+            # Reset runner progress (they've returned to base after the catch)
+            runner.progress = 0.0
 
     def _build_base_situation(self) -> list:
         """
