@@ -52,6 +52,7 @@ class TeamSide(BaseModel):
     team_abbrev: Optional[str] = None
     team_name: Optional[str] = None
     team_nickname: Optional[str] = None
+    team_id: Optional[int] = None
     org_id: Optional[int] = None
     players: List[Dict[str, Any]]
     lineup: List[int]
@@ -142,8 +143,11 @@ class InjuryReport(BaseModel):
 class GameResponse(BaseModel):
     """Single game simulation response."""
     game_id: int
+    home_team_id: Optional[int] = None
+    away_team_id: Optional[int] = None
     result: GameResult
     boxscore: Dict[str, Any]
+    stats: Optional[Dict[str, Any]] = None
     play_by_play: List[Dict[str, Any]]
     injuries: List[Dict[str, Any]] = Field(default_factory=list)
 

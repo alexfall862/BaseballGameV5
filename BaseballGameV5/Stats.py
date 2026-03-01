@@ -85,6 +85,7 @@ class PitchingStats():
         self.name = name
         self.win = 0
         self.loss = 0
+        self.save = 0
         self.earned_runs = 0
         self.unearned_runs = 0
         self.outs_pitched = 0  # Store as integer outs
@@ -187,6 +188,7 @@ class BattingStats():
         self.strikeouts = 0
         self.hbp = 0
         self.ibb = 0
+        self.rbi = 0
         self.bases = 0
         
     def Combiner(self):

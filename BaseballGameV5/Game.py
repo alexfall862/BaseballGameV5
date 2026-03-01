@@ -16,6 +16,21 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from adapter import PlayerAdapter, BaselineAdapter, RulesAdapter, InjuryAdapter
 
+# Engine position names -> API position codes
+POSITION_CODE_MAP = {
+    "catcher": "c",
+    "firstbase": "fb",
+    "secondbase": "sb",
+    "thirdbase": "tb",
+    "shortstop": "ss",
+    "leftfield": "lf",
+    "centerfield": "cf",
+    "rightfield": "rf",
+    "designatedhitter": "dh",
+    "starter": "p",
+    "relief": "p",
+}
+
 
 class Game():
     def __init__(self, gamedict):
@@ -146,6 +161,12 @@ class Game():
             home_name, home_players, instance.baselines, use_dh, "home"
         )
 
+        # Store team IDs for API stats output
+        instance.home_team_id = home_side.get("team_id") or home_side.get("org_id")
+        instance.away_team_id = away_side.get("team_id") or away_side.get("org_id")
+        instance.hometeam.team_id = instance.home_team_id
+        instance.awayteam.team_id = instance.away_team_id
+
         # Initialize game state
         instance.currentinning = 1
         instance.currentouts = 0
@@ -207,9 +228,14 @@ class Game():
             x = Action.Action(self)
         Action.Action.counter = 0
 
+        # Apply W/L/S to pitcher stat objects before building stats output
+        self._apply_pitching_decisions()
+
         # Build results
         return {
             "game_id": self.gname,
+            "home_team_id": getattr(self, 'home_team_id', None),
+            "away_team_id": getattr(self, 'away_team_id', None),
             "result": {
                 "home_team": self.hometeam.name,
                 "home_score": self.hometeam.score,
@@ -219,6 +245,7 @@ class Game():
             },
             "game_summary": self._build_game_summary(),
             "boxscore": self.ReturnBox(),
+            "stats": self._build_api_stats(),
             "play_by_play": self.actions,
             "injuries": self.pregame_injury_reports + getattr(self, 'ingame_injury_reports', []),
             "tuning_data": self._build_tuning_data(),
@@ -368,6 +395,96 @@ class Game():
             "losing_pitcher": losing_pitcher,
             "save": save_pitcher,
             "blown_saves": blown_saves  # Future enhancement
+        }
+
+    def _apply_pitching_decisions(self):
+        """Apply W/L/S decisions to PitchingStats objects so they appear in stats output."""
+        decisions = self._get_pitching_decisions()
+
+        for key, stat_attr in [("winning_pitcher", "win"),
+                                ("losing_pitcher", "loss"),
+                                ("save", "save")]:
+            pitcher_ref = decisions.get(key)
+            if pitcher_ref:
+                pid = pitcher_ref.get("player_id")
+                for team in [self.hometeam, self.awayteam]:
+                    for player in team.roster.playerlist:
+                        if player.id == pid:
+                            setattr(player.pitchingstats, stat_attr, 1)
+
+    def _build_api_stats(self):
+        """
+        Build API-compatible player-level box score stats.
+
+        Returns dict with:
+          batters:  {player_id_str: {team_id, at_bats, runs, hits, ...}}
+          pitchers: {player_id_str: {team_id, games_started, win, loss, save, ...}}
+          fielders: {player_id_pos: {team_id, position_code, innings, putouts, assists, errors}}
+        """
+        batters = {}
+        pitchers = {}
+        fielders = {}
+
+        for team in [self.awayteam, self.hometeam]:
+            team_id = getattr(team, 'team_id', None)
+
+            for player in team.roster.playerlist:
+                pid_str = str(player.id)
+                bs = player.battingstats
+                ps = player.pitchingstats
+                fs = player.fieldingstats
+
+                # BATTERS: every player who had plate appearances
+                if bs.plate_appearances > 0:
+                    batters[pid_str] = {
+                        "team_id": team_id,
+                        "at_bats": bs.at_bats,
+                        "runs": bs.runs,
+                        "hits": bs.singles + bs.doubles + bs.triples + bs.homeruns,
+                        "doubles": bs.doubles,
+                        "triples": bs.triples,
+                        "home_runs": bs.homeruns,
+                        "rbi": bs.rbi,
+                        "walks": bs.walks,
+                        "strikeouts": bs.strikeouts,
+                        "stolen_bases": bs.stolen_bases,
+                        "caught_stealing": bs.caught_stealing,
+                    }
+
+                # PITCHERS: every player who threw pitches
+                if ps.pitches_thrown > 0:
+                    pitchers[pid_str] = {
+                        "team_id": team_id,
+                        "games_started": ps.games_started,
+                        "win": ps.win,
+                        "loss": ps.loss,
+                        "save": ps.save,
+                        "innings_pitched_outs": ps.outs_pitched,
+                        "hits_allowed": ps.singles + ps.doubles + ps.triples + ps.homeruns,
+                        "runs_allowed": ps.earned_runs + ps.unearned_runs,
+                        "earned_runs": ps.earned_runs,
+                        "walks": ps.walks,
+                        "strikeouts": ps.strikeouts,
+                        "home_runs_allowed": ps.homeruns,
+                    }
+
+                # FIELDERS: every player who played in the field
+                if fs.outs_played > 0:
+                    position_code = POSITION_CODE_MAP.get(player.lineup, player.lineup)
+                    fielder_key = f"{pid_str}_{position_code}"
+                    fielders[fielder_key] = {
+                        "team_id": team_id,
+                        "position_code": position_code,
+                        "innings": fs.outs_played // 3,
+                        "putouts": fs.putouts,
+                        "assists": fs.assists,
+                        "errors": fs.throwing_errors + fs.catching_errors,
+                    }
+
+        return {
+            "batters": batters,
+            "pitchers": pitchers,
+            "fielders": fielders,
         }
 
     def _get_team_totals(self):
