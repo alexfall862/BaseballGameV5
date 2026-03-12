@@ -160,9 +160,9 @@ class BaselineAdapter:
             "timetoground": game_constants.get("time_to_ground", {}),
             "energytickcap": game_settings.get("energy_tick_cap", 1.5),
             "energystep": game_settings.get("energy_step", 2),
-            "shortleash": game_settings.get("short_leash", 0.8),
-            "normalleash": game_settings.get("normal_leash", 0.7),
-            "longleash": game_settings.get("long_leash", 0.5),
+            "shortleash": game_settings.get("short_leash", 0.85),
+            "normalleash": game_settings.get("normal_leash", 0.8),
+            "longleash": game_settings.get("long_leash", 0.7),
         }
 
     @classmethod

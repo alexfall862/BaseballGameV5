@@ -72,6 +72,7 @@ class Game():
         self.targeted_defender = None
         self.skip_bool = None
         self.actions = []
+        self.substitutions = []
         self.overallresults = []
         self.meta = Game.GameResult(self.gname, self.hometeam, self.awayteam, self.actions)
 
@@ -155,10 +156,14 @@ class Game():
 
         # Create teams from adapted players
         instance.awayteam = Team.Team.from_players(
-            away_name, away_players, instance.baselines, use_dh, "away"
+            away_name, away_players, instance.baselines, use_dh, "away",
+            team_strategy=away_side.get("team_strategy", {}),
+            bullpen_order=away_side.get("bullpen_order", [])
         )
         instance.hometeam = Team.Team.from_players(
-            home_name, home_players, instance.baselines, use_dh, "home"
+            home_name, home_players, instance.baselines, use_dh, "home",
+            team_strategy=home_side.get("team_strategy", {}),
+            bullpen_order=home_side.get("bullpen_order", [])
         )
 
         # Store team IDs for API stats output
@@ -201,6 +206,7 @@ class Game():
         instance.targeted_defender = None
         instance.skip_bool = None
         instance.actions = []
+        instance.substitutions = []
         instance.overallresults = []
         instance.ingame_injury_reports = []
 
@@ -247,6 +253,7 @@ class Game():
             "boxscore": self.ReturnBox(),
             "stats": self._build_api_stats(),
             "play_by_play": self.actions,
+            "substitutions": self.substitutions,
             "injuries": self.pregame_injury_reports + getattr(self, 'ingame_injury_reports', []),
             "tuning_data": self._build_tuning_data(),
             "debug": self._build_debug_data()
@@ -449,6 +456,7 @@ class Game():
                         "strikeouts": bs.strikeouts,
                         "stolen_bases": bs.stolen_bases,
                         "caught_stealing": bs.caught_stealing,
+                        "stamina_cost": int(round(player.starting_energy - player.energy)),
                     }
 
                 # PITCHERS: every player who threw pitches
@@ -466,6 +474,7 @@ class Game():
                         "walks": ps.walks,
                         "strikeouts": ps.strikeouts,
                         "home_runs_allowed": ps.homeruns,
+                        "stamina_cost": int(round(player.starting_energy - player.energy)),
                     }
 
                 # FIELDERS: every player who played in the field
@@ -870,7 +879,11 @@ class Game():
             "handedness_matchup_breakdown": self._get_handedness_matchup_breakdown(),
 
             # Samples
-            "interaction_samples": self._get_interaction_samples()
+            "interaction_samples": self._get_interaction_samples(),
+
+            # Bullpen status
+            "away_bullpen_empty_at_start": getattr(self.awayteam, '_bullpen_empty_at_start', False),
+            "home_bullpen_empty_at_start": getattr(self.hometeam, '_bullpen_empty_at_start', False),
         }
 
     def _get_players_participated(self):

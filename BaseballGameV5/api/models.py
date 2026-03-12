@@ -163,6 +163,29 @@ class SimulationResponse(BaseModel):
     errors: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class BatchPayload(BaseModel):
+    """
+    Batch payload for parallel game simulation.
+
+    Shared config (game_constants, level_configs, rules, injury_types) can
+    live at the top level or per-game element. Per-game values override
+    top-level when present.
+    """
+    games: List[Dict[str, Any]]
+    subweek: Optional[str] = None
+    game_constants: Optional[Dict[str, Any]] = None
+    level_configs: Optional[Dict[str, Any]] = None
+    rules: Optional[Dict[str, Any]] = None
+    injury_types: Optional[List[Any]] = None
+
+
+class BatchResponse(BaseModel):
+    """Response for batch simulation."""
+    results: List[GameResponse]
+    total_games_simulated: int
+    errors: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str = "healthy"

@@ -944,11 +944,102 @@ class fielding():
             }
             out_probability = DEFAULT_CATCH_RATES.get(self.situation, 0.70)
 
+        # Apply defensive strategy modifiers from pitching team
+        out_probability = self._apply_strategy_modifiers(out_probability)
+
         # Store probability for debugging output
         self.catch_probability = out_probability
 
         # Roll against out probability
         return random.random() < out_probability
+
+    # Outfield spacing modifiers: {spacing: {situation: modifier}}
+    # "deep" = fielders play back: better on deep balls, worse on shallow
+    # "shallow" = fielders play in: better on shallow, worse on deep
+    OUTFIELD_SPACING_MODS = {
+        "deep": {
+            "deep_gap": 0.03, "deep_line": 0.03, "deep": 0.03,
+            "gap": 0.01, "line": 0.01,
+            "routine_of": -0.02,
+        },
+        "shallow": {
+            "deep_gap": -0.03, "deep_line": -0.03, "deep": -0.03,
+            "gap": 0.01, "line": 0.01,
+            "routine_of": 0.02,
+        },
+    }
+
+    # Infield spacing modifiers
+    # "in" = infield drawn in (cut off runs): more holes, worse catch rate
+    # "double_play" = DP depth: slightly better positioning for ground balls
+    INFIELD_SPACING_MODS = {
+        "in": {"routine_if": -0.03},
+        "double_play": {"routine_if": 0.02},
+    }
+
+    # Shift modifiers applied to pull-side or oppo-side directions
+    # "shift_pull" = overload pull side: better pull-side catch, worse oppo
+    # "shift_oppo" = overload oppo side: better oppo-side catch, worse pull
+    SHIFT_MOD = 0.03  # +/- applied to directional catch rates
+
+    # Direction groupings for shift logic
+    PULL_DIRECTIONS_RHB = {"far left", "left", "center left"}
+    PULL_DIRECTIONS_LHB = {"far right", "right", "center right"}
+
+    def _apply_strategy_modifiers(self, base_probability: float) -> float:
+        """
+        Apply defensive alignment strategy modifiers to catch probability.
+
+        Reads outfield_spacing, infield_spacing from pitching team's strategy
+        and adjusts the base catch probability by a few percentage points.
+        """
+        game = self.gamestate.game
+        team_strat = game.pitchingteam.strategy.teamstrategy
+        of_spacing = getattr(team_strat, 'outfieldspacing', 'normal')
+        if_spacing = getattr(team_strat, 'infieldspacing', 'normal')
+
+        modifier = 0.0
+
+        # Outfield spacing (depth-based: deep, shallow, normal)
+        if of_spacing in ("deep", "shallow"):
+            mods = fielding.OUTFIELD_SPACING_MODS.get(of_spacing, {})
+            modifier += mods.get(self.situation, 0.0)
+
+        # Infield spacing (in, double_play, normal)
+        if if_spacing in ("in", "double_play"):
+            mods = fielding.INFIELD_SPACING_MODS.get(if_spacing, {})
+            modifier += mods.get(self.situation, 0.0)
+
+        # Shift (pull or oppo) — applies to both OF and IF spacing enums
+        shift = None
+        if of_spacing in ("shift_pull", "shift_oppo"):
+            shift = of_spacing
+        elif if_spacing in ("shift_pull", "shift_oppo"):
+            shift = if_spacing
+
+        if shift:
+            batter = game.battingteam.currentbatter
+            bat_hand = getattr(batter, 'handedness', ['R', 'R'])[0]
+
+            if bat_hand == 'R':
+                pull_dirs = fielding.PULL_DIRECTIONS_RHB
+            else:
+                pull_dirs = fielding.PULL_DIRECTIONS_LHB
+            oppo_dirs = fielding.PULL_DIRECTIONS_LHB if bat_hand == 'R' else fielding.PULL_DIRECTIONS_RHB
+
+            if shift == "shift_pull":
+                if self.direction in pull_dirs:
+                    modifier += fielding.SHIFT_MOD
+                elif self.direction in oppo_dirs:
+                    modifier -= fielding.SHIFT_MOD
+            elif shift == "shift_oppo":
+                if self.direction in oppo_dirs:
+                    modifier += fielding.SHIFT_MOD
+                elif self.direction in pull_dirs:
+                    modifier -= fielding.SHIFT_MOD
+
+        # Clamp result to [0.01, 0.99]
+        return max(0.01, min(0.99, base_probability + modifier))
 
     def _process_play(self) -> str:
         """
@@ -1669,9 +1760,22 @@ class fielding():
 
         return [first, second, third, scored]
 
+    # Power-vs-throwpower HR modifier for quality contact types.
+    # Compares batter power to pitcher pthrowpower (relative matchup).
+    # Advantage = (power - pthrowpower) / 50, roughly -1.2 to +1.2 range.
+    # Each unit of advantage shifts HR weight by POWER_HR_SHIFT.
+    #   +0.6 advantage (30-pt edge) barrel: 0.15 + 0.6*0.15 = 0.24 → 24% HR
+    #    0.0 advantage (even matchup) barrel: 0.15 → 15% HR (unchanged)
+    #   -0.6 advantage (30-pt deficit) barrel: 0.15 - 0.6*0.15 = 0.06 → 6% HR (floor)
+    POWER_HR_SHIFT = 0.15
+    POWER_HR_MIN = 0.0  # Floor so even weak matchups can luck into one
+
     def _get_distweights(self, contacttype: str) -> list:
         """
         Get distance weights for a contact type with fallback to defaults.
+        For barrel and solid contacts, adjusts HR probability based on
+        batter power vs pitcher pthrowpower — shifting weight between
+        HR (index 0) and deep_of (index 1) to keep the total constant.
 
         Args:
             contacttype: The type of contact (barrel, solid, flare, etc.)
@@ -1684,15 +1788,31 @@ class fielding():
 
         # Check if weights exist and sum to more than zero
         if weights and sum(weights) > 0:
-            return weights
+            weights = list(weights)  # Copy so we don't mutate config
+        else:
+            # Fall back to defaults
+            default = fielding.DEFAULT_DISTWEIGHTS.get(contacttype)
+            if default:
+                weights = list(default)
+            else:
+                # Ultimate fallback - generic weights favoring middle outcomes
+                return [0.05, 0.15, 0.25, 0.25, 0.12, 0.10, 0.05, 0.02, 0.01]
 
-        # Fall back to defaults
-        default = fielding.DEFAULT_DISTWEIGHTS.get(contacttype)
-        if default:
-            return default
+        # Apply power-vs-throwpower modifier for quality contact types
+        if contacttype in ("barrel", "solid"):
+            batter = self.gamestate.game.battingteam.currentbatter
+            pitcher = self.gamestate.game.pitchingteam.currentpitcher
+            power = getattr(batter, 'power', 50)
+            pthrowpower = getattr(pitcher, 'pthrowpower', 50)
+            advantage = (power - pthrowpower) / 50
+            base_hr = weights[0]
+            new_hr = max(base_hr + advantage * fielding.POWER_HR_SHIFT, fielding.POWER_HR_MIN)
+            # Transfer the difference to/from deep_of (index 1) to keep sum constant
+            delta = new_hr - base_hr
+            weights[0] = new_hr
+            weights[1] = max(weights[1] - delta, 0.01)
 
-        # Ultimate fallback - generic weights favoring middle outcomes
-        return [0.05, 0.15, 0.25, 0.25, 0.12, 0.10, 0.05, 0.02, 0.01]
+        return weights
 
     def _derive_situation(self) -> str:
         """

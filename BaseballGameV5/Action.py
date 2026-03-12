@@ -76,9 +76,47 @@ class Action():
 
     def PrePitch(self):
         self.game.error_count=0
-        skip = steals.Steals(self).skippitch 
+
+        # Intentional walk check: if batter is on pitching team's walk list, issue IBB
+        walklist = getattr(self.game.pitchingteam.strategy.teamstrategy, 'walklist', [])
+        batter = self.game.battingteam.currentbatter
+        if batter.id in walklist:
+            self.game.skip_bool = False
+            self.game.is_walk = True
+            self.game.ab_over = True
+            batter.battingstats.Adder("walks", 1)
+            batter.battingstats.Adder("ibb", 1)
+            batter.on_base_pitcher = self.game.pitchingteam.currentpitcher
+            batter.earned_bool = True
+            self.game.pitchingteam.currentpitcher.pitchingstats.Adder("walks", 1)
+            self.game.pitchingteam.currentpitcher.pitchingstats.Adder("ibb", 1)
+            ibb_descript = f"{self.game.pitchingteam.currentpitcher.name} intentionally walks {batter.name}"
+
+            # Advance runners (walk pushes forced runners forward)
+            if self.game.on_thirdbase is not None and self.game.on_secondbase is not None and self.game.on_firstbase is not None:
+                self.game.current_runners_home.append(self.game.on_thirdbase)
+                self.game.on_thirdbase.battingstats.Adder("bases", 1)
+                self.game.on_thirdbase = self.game.on_secondbase
+                self.game.on_thirdbase.battingstats.Adder("bases", 1)
+                self.game.on_secondbase = self.game.on_firstbase
+                self.game.on_secondbase.battingstats.Adder("bases", 1)
+            elif self.game.on_secondbase is not None and self.game.on_firstbase is not None:
+                self.game.on_thirdbase = self.game.on_secondbase
+                self.game.on_thirdbase.battingstats.Adder("bases", 1)
+                self.game.on_secondbase = self.game.on_firstbase
+                self.game.on_secondbase.battingstats.Adder("bases", 1)
+            elif self.game.on_firstbase is not None:
+                self.game.on_secondbase = self.game.on_firstbase
+                self.game.on_secondbase.battingstats.Adder("bases", 1)
+            self.game.on_firstbase = batter
+            batter.battingstats.Adder("bases", 1)
+
+            self.defensiveoutcome = [None, None, None, "walk", [self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, self.game.current_runners_home], [], [ibb_descript]]
+            return
+
+        skip = steals.Steals(self).skippitch
         #print(f"{skip} {self.id}{self.defensiveoutcome}")
-        
+
         if skip == True:
             self.game.skip_bool = True
         elif skip == False:
@@ -196,8 +234,7 @@ class Action():
         if len(self.game.current_runners_home) > 0 and not self.game.skip_bool:
             self.game.battingteam.currentbatter.battingstats.Adder(
                 "rbi", len(self.game.current_runners_home))
-        self.game.actions.append(self.ActionPrint())#[self.game.error_count, self.game.currentinning, self.game.topofinning, self.game.currentouts, self.game.outcount, self.game.hometeam.name, self.game.hometeam.score, self.game.awayteam.name, self.game.awayteam.score, self.game.battingteam.name, self.game.battingteam.currentbatspot, self.game.pitchingteam.name, self.game.pitchingteam.currentbatspot, self.game.currentstrikes, self.game.currentballs, self.game.battingteam.currentbatter, self.outcome, self.game.on_firstbase, self.game.on_secondbase, self.game.on_thirdbase, len(self.game.current_runners_home), self.defensiveoutcome, self.game.skip_bool, [self.game.is_single, self.game.is_double, self.game.is_triple, self.game.is_homerun]])
-        print(self.ActionPrint())
+        self.game.actions.append(self.ActionPrint())
         NextAction(self)
         NextAtBat(self)        
 
@@ -315,8 +352,9 @@ def NextAtBat(self):
         if self.game.on_thirdbase != None:
             self.game.on_thirdbase.earned_bool = True
         self.game.current_runners_home = []
+        self.game.battingteam.TickBatterStamina()
         self.game.battingteam.TickBatter()
-        self.game.pitchingteam.DecidePitchingChange()    
+        self.game.pitchingteam.DecidePitchingChange(self.game)
 
 def AtBatOutcomeParser(self):
 
@@ -428,6 +466,7 @@ def OutProcessor(self):
         InningFlip(self)    
 
 def InningFlip(self):
+    self.game.pitchingteam.TickDefenderStamina()
     for player in self.game.battingteam.roster.playerlist:
         stats.ResetPitcherStatus(player)
 

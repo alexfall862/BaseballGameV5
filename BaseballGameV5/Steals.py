@@ -167,14 +167,14 @@ class Steals():
                             self.gamestate.game.current_runners_home.append(thirdbase)
                             self.gamestate.game.on_thirdbase = None
                             self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                        elif error_check[0] and error_check[1] == False:
+                        elif error_check[0] == False and error_check[1] == False:
                             if outcome == True:
                                 self.gamestate.game.is_stealsuccess = True
                                 self.gamestate.game.current_runners_home.append(thirdbase)
                                 thirdbase.battingstats.Adder("stolen_bases", 1)
                                 self.gamestate.game.on_thirdbase = None
-                                self.gamestate.defensiveoutcome = (None, None, None, "stolen base", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                                return True           
+                                self.gamestate.defensiveoutcome = (None, None, None, "stolen base", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
+                                return True
                             if outcome == False:
                                 thirdbase.battingstats.Adder("caught_stealing", 1)
                                 self.gamestate.game.on_thirdbase = None
@@ -210,7 +210,7 @@ class Steals():
                             self.gamestate.game.on_thirdbase = self.gamestate.game.on_secondbase
                             self.gamestate.game.on_secondbase = None
                             self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                        elif error_check[0] and error_check[1] == False:
+                        elif error_check[0] == False and error_check[1] == False:
                             if outcome == True:
                                 self.gamestate.game.is_stealsuccess = True
                                 secondbase.battingstats.Adder("stolen_bases", 1)
@@ -252,7 +252,7 @@ class Steals():
                             self.gamestate.game.on_secondbase = self.gamestate.game.on_firstbase
                             self.gamestate.game.on_firstbase = None
                             self.gamestate.defensiveoutcome = (None, None, None, "error on steal", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)                        
-                        elif error_check[0] and error_check[1] == False:
+                        elif error_check[0] == False and error_check[1] == False:
                             if outcome == True:
                                 self.gamestate.game.is_stealsuccess = True
                                 self.gamestate.game.on_secondbase = firstbase
@@ -272,16 +272,16 @@ class Steals():
             
     def pickoff_math(self, pickoffsuccess, baserunner, pitcher, baseman):
         diceroll = np.random.rand() * 100
-        
+
         pickoffmod = (pitcher.pickoff - 50)/50
         pickoffchances = (1+pickoffmod)*50
-        
+
         bsp = (baserunner.speed - 50)/50
         bbr = (baserunner.baserunning - 50)/50
-        brr = (baserunner.baserunning - 50)/5
-        baserunner_scores = [bsp, bbr]
-        baserunner_weights = [3, 6]
-        baserunner  = ((1+np.average(baserunner_scores, weights=baserunner_weights))*50)+brr
+        brr = (baserunner.basereaction - 50)/50
+        baserunner_scores = [brr, bbr, bsp]
+        baserunner_weights = [6, 3, 1]
+        baserunner  = ((1+np.average(baserunner_scores, weights=baserunner_weights))*50)
         
         error_check_t, error_check_c, d_action = Error_Throw_Catch(self, pitcher, baseman)     #self.gamestate.game.baselines.Throw_Catch(pitcher, baseman)
         error_check = [error_check_t, error_check_c]
@@ -304,10 +304,10 @@ class Steals():
     def calc_baserunning_math(self, stealsuccess, baserunner, pitcher, catcher, baseman):
         bsp = (baserunner.speed - 50)/50
         bbr = (baserunner.baserunning - 50)/50
-        brr = (baserunner.baserunning - 50)/5
-        baserunner_scores = [bsp, bbr]
-        baserunner_weights = [6, 3]
-        baserunner  = ((1+np.average(baserunner_scores, weights=baserunner_weights))*50)+brr
+        brr = (baserunner.basereaction - 50)/50
+        baserunner_scores = [brr, bbr, bsp]
+        baserunner_weights = [5, 3, 2]
+        baserunner  = ((1+np.average(baserunner_scores, weights=baserunner_weights))*50)
 
         ctp = (catcher.throwpower - 50)/50
         cta = (catcher.throwacc - 50)/50

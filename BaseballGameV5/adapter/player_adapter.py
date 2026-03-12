@@ -199,7 +199,12 @@ class PlayerAdapter:
             # Spray chart splits (sum to 1.0)
             left_split=float(player_data.get("left_split", 0.33)),
             center_split=float(player_data.get("center_split", 0.34)),
-            right_split=float(player_data.get("right_split", 0.33))
+            right_split=float(player_data.get("right_split", 0.33)),
+
+            # Pitcher management
+            pitchpull=player_data.get("pitchpull", None),
+            usage_preference=player_data.get("usage_preference", "normal"),
+            pulltend=player_data.get("pulltend", "normal")
         )
 
     @classmethod

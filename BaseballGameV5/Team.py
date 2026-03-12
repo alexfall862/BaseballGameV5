@@ -5,6 +5,14 @@ import Fatigue as f
 import Player
 import os
 
+# Energy thresholds by usage_preference
+USAGE_ENERGY_THRESHOLDS = {
+    "only_fully_rested": 95,
+    "normal": 75,
+    "play_tired": 50,
+    "desperation": 25,
+}
+
 class Team():
     def __init__(self, name, travelstatus, pitchervalue, baselines):
         self.name = name
@@ -41,7 +49,8 @@ class Team():
 
     @classmethod
     def from_players(cls, name: str, players: list, baselines, use_dh: bool = True,
-                     travelstatus: str = "home"):
+                     travelstatus: str = "home", team_strategy: dict = None,
+                     bullpen_order: list = None):
         """
         Create a Team instance from a pre-built list of Player objects.
 
@@ -51,6 +60,8 @@ class Team():
             baselines: Baselines instance
             use_dh: Whether DH rule is in effect
             travelstatus: Travel status (home/away)
+            team_strategy: Team strategy dict (bullpen_cutoff, bullpen_priority, emergency_pitcher_id)
+            bullpen_order: List of dicts with slot, player_id, role for bullpen ordering
 
         Returns:
             Team instance
@@ -70,25 +81,38 @@ class Team():
                 self.playerlist = playerlist
         instance.roster = MockRoster(players)
 
+        # Create a mock team strategy from payload
+        ts = team_strategy or {}
+        team_cutoff = ts.get("bullpen_cutoff", 85)
+
+        class MockTeamStrategy:
+            def __init__(self, data):
+                self.bullpencutoff = data.get("bullpen_cutoff", 85)
+                self.bullpenpriority = data.get("bullpen_priority", "best_available")
+                self.emergencypitcher = data.get("emergency_pitcher_id", None)
+                self.outfieldspacing = data.get("outfield_spacing", "normal")
+                self.infieldspacing = data.get("infield_spacing", "normal")
+                self.walklist = data.get("intentional_walk_list", [])
+
         # Create a mock strategy object
         class MockStrategy:
-            def __init__(self, players):
+            def __init__(self, players, cutoff):
                 self.playerstrategy = []
+                self.teamstrategy = MockTeamStrategy(ts)
                 for p in players:
                     class PlayerStrat:
-                        def __init__(self, player):
+                        def __init__(self, player, team_cutoff):
                             self.id = player.id
-                            # Use player's usage_preference if available
-                            pref = getattr(player, 'usage_preference', 'normal')
-                            self.pitchpull = 100 if pref == 'normal' else (80 if pref == 'short' else 120)
-                            self.pulltend = pref if pref in ['normal', 'quick', 'long'] else 'normal'
+                            # Per-player pitchpull overrides team bullpen_cutoff
+                            self.pitchpull = getattr(player, 'pitchpull', None) or team_cutoff
+                            self.pulltend = getattr(player, 'pulltend', 'normal')
                             # Strategy values from player (endpoint data)
                             self.stealfreq = getattr(player, 'stealfreq', 10.0)
                             self.pickofffreq = getattr(player, 'pickofffreq', 10.0)
                             self.plate_approach = getattr(player, 'plate_approach', 'normal')
                             self.pitchchoices = getattr(player, 'pitchchoices', [])
-                    self.playerstrategy.append(PlayerStrat(p))
-        instance.strategy = MockStrategy(players)
+                    self.playerstrategy.append(PlayerStrat(p, cutoff))
+        instance.strategy = MockStrategy(players, team_cutoff)
 
         # Grab position players
         instance.catcher = instance._grab_position_from_list(players, 'catcher')
@@ -131,8 +155,31 @@ class Team():
         instance.currentpitcher = instance._grab_starting_pitcher_from_list(players)
         instance.currentpitcher.pitchingstats.Adder("games_started", 1)
 
-        instance.reliefpitchers = [p for p in players if p.lineup == "relief" and p.energy >= 75]
+        instance.reliefpitchers = [
+            p for p in players
+            if p.lineup == "relief"
+            and p.energy >= USAGE_ENERGY_THRESHOLDS.get(
+                getattr(p, 'usage_preference', 'normal'), 75
+            )
+        ]
         instance.benchplayers = [p for p in players if p.lineup == "bench"]
+        instance._bullpen_empty_at_start = len(instance.reliefpitchers) == 0
+
+        # Assign bullpen roles from bullpen_order
+        bp_order = bullpen_order or []
+        for entry in bp_order:
+            pid = entry.get("player_id")
+            role = entry.get("role", "middle")
+            slot = entry.get("slot", 99)
+            for rp in instance.reliefpitchers:
+                if rp.id == pid:
+                    rp.bullpen_role = role
+                    rp.bullpen_slot = slot
+                    break
+        for rp in instance.reliefpitchers:
+            if not hasattr(rp, 'bullpen_role'):
+                rp.bullpen_role = "middle"
+                rp.bullpen_slot = 99
 
         return instance
 
@@ -184,11 +231,30 @@ class Team():
     def GrabReliefPitchers(self):
         return [player for player in self.roster.playerlist if player.lineup=="relief" and player.energy >= 75]
     
-    def ChooseReliefPitcher(self):
-        rpitchers = sorted(self.reliefpitchers, key=lambda x: x.rp_rating, reverse=True)
-        self.reliefpitchers = rpitchers
-        newpitcher = self.reliefpitchers.pop(0)
-        self.currentpitcher = newpitcher
+    def ChooseReliefPitcher(self, game):
+        if len(self.reliefpitchers) == 0:
+            self._UseEmergencyPitcher(game)
+            return
+
+        is_save = self._IsSaveSituation(game)
+        priority = self.strategy.teamstrategy.bullpenpriority
+
+        newpitcher = None
+        if priority == "rest":
+            newpitcher = self._SelectBySlotOrder(is_save)
+        elif priority == "matchup":
+            newpitcher = self._SelectBySlotOrder(is_save)
+        else:
+            newpitcher = self._SelectByRating(is_save)
+
+        if newpitcher:
+            self._SwapPitcher(newpitcher, game)
+        else:
+            rpitchers = sorted(self.reliefpitchers, key=lambda x: x.rp_rating, reverse=True)
+            if rpitchers:
+                self._SwapPitcher(rpitchers[0], game)
+            else:
+                self._UseEmergencyPitcher(game)
         
     def ChooseBenchBat(self, subbedplayer):
         cpref = sorted(self.benchplayers, key=lambda x: x.c_rating, reverse=True)
@@ -249,10 +315,11 @@ class Team():
         f.TickEnergy(self.baselines, self.currentpitcher)
         
     def TickBatterStamina(self):
-        pass
+        f.TickBatterEnergy(self.currentbatter)
 
     def TickDefenderStamina(self):
-        pass
+        for player in self.battinglist:
+            f.TickDefenderEnergy(player)
 
     def ActionAdjustments(self):
         Team.AttributeReCalc(self)
@@ -266,26 +333,108 @@ class Team():
     def InjuryCheck(self):
         pass
 
-    def DecidePitchingChange(self):
-        playerstrat = [playerstrat for playerstrat in self.strategy.playerstrategy if playerstrat.id == self.currentpitcher.id][0]
+    def DecidePitchingChange(self, game):
+        matches = [ps for ps in self.strategy.playerstrategy if ps.id == self.currentpitcher.id]
+        if matches:
+            playerstrat = matches[0]
+        else:
+            class DefaultStrat:
+                def __init__(self, pid, cutoff):
+                    self.id = pid
+                    self.pitchpull = cutoff
+                    self.pulltend = 'normal'
+            playerstrat = DefaultStrat(self.currentpitcher.id, self.strategy.teamstrategy.bullpencutoff)
 
+        should_pull = False
+
+        # Trigger 1: Pitch count exceeded
         if self.currentpitcher.pitchingstats.pitches_thrown > playerstrat.pitchpull:
-            #print(f"pitches exceeded {self.currentpitcher.pitchingstats.pitches_thrown} / {playerstrat.pitchpull}")
-            #self.ChooseReliefPitcher()
-            pass 
+            should_pull = True
 
-        if playerstrat.pulltend == 'normal':
-            pulltend = self.baselines.normalleash
-        elif playerstrat.pulltend == 'quick':
+        # Trigger 2: Fatigue below leash threshold
+        if playerstrat.pulltend == 'quick':
             pulltend = self.baselines.shortleash
         elif playerstrat.pulltend == 'long':
             pulltend = self.baselines.longleash
+        else:
+            pulltend = self.baselines.normalleash
 
         if self.currentpitcher.abilitymodifierscore < pulltend:
-            #print(f"manager pulls: {playerstrat.pulltend} / {self.currentpitcher.pitchingstats.pitches_thrown} / {self.currentpitcher.abilitymodifierscore}")
-            #self.ChooseReliefPitcher()
-            pass
-            
+            should_pull = True
+
+        if should_pull:
+            self.ChooseReliefPitcher(game)
+
+    def _IsSaveSituation(self, game):
+        if game.currentinning < 9:
+            return False
+        score_diff = self._GetScoreDiff(game)
+        return 1 <= score_diff <= 3
+
+    def _GetScoreDiff(self, game):
+        return self.score - game.battingteam.score
+
+    def _SelectBySlotOrder(self, is_save):
+        ordered = sorted(self.reliefpitchers, key=lambda x: getattr(x, 'bullpen_slot', 99))
+        for rp in ordered:
+            role = getattr(rp, 'bullpen_role', 'middle')
+            if role == 'closer' and not is_save:
+                continue
+            return rp
+        return None
+
+    def _SelectByRating(self, is_save):
+        rated = sorted(self.reliefpitchers, key=lambda x: x.rp_rating, reverse=True)
+        if is_save:
+            closers = [rp for rp in rated if getattr(rp, 'bullpen_role', '') == 'closer']
+            if closers:
+                return closers[0]
+        for rp in rated:
+            if getattr(rp, 'bullpen_role', '') == 'closer' and not is_save:
+                continue
+            return rp
+        return None
+
+    def _SwapPitcher(self, newpitcher, game):
+        replaced = self.currentpitcher
+        self.reliefpitchers.remove(newpitcher)
+        self.currentpitcher = newpitcher
+        newpitcher.pitchingstats.Adder("appearances", 1)
+        game.substitutions.append({
+            "team": self.name,
+            "inning": game.currentinning,
+            "half": "top" if game.topofinning else "bottom",
+            "player_in_id": newpitcher.id,
+            "player_in_name": newpitcher.name,
+            "new_position": "P",
+            "player_out_id": replaced.id,
+            "player_out_name": replaced.name,
+            "type": "pitching_change"
+        })
+
+    def _UseEmergencyPitcher(self, game):
+        ep_id = self.strategy.teamstrategy.emergencypitcher
+        if ep_id is None:
+            return
+        for i, bp in enumerate(self.benchplayers):
+            if bp.id == ep_id:
+                replaced = self.currentpitcher
+                emergency = self.benchplayers.pop(i)
+                self.currentpitcher = emergency
+                emergency.pitchingstats.Adder("appearances", 1)
+                game.substitutions.append({
+                    "team": self.name,
+                    "inning": game.currentinning,
+                    "half": "top" if game.topofinning else "bottom",
+                    "player_in_id": emergency.id,
+                    "player_in_name": emergency.name,
+                    "new_position": "P",
+                    "player_out_id": replaced.id,
+                    "player_out_name": replaced.name,
+                    "type": "emergency_pitcher"
+                })
+                return
+
 
 def find_index(objectlist, attribute, targetvalue):
     for index, obj in enumerate(objectlist):

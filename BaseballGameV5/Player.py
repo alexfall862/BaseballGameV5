@@ -14,8 +14,10 @@ class Player():
                  # Strategy attributes (from endpoint)
                  stealfreq=10.0, pickofffreq=10.0, plate_approach="normal", pitchchoices=None,
                  # Spray chart splits (sum to 1.0)
-                 left_split=0.33, center_split=0.34, right_split=0.33
-                 ): 
+                 left_split=0.33, center_split=0.34, right_split=0.33,
+                 # Pitcher management
+                 pitchpull=None, usage_preference="normal", pulltend="normal"
+                 ):
         
         self.id = pid
         self.ptype = ptype
@@ -78,12 +80,18 @@ class Player():
 
         self.injurystate = injurystate
         self.energy = energy
+        self.starting_energy = energy
 
         # Strategy attributes
         self.stealfreq = stealfreq
         self.pickofffreq = pickofffreq
         self.plate_approach = plate_approach
         self.pitchchoices = pitchchoices if pitchchoices is not None else []
+
+        # Pitcher management
+        self.pitchpull = pitchpull
+        self.usage_preference = usage_preference
+        self.pulltend = pulltend
 
         # Spray chart splits (sum to 1.0)
         self.left_split = left_split

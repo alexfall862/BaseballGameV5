@@ -122,9 +122,9 @@ class Baselines():
         instance.energytickcap = data.get("energytickcap", 1.5)
         instance.energystep = data.get("energystep", 2)
 
-        instance.shortleash = data.get("shortleash", 0.8)
-        instance.normalleash = data.get("normalleash", 0.7)
-        instance.longleash = data.get("longleash", 0.5)
+        instance.shortleash = data.get("shortleash", 0.85)
+        instance.normalleash = data.get("normalleash", 0.8)
+        instance.longleash = data.get("longleash", 0.7)
 
         return instance
 

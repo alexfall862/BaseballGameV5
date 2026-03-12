@@ -8,6 +8,7 @@ Both use the same payload structure - single game just has 1 game in subweeks.a.
 import sys
 import os
 from typing import Dict, List, Any
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +18,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from api.models import (
     SimulationPayload,
     SimulationResponse,
+    BatchPayload,
+    BatchResponse,
     HealthResponse,
 )
 import Game
@@ -122,6 +125,42 @@ def simulate_single_game(
             "boxscore": None,
             "play_by_play": [],
             "injuries": []
+        }
+
+
+def _worker_simulate(job: dict) -> dict:
+    """
+    Worker function for parallel simulation. Runs in a subprocess.
+
+    Args:
+        job: Dict with game_data, rules, level_config, game_constants,
+             injury_types, and payload_index for error reporting.
+
+    Returns:
+        Dict with result or error info.
+    """
+    try:
+        result = simulate_single_game(
+            game_data=job["game_data"],
+            rules=job["rules"],
+            level_config=job["level_config"],
+            game_constants=job["game_constants"],
+            injury_types=job.get("injury_types"),
+        )
+        if "error" in result and result.get("result") is None:
+            return {
+                "ok": False,
+                "game_id": job["game_data"].get("game_id"),
+                "payload_index": job["payload_index"],
+                "error": result["error"],
+            }
+        return {"ok": True, "result": result}
+    except Exception as e:
+        return {
+            "ok": False,
+            "game_id": job["game_data"].get("game_id"),
+            "payload_index": job["payload_index"],
+            "error": str(e),
         }
 
 
@@ -235,12 +274,78 @@ async def simulate_game(payload: SimulationPayload):
     return await simulate(payload)
 
 
-@app.post("/simulate/batch", response_model=SimulationResponse)
-async def simulate_batch(payload: SimulationPayload):
+@app.post("/simulate/batch", response_model=BatchResponse)
+async def simulate_batch(payload: BatchPayload):
     """
-    Legacy batch endpoint - redirects to unified /simulate.
+    Batch endpoint that accepts an array of game payloads.
+
+    Shared config (game_constants, level_configs, rules, injury_types) can
+    be at the top level or per-game element. Per-game values take priority.
+
+    Games are simulated in parallel across CPU cores.
     """
-    return await simulate(payload)
+    subweek_key = payload.subweek or "a"
+
+    # Top-level shared config (fallback when per-game element omits them)
+    shared_game_constants = payload.game_constants or DEFAULT_GAME_CONSTANTS
+    shared_level_configs = payload.level_configs or {}
+    shared_rules = payload.rules or {}
+    shared_injury_types = payload.injury_types or []
+
+    # Build flat list of jobs to dispatch
+    jobs = []
+    for i, game_payload in enumerate(payload.games):
+        game_constants = game_payload.get("game_constants") or shared_game_constants
+        level_configs = game_payload.get("level_configs") or shared_level_configs
+        rules_by_level = game_payload.get("rules") or shared_rules
+        injury_types = game_payload.get("injury_types") or shared_injury_types
+        subweeks = game_payload.get("subweeks", {})
+        games_in_subweek = subweeks.get(subweek_key, [])
+
+        for game_data in games_in_subweek:
+            level_id = str(game_data.get("league_level_id",
+                           game_payload.get("league_level", "9")))
+
+            rules = rules_by_level.get(level_id, DEFAULT_RULES)
+            if hasattr(rules, 'model_dump'):
+                rules = rules.model_dump()
+
+            level_config = level_configs.get(level_id, DEFAULT_LEVEL_CONFIG)
+            if hasattr(level_config, 'model_dump'):
+                level_config = level_config.model_dump()
+
+            jobs.append({
+                "game_data": game_data,
+                "rules": rules,
+                "level_config": level_config,
+                "game_constants": game_constants,
+                "injury_types": injury_types,
+                "payload_index": i,
+            })
+
+    # Run games in parallel across CPU cores
+    results = []
+    errors = []
+    max_workers = min(os.cpu_count() or 4, len(jobs)) if jobs else 1
+
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_worker_simulate, job): job for job in jobs}
+        for future in as_completed(futures):
+            outcome = future.result()
+            if outcome["ok"]:
+                results.append(outcome["result"])
+            else:
+                errors.append({
+                    "game_id": outcome.get("game_id"),
+                    "payload_index": outcome.get("payload_index"),
+                    "error": outcome.get("error"),
+                })
+
+    return {
+        "results": results,
+        "total_games_simulated": len(results),
+        "errors": errors
+    }
 
 
 @app.get("/")
@@ -253,6 +358,6 @@ async def root():
             "/health": "Health check",
             "/simulate": "Unified simulation endpoint (single or batch)",
             "/simulate/game": "Legacy single game endpoint",
-            "/simulate/batch": "Legacy batch endpoint"
+            "/simulate/batch": "Batch endpoint (accepts games array)"
         }
     }
