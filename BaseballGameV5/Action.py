@@ -250,7 +250,7 @@ def HitEval(self):
 
     # Process scored runners for hits OR sac flies/tag-ups (runners can score on outs too)
     outcome = self.defensiveoutcome[3]
-    if outcome in ("single", "double", "triple", "homerun", "out"):
+    if outcome in ("single", "double", "triple", "homerun", "inside_the_park_hr", "out"):
         listofrunners = self.defensiveoutcome[4][3]
         for runner in listofrunners:
             self.game.current_runners_home.append(runner)
@@ -422,7 +422,7 @@ def AtBatOutcomeParser(self):
         elif outcome == "triple":
             self.game.is_hit = True
             self.game.is_triple = True
-        elif outcome == "homerun":
+        elif outcome == "homerun" or outcome == "inside_the_park_hr":
             self.game.is_hit = True
             self.game.is_homerun = True
 
@@ -430,6 +430,8 @@ def AtBatOutcomeParser(self):
         self.game.error_count = len(self.defensiveoutcome[5]) if self.defensiveoutcome[5] else 0
 
         stats.OutcomeStatAdder(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, self.defensiveoutcome[3])
+        # Track which pitcher is responsible for this batter reaching base
+        stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)
         self.game.ab_over = True
 
 
@@ -485,6 +487,9 @@ def InningFlip(self):
     if self.game.topofinning == False:
         self.game.currentinning+=1
     self.game.topofinning = not self.game.topofinning
+    if not self.game.gamedone:
+        self.game.pitchingteam.DecideBetweenInningChange(self.game)
+
     flipholderbat = self.game.battingteam
     flipholderpitch = self.game.pitchingteam
     self.game.battingteam = flipholderpitch

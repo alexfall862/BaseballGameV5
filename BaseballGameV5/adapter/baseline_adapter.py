@@ -163,6 +163,13 @@ class BaselineAdapter:
             "shortleash": game_settings.get("short_leash", 0.85),
             "normalleash": game_settings.get("normal_leash", 0.8),
             "longleash": game_settings.get("long_leash", 0.7),
+            # Feature tunables
+            "consecutive_pitch_debuff_scale": game_settings.get("consecutive_pitch_debuff_scale", 1.5),
+            "battery_iq_weight": game_settings.get("battery_iq_weight", 0.5),
+            "arm_angle_familiarity_increment": game_settings.get("arm_angle_familiarity_increment", 1.0),
+            "velocity_swing_suppression_max": game_settings.get("velocity_swing_suppression_max", 0.05),
+            "control_strike_floor": game_settings.get("control_strike_floor", 0.35),
+            "control_strike_ceiling": game_settings.get("control_strike_ceiling", 0.70),
         }
 
     @classmethod
@@ -184,6 +191,7 @@ class BaselineAdapter:
             "modexp": batting.get("modexp", 2),
             "steal_success": game_settings.get("steal_success", 0.65),
             "pickoff_success": game_settings.get("pickoff_success", 0.1),
+            "stealawareness_max": game_settings.get("stealawareness_max", 0.45),
             "error_rate": game_settings.get("error_rate", 0.05),
         }
 

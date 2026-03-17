@@ -54,7 +54,7 @@ class PlayerAdapter:
         lineup = team_side.get("lineup", [])
         available_pitcher_ids = team_side.get("available_pitcher_ids", [])
         bench = team_side.get("bench", [])
-        starting_pitcher_id = team_side.get("starting_pitcher_id")
+        starting_pitcher_id = team_side.get("starting_pitcher_id") or defense.get("startingpitcher")
 
         for player_data in team_side.get("players", []):
             player = cls.adapt(

@@ -4,6 +4,7 @@ from Baselines import Baselines as b
 import Fatigue as f
 import Player
 import os
+import random
 
 # Energy thresholds by usage_preference
 USAGE_ENERGY_THRESHOLDS = {
@@ -13,6 +14,33 @@ USAGE_ENERGY_THRESHOLDS = {
     "desperation": 25,
 }
 
+# Role priority by game situation: which bullpen roles to try first
+SITUATION_ROLE_ORDER = {
+    "save":            ["closer", "setup", "middle", "long", "mop_up"],
+    "setup":           ["setup", "middle", "closer", "long", "mop_up"],
+    "middle":          ["middle", "setup", "long", "mop_up", "closer"],
+    "early_relief":    ["long", "middle", "mop_up", "setup", "closer"],
+    "blowout_winning": ["mop_up", "long", "middle", "setup", "closer"],
+    "blowout_losing":  ["mop_up", "long", "middle", "setup", "closer"],
+}
+
+# Max outs per reliever role before pull probability kicks in
+ROLE_MAX_OUTS = {
+    "closer": 4,      # ~1.1 innings
+    "setup": 6,       # 2 innings
+    "middle": 6,      # 2 innings
+    "long": 9,        # 3 innings
+    "mop_up": 9,      # 3 innings
+}
+
+# Pull probability escalation rates (per out over target)
+STARTER_PULL_RATE = 0.15     # 15% per out over target
+RELIEVER_PULL_RATE = 0.40    # 40% per out over limit
+
+# Soft pitch ceiling (pull probability starts here)
+SOFT_PITCH_CEILING = 110
+PITCH_CEILING_RATE = 0.03    # 3% per pitch over ceiling
+
 class Team():
     def __init__(self, name, travelstatus, pitchervalue, baselines):
         self.name = name
@@ -21,6 +49,7 @@ class Team():
         self.roster = r(self.name)
         self.strategy = s(self.name)
         self.score = 0
+        self.use_dh = True
         self.catcher = Team.GrabPositionPlayer(self, 'catcher')
         self.firstbase = Team.GrabPositionPlayer(self, 'firstbase')
         self.secondbase = Team.GrabPositionPlayer(self, 'secondbase')
@@ -44,6 +73,8 @@ class Team():
         self.currentbatspot = 1
         self.currentbatter = Team.GrabBatter(self, self.currentbatspot)
         self.currentpitcher = Team.GrabStartingPitcher(self, pitchervalue)
+        self._pitching_appearance_seq = 1
+        self.currentpitcher.pitch_appearance_order = 1
         self.reliefpitchers = Team.GrabReliefPitchers(self)
         self.benchplayers = Team.GrabBenchBats(self)
 
@@ -71,6 +102,7 @@ class Team():
         instance.baselines = baselines
         instance.travelstatus = travelstatus
         instance.score = 0
+        instance.use_dh = use_dh
 
         # Store all players for reference
         instance._all_players = players
@@ -152,8 +184,10 @@ class Team():
         instance.currentbatter = instance.battinglist[0]
 
         # Grab pitchers
-        instance.currentpitcher = instance._grab_starting_pitcher_from_list(players)
+        instance.currentpitcher = starter if not use_dh else instance._grab_starting_pitcher_from_list(players)
         instance.currentpitcher.pitchingstats.Adder("games_started", 1)
+        instance._pitching_appearance_seq = 1
+        instance.currentpitcher.pitch_appearance_order = 1
 
         instance.reliefpitchers = [
             p for p in players
@@ -198,7 +232,14 @@ class Team():
         matches = [p for p in players if p.lineup == "starter"]
         if matches:
             return matches[0]
-        return None
+        # Fallback: check for pitchingorder == 1 (starting pitcher attribute)
+        fallback = [p for p in players if getattr(p, 'pitchingorder', 0) == 1]
+        if fallback:
+            return fallback[0]
+        raise ValueError(
+            f"No starting pitcher found for team '{self.name}'. "
+            f"Player lineups: {[(p.name, p.lineup) for p in players]}"
+        )
     
     def TickBatter(self):
         self.TickBatSpot()
@@ -232,24 +273,16 @@ class Team():
         return [player for player in self.roster.playerlist if player.lineup=="relief" and player.energy >= 75]
     
     def ChooseReliefPitcher(self, game):
-        if len(self.reliefpitchers) == 0:
+        if not self.reliefpitchers:
             self._UseEmergencyPitcher(game)
             return
 
-        is_save = self._IsSaveSituation(game)
-        priority = self.strategy.teamstrategy.bullpenpriority
-
-        newpitcher = None
-        if priority == "rest":
-            newpitcher = self._SelectBySlotOrder(is_save)
-        elif priority == "matchup":
-            newpitcher = self._SelectBySlotOrder(is_save)
-        else:
-            newpitcher = self._SelectByRating(is_save)
+        newpitcher = self._SelectByRole(game)
 
         if newpitcher:
             self._SwapPitcher(newpitcher, game)
         else:
+            # Fallback: best rp_rating regardless of role
             rpitchers = sorted(self.reliefpitchers, key=lambda x: x.rp_rating, reverse=True)
             if rpitchers:
                 self._SwapPitcher(rpitchers[0], game)
@@ -362,44 +395,186 @@ class Team():
         if self.currentpitcher.abilitymodifierscore < pulltend:
             should_pull = True
 
+        # Trigger 3: Starter outs limit (probability-based, performance-gated)
+        if not should_pull and self.currentpitcher.pitchingstats.games_started > 0:
+            base_outs = 15
+            bonus = max(0, int((self.currentpitcher.pendurance - 40) / 10))
+            target_outs = min(base_outs + bonus, 24)
+
+            outs_over = self.currentpitcher.pitchingstats.outs_pitched - target_outs
+            if outs_over > 0:
+                base_chance = STARTER_PULL_RATE * outs_over
+
+                er = self.currentpitcher.pitchingstats.earned_runs
+                energy_pct = self.currentpitcher.energy / max(self.currentpitcher.starting_energy, 1)
+
+                if er <= 1 and energy_pct > 0.4:
+                    perf_mod = -0.25
+                elif er <= 2 and energy_pct > 0.3:
+                    perf_mod = -0.10
+                elif er >= 4:
+                    perf_mod = 0.20
+                else:
+                    perf_mod = 0.0
+
+                pull_chance = max(0.05, min(0.95, base_chance + perf_mod))
+                if random.random() < pull_chance:
+                    should_pull = True
+
+        # Trigger 4: Reliever outs limit (probability-based, steep)
+        if not should_pull and self.currentpitcher.pitchingstats.games_started == 0:
+            role = getattr(self.currentpitcher, 'bullpen_role', 'middle')
+            role_max = ROLE_MAX_OUTS.get(role, 6)
+            outs_over = self.currentpitcher.pitchingstats.outs_pitched - role_max
+            if outs_over > 0:
+                pull_chance = max(0.10, min(0.95, RELIEVER_PULL_RATE * outs_over))
+                if random.random() < pull_chance:
+                    should_pull = True
+
+        # Trigger 5: Soft pitch ceiling (any pitcher)
+        if not should_pull:
+            pitches = self.currentpitcher.pitchingstats.pitches_thrown
+            if pitches > SOFT_PITCH_CEILING:
+                overage = pitches - SOFT_PITCH_CEILING
+                pull_chance = max(0.05, min(0.95, PITCH_CEILING_RATE * overage))
+                if random.random() < pull_chance:
+                    should_pull = True
+
         if should_pull:
             self.ChooseReliefPitcher(game)
 
+    def DecideBetweenInningChange(self, game):
+        """Evaluate whether to change pitchers at an inning boundary.
+
+        Called after InningFlip updates inning/half state but before teams are
+        swapped. Only applies to relievers — starters are handled by the
+        existing mid-inning triggers.
+        """
+        if self.currentpitcher.pitchingstats.games_started > 0:
+            return  # starters handled by mid-inning triggers
+
+        # Determine what inning this team will next pitch.
+        # After InningFlip, topofinning has been flipped but teams not yet swapped.
+        #   topofinning is now False  → top just ended → next pitch is top of currentinning+1
+        #   topofinning is now True   → bottom just ended, inning already incremented
+        #                              → next pitch is bottom of currentinning
+        if not game.topofinning:
+            next_inning = game.currentinning + 1
+        else:
+            next_inning = game.currentinning
+
+        situation = self._ClassifyGameSituation(game, inning_override=next_inning)
+        role_order = SITUATION_ROLE_ORDER.get(situation, SITUATION_ROLE_ORDER["middle"])
+        current_role = getattr(self.currentpitcher, 'bullpen_role', 'middle')
+
+        # Walk the priority list. If a better-suited available pitcher is found
+        # before we reach the current pitcher's role, make the change.
+        for role in role_order:
+            if role == current_role:
+                return  # current pitcher is already the best fit for this situation
+            candidates = [rp for rp in self.reliefpitchers
+                          if getattr(rp, 'bullpen_role', 'middle') == role]
+            if candidates:
+                self.ChooseReliefPitcher(game)
+                return
+
     def _IsSaveSituation(self, game):
-        if game.currentinning < 9:
-            return False
+        """MLB save situation: leading by 1-3, or tying run on base/at-bat/on-deck."""
         score_diff = self._GetScoreDiff(game)
-        return 1 <= score_diff <= 3
+        runners_on = sum(1 for r in [game.on_firstbase, game.on_secondbase, game.on_thirdbase] if r is not None)
+        return self._is_entry_save_situation(score_diff, runners_on)
+
+    def _is_entry_save_situation(self, score_diff, runners_on):
+        """Check if conditions constitute a save situation per MLB rules."""
+        if score_diff <= 0:
+            return False
+        if score_diff <= 3:
+            return True
+        # Tying run on base, at bat, or on deck
+        if score_diff <= runners_on + 2:
+            return True
+        return False
 
     def _GetScoreDiff(self, game):
         return self.score - game.battingteam.score
 
-    def _SelectBySlotOrder(self, is_save):
-        ordered = sorted(self.reliefpitchers, key=lambda x: getattr(x, 'bullpen_slot', 99))
-        for rp in ordered:
-            role = getattr(rp, 'bullpen_role', 'middle')
-            if role == 'closer' and not is_save:
+    def _ClassifyGameSituation(self, game, inning_override=None):
+        """Classify current game context for bullpen role selection."""
+        inning = inning_override if inning_override is not None else game.currentinning
+        score_diff = self._GetScoreDiff(game)
+        is_save = self._IsSaveSituation(game)
+
+        if is_save and inning >= 8:
+            return "save"
+        if 1 <= score_diff <= 5 and inning >= 7:
+            return "setup"
+        if score_diff <= -6:
+            return "blowout_losing"
+        if score_diff >= 6:
+            return "blowout_winning"
+        if inning <= 5:
+            return "early_relief"
+        return "middle"
+
+    def _SelectByRole(self, game):
+        """Select relief pitcher based on game situation and role priority."""
+        situation = self._ClassifyGameSituation(game)
+        role_order = SITUATION_ROLE_ORDER.get(situation, SITUATION_ROLE_ORDER["middle"])
+        priority = self.strategy.teamstrategy.bullpenpriority
+
+        for role in role_order:
+            candidates = [rp for rp in self.reliefpitchers
+                          if getattr(rp, 'bullpen_role', 'middle') == role]
+            if not candidates:
                 continue
-            return rp
+
+            if priority == "matchup":
+                ranked = self._RankByMatchup(candidates, game)
+            elif priority == "rest":
+                ranked = sorted(candidates, key=lambda x: getattr(x, 'bullpen_slot', 99))
+            else:  # "best_available"
+                ranked = sorted(candidates, key=lambda x: x.rp_rating, reverse=True)
+
+            return ranked[0]
+
         return None
 
-    def _SelectByRating(self, is_save):
-        rated = sorted(self.reliefpitchers, key=lambda x: x.rp_rating, reverse=True)
-        if is_save:
-            closers = [rp for rp in rated if getattr(rp, 'bullpen_role', '') == 'closer']
-            if closers:
-                return closers[0]
-        for rp in rated:
-            if getattr(rp, 'bullpen_role', '') == 'closer' and not is_save:
-                continue
-            return rp
-        return None
+    def _RankByMatchup(self, candidates, game):
+        """Rank relief pitcher candidates by handedness matchup advantage."""
+        batter_hand = game.battingteam.currentbatter.handedness[0]
+
+        def matchup_score(rp):
+            score = rp.rp_rating
+            pitcher_hand = rp.handedness[1]
+            if batter_hand == 'S':
+                score += 5
+            elif batter_hand == pitcher_hand:
+                score += 10  # Same-side = pitcher advantage
+            return score
+
+        return sorted(candidates, key=matchup_score, reverse=True)
 
     def _SwapPitcher(self, newpitcher, game):
         replaced = self.currentpitcher
         self.reliefpitchers.remove(newpitcher)
         self.currentpitcher = newpitcher
+        self._pitching_appearance_seq += 1
+        newpitcher.pitch_appearance_order = self._pitching_appearance_seq
         newpitcher.pitchingstats.Adder("appearances", 1)
+
+        # In no-DH games, new pitcher inherits the replaced pitcher's batting spot
+        if not self.use_dh:
+            newpitcher.battingorder = replaced.battingorder
+            newpitcher.lineup = replaced.lineup
+            for idx, player in enumerate(self.battinglist):
+                if player.id == replaced.id:
+                    self.battinglist[idx] = newpitcher
+                    break
+
+        # Entry-state tracking for save/hold/blown-save determination
+        score_diff = self.score - game.battingteam.score
+        runners_on = sum(1 for r in [game.on_firstbase, game.on_secondbase, game.on_thirdbase] if r is not None)
+
         game.substitutions.append({
             "team": self.name,
             "inning": game.currentinning,
@@ -409,31 +584,70 @@ class Team():
             "new_position": "P",
             "player_out_id": replaced.id,
             "player_out_name": replaced.name,
-            "type": "pitching_change"
+            "batting_order": newpitcher.battingorder if not self.use_dh else None,
+            "type": "pitching_change",
+            "entry_score_diff": score_diff,
+            "entry_runners_on": runners_on,
+            "entry_inning": game.currentinning,
+            "entry_outs": game.currentouts,
+            "entry_is_save_situation": self._is_entry_save_situation(score_diff, runners_on)
         })
 
     def _UseEmergencyPitcher(self, game):
         ep_id = self.strategy.teamstrategy.emergencypitcher
-        if ep_id is None:
+
+        # Try designated emergency pitcher first
+        if ep_id is not None:
+            for i, bp in enumerate(self.benchplayers):
+                if bp.id == ep_id:
+                    self._ActivateEmergencyPitcher(bp, i, game)
+                    return
+
+        # Fallback: bench player with highest pendurance
+        if self.benchplayers:
+            best_idx = max(range(len(self.benchplayers)),
+                           key=lambda i: getattr(self.benchplayers[i], 'pendurance', 0))
+            self._ActivateEmergencyPitcher(self.benchplayers[best_idx], best_idx, game)
             return
-        for i, bp in enumerate(self.benchplayers):
-            if bp.id == ep_id:
-                replaced = self.currentpitcher
-                emergency = self.benchplayers.pop(i)
-                self.currentpitcher = emergency
-                emergency.pitchingstats.Adder("appearances", 1)
-                game.substitutions.append({
-                    "team": self.name,
-                    "inning": game.currentinning,
-                    "half": "top" if game.topofinning else "bottom",
-                    "player_in_id": emergency.id,
-                    "player_in_name": emergency.name,
-                    "new_position": "P",
-                    "player_out_id": replaced.id,
-                    "player_out_name": replaced.name,
-                    "type": "emergency_pitcher"
-                })
-                return
+
+    def _ActivateEmergencyPitcher(self, player, index, game):
+        replaced = self.currentpitcher
+        emergency = self.benchplayers.pop(index)
+        self.currentpitcher = emergency
+        self._pitching_appearance_seq += 1
+        emergency.pitch_appearance_order = self._pitching_appearance_seq
+        emergency.pitchingstats.Adder("appearances", 1)
+
+        # In no-DH games, new pitcher inherits the replaced pitcher's batting spot
+        if not self.use_dh:
+            emergency.battingorder = replaced.battingorder
+            emergency.lineup = replaced.lineup
+            for idx, p in enumerate(self.battinglist):
+                if p.id == replaced.id:
+                    self.battinglist[idx] = emergency
+                    break
+
+        # Entry-state tracking for save/hold/blown-save determination
+        score_diff = self.score - game.battingteam.score
+        runners_on = sum(1 for r in [game.on_firstbase, game.on_secondbase, game.on_thirdbase] if r is not None)
+
+        game.substitutions.append({
+            "team": self.name,
+            "inning": game.currentinning,
+            "half": "top" if game.topofinning else "bottom",
+            "player_in_id": emergency.id,
+            "player_in_name": emergency.name,
+            "new_position": "P",
+            "player_out_id": replaced.id,
+            "player_out_name": replaced.name,
+            "batting_order": emergency.battingorder if not self.use_dh else None,
+            "type": "emergency_pitcher",
+            "entry_score_diff": score_diff,
+            "entry_runners_on": runners_on,
+            "entry_inning": game.currentinning,
+            "entry_outs": game.currentouts,
+            "entry_is_save_situation": self._is_entry_save_situation(score_diff, runners_on)
+        })
 
 
 def find_index(objectlist, attribute, targetvalue):

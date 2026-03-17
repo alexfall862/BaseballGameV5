@@ -50,7 +50,7 @@ def OutcomeStatAdder(batter, pitcher, stat):
         stattoadd = "doubles"
     if stat == "triple":
         stattoadd = "triples"
-    if stat == "homerun":
+    if stat == "homerun" or stat == "inside_the_park_hr":
         stattoadd = "homeruns"
     if stattoadd != None:
         batter.battingstats.Adder(stattoadd, 1)
@@ -58,10 +58,11 @@ def OutcomeStatAdder(batter, pitcher, stat):
 
 def RunScorer(runner):
     runner.battingstats.Adder("runs", 1)
-    if runner.earned_bool == True:
-        runner.on_base_pitcher.pitchingstats.Adder("earned_runs", 1)
-    else:
-        runner.on_base_pitcher.pitchingstats.Adder("unearned_runs", 1)
+    if runner.on_base_pitcher is not None:
+        if runner.earned_bool == True:
+            runner.on_base_pitcher.pitchingstats.Adder("earned_runs", 1)
+        else:
+            runner.on_base_pitcher.pitchingstats.Adder("unearned_runs", 1)
 
 def outs_to_innings(outs):
     """Convert outs count to baseball innings notation (e.g., 27 outs = 9.0, 28 outs = 9.1)."""
@@ -104,6 +105,9 @@ class PitchingStats():
         self.balks = 0
         self.games_started = 0
         self.appearances = 0
+        self.hold = 0
+        self.blown_save = 0
+        self.quality_start = 0
 
     @property
     def innings_pitched(self):
@@ -212,7 +216,7 @@ class BattingStats():
 
 def SetPitcherStatus(player, pitcher, earned_bool):
     player.earned_bool = earned_bool
-    player.on_base_pitcher = pitcher.id
+    player.on_base_pitcher = pitcher
     
 def ResetPitcherStatus(player):
     player.earned_bool = True

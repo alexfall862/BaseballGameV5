@@ -74,6 +74,14 @@ class Game():
         self.actions = []
         self.substitutions = []
         self.overallresults = []
+
+        # Pitch sequencing state (consecutive pitch tracking)
+        self.pitcher_last_pitch = {}         # {pitcher_id: pitch_name}
+        self.pitcher_consecutive_count = {}  # {pitcher_id: int}
+
+        # Arm angle familiarity tracking
+        self.batter_arm_angle_history = {}   # {batter_id: {arm_angle: times_seen}}
+
         self.meta = Game.GameResult(self.gname, self.hometeam, self.awayteam, self.actions)
 
     @classmethod
@@ -210,6 +218,13 @@ class Game():
         instance.overallresults = []
         instance.ingame_injury_reports = []
 
+        # Pitch sequencing state (consecutive pitch tracking)
+        instance.pitcher_last_pitch = {}         # {pitcher_id: pitch_name}
+        instance.pitcher_consecutive_count = {}  # {pitcher_id: int}
+
+        # Arm angle familiarity tracking
+        instance.batter_arm_angle_history = {}   # {batter_id: {arm_angle: times_seen}}
+
         # Store injury adapter for in-game injury checks
         if injury_types:
             instance.injury_adapter = InjuryAdapter(injury_types)
@@ -282,51 +297,60 @@ class Game():
             "game_info": self._get_game_info()
         }
 
+    def _find_player(self, pid):
+        """Search both team rosters for a player by ID."""
+        for team in [self.hometeam, self.awayteam]:
+            for player in team.roster.playerlist:
+                if player.id == pid:
+                    return player
+        return None
+
     def _get_pitching_decisions(self):
         """
-        Determine W/L/S/BS for pitchers.
+        Determine W/L/S/BS/Hold/QS for pitchers.
 
         Rules:
         - Winning pitcher: pitcher of record when team takes the final lead
         - Losing pitcher: pitcher who gave up the run that put opponent ahead for good
-        - Save: reliever finishes game with lead, wasn't winning pitcher, and:
+        - Save (MLB Rule 9.19): reliever finishes game with lead, wasn't winning pitcher, and:
           - Entered with lead of 3 or less, OR
           - Entered with tying run on base/at bat/on deck, OR
           - Pitched at least 3 innings
-        - Blown save: pitcher in save situation who allowed tying/go-ahead run
+        - Blown save: pitcher who entered in save situation and allowed tying/go-ahead run
+        - Hold: reliever entered in save situation, recorded an out, left without blowing
+          the lead, didn't finish, and isn't the winning or save pitcher
+        - Quality start: starter with 6+ IP and 3 or fewer earned runs
         """
+        # Build set of pitchers who entered in save situations
+        save_sit_pitchers = {}
+        for sub in self.substitutions:
+            if sub.get("entry_is_save_situation"):
+                save_sit_pitchers[sub["player_in_id"]] = sub
+
         # Track score changes and pitcher of record through the game
         home_score = 0
         away_score = 0
-        home_pitcher_of_record = None  # Pitcher credited if home wins
-        away_pitcher_of_record = None  # Pitcher credited if away wins
-        home_losing_pitcher = None     # Pitcher blamed if home loses
-        away_losing_pitcher = None     # Pitcher blamed if away loses
+        home_pitcher_of_record = None
+        away_pitcher_of_record = None
+        home_losing_pitcher = None
+        away_losing_pitcher = None
 
-        # Track current pitchers (from play-by-play)
         current_home_pitcher = None
         current_away_pitcher = None
 
-        # Save situation tracking
-        save_candidate = None
-        save_situation_entered = False
         blown_saves = []
+        blown_save_ids = set()
 
         for action in self.actions:
-            # Track current pitcher
             pitcher_info = action.get("Pitcher")
             inning_half = action.get("Inning Half")
 
             if pitcher_info:
-                pitcher_id = pitcher_info.get("player_id")
                 if inning_half == "Top":
-                    # Top of inning = away batting, home pitching
                     current_home_pitcher = pitcher_info
                 else:
-                    # Bottom of inning = home batting, away pitching
                     current_away_pitcher = pitcher_info
 
-            # Get runs scored this action
             runners_scored = action.get("Runners_Scored", 0)
             if runners_scored > 0:
                 prev_home = home_score
@@ -337,24 +361,33 @@ class Game():
                 else:
                     home_score += runners_scored
 
-                # Check if lead changed
-                prev_lead = prev_home - prev_away  # Positive = home leads
+                prev_lead = prev_home - prev_away
                 new_lead = home_score - away_score
 
-                # Determine if a team took the lead
+                # Check for blown saves: pitcher in save situation allows lead to evaporate
+                if inning_half == "Top" and current_home_pitcher:
+                    # Home was pitching (top of inning), away scored
+                    pid = current_home_pitcher.get("player_id")
+                    if pid in save_sit_pitchers and prev_lead > 0 and new_lead <= 0:
+                        if pid not in blown_save_ids:
+                            blown_saves.append(current_home_pitcher)
+                            blown_save_ids.add(pid)
+                elif inning_half == "Bottom" and current_away_pitcher:
+                    # Away was pitching (bottom of inning), home scored
+                    pid = current_away_pitcher.get("player_id")
+                    if pid in save_sit_pitchers and prev_lead < 0 and new_lead >= 0:
+                        # prev_lead < 0 means away was leading, new_lead >= 0 means home tied/took lead
+                        if pid not in blown_save_ids:
+                            blown_saves.append(current_away_pitcher)
+                            blown_save_ids.add(pid)
+
+                # W/L tracking: determine if a team took the lead
                 if prev_lead <= 0 and new_lead > 0:
-                    # Home took the lead
                     home_pitcher_of_record = current_home_pitcher
-                    # The away pitcher who gave up the lead is the losing pitcher candidate
                     away_losing_pitcher = current_away_pitcher
                 elif prev_lead >= 0 and new_lead < 0:
-                    # Away took the lead
                     away_pitcher_of_record = current_away_pitcher
-                    # The home pitcher who gave up the lead is the losing pitcher candidate
                     home_losing_pitcher = current_home_pitcher
-                elif prev_lead == 0 and new_lead == 0:
-                    # Still tied - no change
-                    pass
 
         # Final score
         final_home = self.hometeam.score
@@ -371,11 +404,10 @@ class Game():
             winning_pitcher = away_pitcher_of_record
             losing_pitcher = home_losing_pitcher
 
-        # Determine save (simplified: last pitcher on winning team who isn't winning pitcher)
+        # Determine save using entry-state tracking (MLB Rule 9.19)
         save_pitcher = None
         if final_home != final_away:
-            winning_team = self.hometeam if final_home > final_away else self.awayteam
-            # Get the last pitcher used by winning team
+            # Find the last pitcher on the winning team
             last_winning_pitcher = None
             for action in reversed(self.actions):
                 pitcher_info = action.get("Pitcher")
@@ -389,35 +421,92 @@ class Game():
                         last_winning_pitcher = pitcher_info
                         break
 
-            # Check if save situation (different pitcher than winning pitcher, closed out game)
             if (last_winning_pitcher and winning_pitcher and
                 last_winning_pitcher.get("player_id") != winning_pitcher.get("player_id")):
-                lead_margin = abs(final_home - final_away)
-                # Simple save: finished game with lead of 3 or less
-                if lead_margin <= 3:
+                pid = last_winning_pitcher.get("player_id")
+                pitcher_player = self._find_player(pid)
+
+                save_earned = False
+
+                # Rule 1 & 2: entered in a save situation (lead <= 3 or tying run close)
+                if pid in save_sit_pitchers:
+                    if pitcher_player and pitcher_player.pitchingstats.outs_pitched >= 1:
+                        save_earned = True
+
+                # Rule 3: pitched 3+ innings (9+ outs) to finish the game
+                if pitcher_player and pitcher_player.pitchingstats.outs_pitched >= 9:
+                    save_earned = True
+
+                if save_earned:
                     save_pitcher = last_winning_pitcher
+
+        # Determine holds: relievers who entered in save situation, got outs,
+        # didn't blow the lead, didn't finish the game, and aren't W or SV pitcher
+        holds = []
+        replaced_pitcher_ids = {sub["player_out_id"] for sub in self.substitutions}
+        winning_pid = winning_pitcher.get("player_id") if winning_pitcher else None
+        save_pid = save_pitcher.get("player_id") if save_pitcher else None
+
+        for pid, sub in save_sit_pitchers.items():
+            if pid == winning_pid or pid == save_pid:
+                continue
+            if pid in blown_save_ids:
+                continue
+            # Must have been replaced (didn't finish the game)
+            if pid not in replaced_pitcher_ids:
+                continue
+            pitcher_player = self._find_player(pid)
+            if pitcher_player and pitcher_player.pitchingstats.outs_pitched >= 1:
+                holds.append({
+                    "player_id": pid,
+                    "player_name": f"{getattr(pitcher_player, 'firstname', '')} {getattr(pitcher_player, 'lastname', '')}"
+                })
+
+        # Determine quality starts
+        quality_starts = []
+        for team in [self.hometeam, self.awayteam]:
+            for p in team.roster.playerlist:
+                if (p.pitchingstats.games_started > 0 and
+                    p.pitchingstats.outs_pitched >= 18 and
+                    p.pitchingstats.earned_runs <= 3):
+                    quality_starts.append({
+                        "player_id": p.id,
+                        "player_name": f"{getattr(p, 'firstname', '')} {getattr(p, 'lastname', '')}"
+                    })
 
         return {
             "winning_pitcher": winning_pitcher,
             "losing_pitcher": losing_pitcher,
             "save": save_pitcher,
-            "blown_saves": blown_saves  # Future enhancement
+            "blown_saves": blown_saves,
+            "holds": holds,
+            "quality_starts": quality_starts
         }
 
     def _apply_pitching_decisions(self):
-        """Apply W/L/S decisions to PitchingStats objects so they appear in stats output."""
+        """Apply W/L/S/BS/Hold/QS decisions to PitchingStats objects so they appear in stats output."""
         decisions = self._get_pitching_decisions()
 
+        # Apply single-pitcher decisions (W/L/S)
         for key, stat_attr in [("winning_pitcher", "win"),
                                 ("losing_pitcher", "loss"),
                                 ("save", "save")]:
             pitcher_ref = decisions.get(key)
             if pitcher_ref:
                 pid = pitcher_ref.get("player_id")
-                for team in [self.hometeam, self.awayteam]:
-                    for player in team.roster.playerlist:
-                        if player.id == pid:
-                            setattr(player.pitchingstats, stat_attr, 1)
+                player = self._find_player(pid)
+                if player:
+                    setattr(player.pitchingstats, stat_attr, 1)
+
+        # Apply list-based decisions (blown saves, holds, quality starts)
+        for key, stat_attr in [("blown_saves", "blown_save"),
+                                ("holds", "hold"),
+                                ("quality_starts", "quality_start")]:
+            for pitcher_ref in decisions.get(key, []):
+                pid = pitcher_ref.get("player_id")
+                player = self._find_player(pid)
+                if player:
+                    setattr(player.pitchingstats, stat_attr, 1)
 
     def _build_api_stats(self):
         """
@@ -445,6 +534,7 @@ class Game():
                 if bs.plate_appearances > 0:
                     batters[pid_str] = {
                         "team_id": team_id,
+                        "batting_order": player.battingorder,
                         "at_bats": bs.at_bats,
                         "runs": bs.runs,
                         "hits": bs.singles + bs.doubles + bs.triples + bs.homeruns,
@@ -463,6 +553,7 @@ class Game():
                 if ps.pitches_thrown > 0:
                     pitchers[pid_str] = {
                         "team_id": team_id,
+                        "pitch_appearance_order": getattr(player, 'pitch_appearance_order', 0),
                         "games_started": ps.games_started,
                         "win": ps.win,
                         "loss": ps.loss,
@@ -474,6 +565,9 @@ class Game():
                         "walks": ps.walks,
                         "strikeouts": ps.strikeouts,
                         "home_runs_allowed": ps.homeruns,
+                        "hold": ps.hold,
+                        "blown_save": ps.blown_save,
+                        "quality_start": ps.quality_start,
                         "stamina_cost": int(round(player.starting_energy - player.energy)),
                     }
 
@@ -1456,7 +1550,7 @@ class Game():
             # Track balls in play
             if is_inplay or (batted_ball and batted_ball != "None" and not is_foul):
                 counts[count_key]["in_play"] += 1
-                if defensive_outcome in ["single", "double", "triple", "homerun"]:
+                if defensive_outcome in ["single", "double", "triple", "homerun", "inside_the_park_hr"]:
                     counts[count_key]["hits"] += 1
                 elif defensive_outcome == "out":
                     counts[count_key]["outs"] += 1
@@ -1517,10 +1611,10 @@ class Game():
             result_type = action.get("Result Type")
             batted_ball = action.get("Batted Ball")
 
-            if outcome in ["single", "double", "triple", "homerun"]:
+            if outcome in ["single", "double", "triple", "homerun", "inside_the_park_hr"]:
                 matchups[matchup_key]["hits"] += 1
                 matchups[matchup_key]["at_bats"] += 1
-                if outcome == "homerun":
+                if outcome in ["homerun", "inside_the_park_hr"]:
                     matchups[matchup_key]["homeruns"] += 1
             elif outcome == "out":
                 matchups[matchup_key]["at_bats"] += 1

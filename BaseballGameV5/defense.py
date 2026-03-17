@@ -80,10 +80,10 @@ class TimeCalculator:
 
     # Time additions (seconds) - TUNABLE for game balance
     TIMING_CONSTANTS = {
-        "gap_reach_bonus": 3.5,      # Extra time for gap hits (between OF)
-        "line_reach_bonus": 3.0,     # Extra time down the line
-        "deep_chase_bonus": 2.0,     # Ball over fielder's head
-        "outfield_retrieval": 2.0,   # Pick up and set in OF
+        "gap_reach_bonus": 2.5,      # Extra time for gap hits (between OF) — was 3.5
+        "line_reach_bonus": 2.0,     # Extra time down the line — was 3.0
+        "deep_chase_bonus": 1.5,     # Ball over fielder's head — was 2.0
+        "outfield_retrieval": 1.3,   # Pick up and set in OF — was 2.0
         "infield_retrieval": 0.8,    # Pick up and set in IF (was 0.4 - too fast)
         "hard_hit_bonus": 0.5,       # Less reaction time on barrels/solids
         "base_reach_time": 0.5,      # Fielder already in position
@@ -187,9 +187,9 @@ class TimeCalculator:
         base_key = (runner.current_base, runner.target_base)
         base_time = TimeCalculator.BASE_RUNNING_TIMES.get(base_key, 4.0)
 
-        # Speed modifier: 50 rating = 1.0x, each point = 1%
-        # 80 speed = 0.7x time (30% faster), 20 speed = 1.3x time (30% slower)
-        speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.01)
+        # Speed modifier: 50 rating = 1.0x, each point = 0.5%
+        # 80 speed = 0.85x time (15% faster), 20 speed = 1.15x time (15% slower)
+        speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.005)
 
         # Account for progress already made
         remaining = 1.0 - runner.progress
@@ -280,10 +280,10 @@ class TimeCalculator:
             fieldspot: Player's fieldspot rating (1-99, baseline 50)
 
         Returns:
-            Multiplier for reach time (0.925 to 1.075 for ratings 80-20)
+            Multiplier for reach time (0.85 to 1.15 for ratings 80-20)
         """
-        # 0.25% per point
-        return 1.0 - ((fieldspot - 50) * 0.0025)
+        # 0.5% per point — 15% spread across 20-80 scale
+        return 1.0 - ((fieldspot - 50) * 0.005)
 
     @staticmethod
     def defense_variance() -> float:
@@ -944,6 +944,9 @@ class fielding():
             }
             out_probability = DEFAULT_CATCH_RATES.get(self.situation, 0.70)
 
+        # Apply individual fielder skill modifier
+        out_probability += self._fielder_skill_modifier()
+
         # Apply defensive strategy modifiers from pitching team
         out_probability = self._apply_strategy_modifiers(out_probability)
 
@@ -952,6 +955,35 @@ class fielding():
 
         # Roll against out probability
         return random.random() < out_probability
+
+    def _fielder_skill_modifier(self) -> float:
+        """
+        Calculate out probability modifier from individual fielder skill.
+
+        Uses a weighted composite of fieldspot, fieldreact, and speed to shift
+        the base catch probability. An 80-composite fielder gets ~+8% out
+        probability, a 20-composite fielder gets ~-8%.
+
+        Returns:
+            Modifier to add to base out probability (positive = better defense)
+        """
+        fielder = self.fieldingdefender
+        if fielder is None:
+            return 0.0
+
+        # Composite of the three key range attributes
+        react = getattr(fielder, 'fieldreact', 50)
+        spot = getattr(fielder, 'fieldspot', 50)
+        spd = getattr(fielder, 'speed', 50)
+
+        # Weighted composite: fieldspot matters most for range, then reaction, then speed
+        composite = (spot * 0.4 + react * 0.35 + spd * 0.25)
+
+        # Convert to modifier: ±0.08 max (at 80/20 ratings)
+        # Each point from 50 = 0.27% shift
+        modifier = (composite - 50) * 0.00267
+
+        return modifier
 
     # Outfield spacing modifiers: {spacing: {situation: modifier}}
     # "deep" = fielders play back: better on deep balls, worse on shallow
@@ -1444,8 +1476,11 @@ class fielding():
                 continue
 
             # Apply jump bonus based on basereaction
-            # High basereaction = runner gets a head start (more effective time)
-            jump_bonus = TimeCalculator.runner_jump_bonus(runner.basereaction)
+            # Batter gets no jump bonus — swing follow-through negates reaction advantage
+            if runner.current_base == 0:
+                jump_bonus = 0.0
+            else:
+                jump_bonus = TimeCalculator.runner_jump_bonus(runner.basereaction)
             time_remaining = available_time + jump_bonus
 
             # Get route efficiency modifier based on baserunning
@@ -1456,10 +1491,10 @@ class fielding():
                 base_key = (runner.current_base, runner.target_base)
                 base_time = TimeCalculator.BASE_RUNNING_TIMES.get(base_key, 4.0)
 
-                # Speed modifier: 50 rating = 1.0x, each point = 1%
-                # 80 speed = 0.7x time (30% faster), 20 speed = 1.3x time
-                speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.01)
-                speed_mod = max(speed_mod, 0.5)  # Cap at 50% faster
+                # Speed modifier: 50 rating = 1.0x, each point = 0.5%
+                # 80 speed = 0.85x time (15% faster), 20 speed = 1.15x time
+                speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.005)
+                speed_mod = max(speed_mod, 0.75)  # Cap at 25% faster
 
                 # Time needed to complete remaining progress to next base
                 # Now includes route efficiency modifier
@@ -1531,7 +1566,7 @@ class fielding():
 
         if batter_runner:
             if batter_runner.current_base >= 4:
-                return 'homerun'  # Inside the park
+                return 'inside_the_park_hr'
             elif batter_runner.current_base == 3:
                 return 'triple'
             elif batter_runner.current_base == 2:
@@ -1556,11 +1591,14 @@ class fielding():
         Args:
             available_time: Time in seconds runners can advance
         """
+        # Identify the batter by player_id to reliably skip them
+        batter_id = self.gamestate.game.battingteam.currentbatter.id if self.gamestate.game.battingteam.currentbatter else None
+
         for runner in self.play_state.runners:
             if runner.is_out:
                 continue
-            # Skip the batter (current_base == 0 or already marked out)
-            if runner.current_base == 0:
+            # Skip the batter — they don't get extra throw time
+            if runner.player_id == batter_id:
                 continue
 
             # Apply jump bonus based on basereaction
@@ -1574,8 +1612,8 @@ class fielding():
                 base_key = (runner.current_base, runner.target_base)
                 base_time = TimeCalculator.BASE_RUNNING_TIMES.get(base_key, 4.0)
 
-                speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.01)
-                speed_mod = max(speed_mod, 0.5)
+                speed_mod = 1.0 - ((runner.speed_rating - 50) * 0.005)
+                speed_mod = max(speed_mod, 0.75)  # Cap at 25% faster
 
                 # Include route efficiency modifier
                 time_to_next = base_time * speed_mod * route_mod * (1 - runner.progress)
@@ -1767,8 +1805,8 @@ class fielding():
     #   +0.6 advantage (30-pt edge) barrel: 0.15 + 0.6*0.15 = 0.24 → 24% HR
     #    0.0 advantage (even matchup) barrel: 0.15 → 15% HR (unchanged)
     #   -0.6 advantage (30-pt deficit) barrel: 0.15 - 0.6*0.15 = 0.06 → 6% HR (floor)
-    POWER_HR_SHIFT = 0.15
-    POWER_HR_MIN = 0.0  # Floor so even weak matchups can luck into one
+    POWER_HR_SHIFT = 0.4
+    POWER_HR_MIN = 0.00001  # Floor so even weak matchups can luck into one
 
     def _get_distweights(self, contacttype: str) -> list:
         """
@@ -1945,7 +1983,7 @@ def Error_Catch(self, thrower, catcher):
         cweights = [4, 2, 3]
     elif depth == 'infield':
         cweights = [1, 2, 3]
-    error_rate = (1+np.average(cscores, weights=cweights))*baselines.error_rate
+    error_rate = (1-np.average(cscores, weights=cweights))*baselines.error_rate
     if error_rate > diceroll:
         # Error occurred - runner advancement handled by caller
         self.errorlist.append(f"{catcher} catching error!")
@@ -1981,7 +2019,7 @@ def Error_Throw(self, thrower, catcher):
     elif depth == 'infield':
         cweights = [1, 0]
 
-    error_rate = (1+np.average(cscores, weights=cweights))*baselines.error_rate
+    error_rate = (1-np.average(cscores, weights=cweights))*baselines.error_rate
     if error_rate > diceroll:
         # Error occurred - runner advancement handled by caller
         self.errorlist.append(f"{thrower} throws it wide!")

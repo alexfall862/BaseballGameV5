@@ -1,3 +1,4 @@
+import math
 import random
 
 
@@ -11,12 +12,15 @@ class PitchEvent:
     Sequential Pipeline for pitcher/batter interaction.
 
     Phases:
-    0.   Pitch Selection - choose pitch and intended location
+    0.   Pitch Selection - choose pitch and intended location (battery IQ)
     0.5  Consistency Roll - per-pitch variance based on pitch.consist
+    0.55 Consecutive Pitch Debuff - repeated pitch type degrades attributes
+    0.6  Arm Angle Familiarity - novelty buff / familiarity debuff
     0.75 Handedness Adjustment - modify batter stats for matchup
+    0.8  Plate Approach - contact/power stat trades, swing rate modifiers
     1.   Location Quality + HBP check
     2.   Recognition - eye vs deception/velocity
-    3.   Swing Decision - discipline vs control (uses InsideSwing/OutsideSwing)
+    3.   Swing Decision - discipline vs control + velocity suppression + approach
     3a.  Take Outcome - ball/strike with catcher framing
     4.   Contact Execution - contact vs pitch attributes (uses InsideContact/OutsideContact)
     5.   Contact Type - power shifts config distribution (BattedBallEvent)
@@ -38,6 +42,13 @@ class PitchEvent:
     BASE_SWING_ON_STRIKE = 0.70  # Base swing rate on strikes
     BASE_SWING_ON_BALL = 0.30  # Base chase rate on balls
     BASE_CONTACT_RATE = 0.75  # Base contact rate at parity
+
+    # Plate approach constants
+    APPROACH_STAT_MOD = 2       # ±2 stat trade for contact/power approaches
+    APPROACH_SWING_MOD = 0.05   # ±5% swing rate for aggressive/patient
+
+    # Control-driven location constants
+    PGENCONTROL_LOCATION_WEIGHT = 0.70  # pgencontrol share of blended control (pcntrl gets 0.30)
 
     def __init__(self, action):
         self.action = action
@@ -66,6 +77,18 @@ class PitchEvent:
         self.swing_prob = None
         self.contact_prob = None
         self.consist_degrade = None
+        self.blended_control = None
+        self.hold_prob = None
+
+        # New phase tracking variables
+        self.consecutive_repeat_count = 0
+        self.arm_angle_modifier = 0
+        self.arm_angle_times_seen = 0
+        self.plate_approach = getattr(self.batter, 'plate_approach', 'normal')
+        self.velocity_swing_modifier = 0
+        self.approach_swing_modifier = 0
+        self.battery_iq = 0
+        self.pitch_selection_weights = None
 
         # Matchup advantages (calculated after consistency roll)
         self.advantages = None
@@ -77,14 +100,23 @@ class PitchEvent:
     def run_pipeline(self):
         """Execute the sequential pipeline phases."""
 
-        # Phase 0: Pitch Selection
+        # Phase 0: Pitch Selection (with battery IQ)
         self.pitch, self.intended_location = self.phase0_pitch_selection()
 
         # Phase 0.5: Consistency Roll - may degrade pitch attributes
         self.eff_pcntrl, self.eff_pbrk, self.eff_pacc = self.phase05_consistency_roll()
 
+        # Phase 0.55: Consecutive Pitch Debuff
+        self.eff_pcntrl, self.eff_pbrk, self.eff_pacc = self.phase055_consecutive_pitch_debuff()
+
+        # Phase 0.6: Arm Angle Familiarity
+        self.eff_pcntrl, self.eff_pbrk, self.eff_pacc = self.phase06_arm_angle_familiarity()
+
         # Phase 0.75: Handedness Adjustment
         self.phase075_handedness_adjustment()
+
+        # Phase 0.8: Plate Approach stat modifiers
+        self.phase08_plate_approach()
 
         # Calculate matchup advantages (after effective stats are set)
         self.advantages = self.calculate_matchup_advantages()
@@ -118,7 +150,12 @@ class PitchEvent:
             return self.batted_ball_event.outcome
 
     def phase0_pitch_selection(self):
-        """Select pitch and intended location."""
+        """
+        Select pitch and intended location.
+
+        Battery IQ (psequencing + catchsequence) blends strategy weights
+        toward the optimal pitch, factoring in consecutive repeat debuff.
+        """
         pitchlist = [
             self.pitcher.pitch1,
             self.pitcher.pitch2,
@@ -126,10 +163,61 @@ class PitchEvent:
             self.pitcher.pitch4,
             self.pitcher.pitch5
         ]
-        pitchodds = [5, 4, 3, 2, 1]
 
-        pitch = random.choices(pitchlist, pitchodds, k=1)[0]
-        location = random.choices(["Inside", "Outside"], [1, 1], k=1)[0]
+        # Base strategy weights
+        strategy_weights = getattr(self.pitcher, 'pitchchoices', None)
+        if not strategy_weights or len(strategy_weights) != 5:
+            strategy_weights = [5, 4, 3, 2, 1]
+
+        # Calculate battery IQ (normalized 20-100 → 0.0-1.0)
+        psequencing = getattr(self.pitcher, 'psequencing', 50)
+        catchsequence = getattr(self.catcher, 'catchsequence', 50)
+        raw_iq = (psequencing + catchsequence) / 2.0
+        battery_iq = clamp((raw_iq - 20) / 80.0, 0.0, 1.0)
+
+        max_blend = self.game.baselines.battery_iq_weight
+        blend_factor = battery_iq * max_blend
+
+        # Preview effective ratings for each pitch (considering consecutive debuff)
+        pitcher_id = self.pitcher.id
+        last_pitch = self.game.pitcher_last_pitch.get(pitcher_id)
+        count = self.game.pitcher_consecutive_count.get(pitcher_id, 0)
+        scale = self.game.baselines.consecutive_pitch_debuff_scale
+
+        effective_ratings = []
+        for pitch in pitchlist:
+            rating = pitch.ovr
+            # Preview debuff if this pitch were selected
+            if last_pitch == pitch.name:
+                preview_count = count + 1
+            else:
+                preview_count = 0
+
+            if preview_count > 0:
+                debuff_pct = min(scale * (preview_count ** 2) / 100.0, 0.30)
+                rating *= (1.0 - debuff_pct)
+
+            effective_ratings.append(rating)
+
+        # Build optimal weights proportional to effective ratings
+        total_rating = sum(effective_ratings)
+        if total_rating > 0:
+            optimal_weights = [r / total_rating * 15 for r in effective_ratings]
+        else:
+            optimal_weights = list(strategy_weights)
+
+        # Blend strategy weights with optimal weights based on battery IQ
+        final_weights = [
+            sw * (1 - blend_factor) + ow * blend_factor
+            for sw, ow in zip(strategy_weights, optimal_weights)
+        ]
+
+        # Store for snapshot
+        self.battery_iq = round(battery_iq, 3)
+        self.pitch_selection_weights = [round(w, 2) for w in final_weights]
+
+        pitch = random.choices(pitchlist, final_weights, k=1)[0]
+        location = "Inside"  # Intent is always to throw a strike; Phase 1 determines execution
 
         return pitch, location
 
@@ -158,6 +246,87 @@ class PitchEvent:
 
         return eff_pcntrl, eff_pbrk, eff_pacc
 
+    def phase055_consecutive_pitch_debuff(self):
+        """
+        Debuff pitch attributes when the same pitch type is thrown consecutively.
+        Uses increasing returns (quadratic) — slight at first, snowballs on long runs.
+        """
+        pitcher_id = self.pitcher.id
+        pitch_name = self.pitch.name
+        scale = self.game.baselines.consecutive_pitch_debuff_scale
+
+        last_pitch = self.game.pitcher_last_pitch.get(pitcher_id)
+        count = self.game.pitcher_consecutive_count.get(pitcher_id, 0)
+
+        if last_pitch == pitch_name:
+            count += 1
+        else:
+            count = 0
+
+        # Update state for next pitch
+        self.game.pitcher_last_pitch[pitcher_id] = pitch_name
+        self.game.pitcher_consecutive_count[pitcher_id] = count
+        self.consecutive_repeat_count = count
+
+        if count == 0:
+            return self.eff_pcntrl, self.eff_pbrk, self.eff_pacc
+
+        # Quadratic debuff: count=1: 1.5%, count=2: 6%, count=3: 13.5%, count=4: 24%
+        debuff_pct = scale * (count ** 2) / 100.0
+        debuff_pct = min(debuff_pct, 0.30)  # Cap at 30%
+
+        multiplier = 1.0 - debuff_pct
+        return (
+            self.eff_pcntrl * multiplier,
+            self.eff_pbrk * multiplier,
+            self.eff_pacc * multiplier,
+        )
+
+    def phase06_arm_angle_familiarity(self):
+        """
+        Arm angle familiarity: pitcher gets a buff on first encounter,
+        then neutral, then increasing debuff as batter adjusts.
+
+        1st time seeing arm angle: +increment (novelty)
+        2nd time: 0 (neutral)
+        3rd time: -increment (batter adjusting)
+        4th time: -2*increment, etc.
+        """
+        batter_id = self.batter.id
+        arm_angle = getattr(self.pitcher, 'armangle', None)
+        increment = self.game.baselines.arm_angle_familiarity_increment
+
+        if not arm_angle or arm_angle == "":
+            self.arm_angle_modifier = 0
+            self.arm_angle_times_seen = 0
+            return self.eff_pcntrl, self.eff_pbrk, self.eff_pacc
+
+        # Initialize history if needed
+        if batter_id not in self.game.batter_arm_angle_history:
+            self.game.batter_arm_angle_history[batter_id] = {}
+
+        history = self.game.batter_arm_angle_history[batter_id]
+        times_seen = history.get(arm_angle, 0)
+
+        # Only increment on first pitch of at-bat (avoid counting per-pitch)
+        is_first_pitch = (self.game.currentstrikes == 0 and self.game.currentballs == 0)
+        if is_first_pitch:
+            history[arm_angle] = times_seen + 1
+
+        # modifier: 1st(0)=+1, 2nd(1)=0, 3rd(2)=-1, 4th(3)=-2 ...
+        modifier = -(times_seen - 1)
+        modifier = min(modifier, 1)  # Cap buff at +1
+
+        scaled_modifier = modifier * increment
+        self.arm_angle_modifier = scaled_modifier
+        self.arm_angle_times_seen = times_seen
+
+        return (
+            self.eff_pcntrl + scaled_modifier,
+            self.eff_pbrk + scaled_modifier,
+            self.eff_pacc + scaled_modifier,
+        )
+
     def phase075_handedness_adjustment(self):
         """Modify batter stats based on handedness matchup."""
         mod_amount = 2
@@ -180,6 +349,24 @@ class PitchEvent:
             self.eff_power = min(self.batter.power + mod_amount, max_stat)
             self.eff_eye = min(self.batter.eye + mod_amount, max_stat)
             self.eff_discipline = min(self.batter.discipline + mod_amount, max_stat)
+
+    def phase08_plate_approach(self):
+        """
+        Apply plate approach stat modifiers.
+        - contact: +2 contact, -2 power
+        - power: +2 power, -2 discipline
+        - aggressive/patient: no stat change (swing rate handled in phase3)
+        - normal: no change
+        """
+        approach = self.plate_approach
+        mod = self.APPROACH_STAT_MOD
+
+        if approach == "contact":
+            self.eff_contact = min(self.eff_contact + mod, 99)
+            self.eff_power = max(self.eff_power - mod, 1)
+        elif approach == "power":
+            self.eff_power = min(self.eff_power + mod, 99)
+            self.eff_discipline = max(self.eff_discipline - mod, 1)
 
     def calculate_matchup_advantages(self):
         """
@@ -205,19 +392,42 @@ class PitchEvent:
         """
         Determine pitch execution and check for HBP.
         Returns "HBP" or final location ("Inside"/"Outside").
+
+        Blends pgencontrol (70%) and eff_pcntrl (30%) into a control score that
+        determines the probability the intended strike actually lands in the zone.
+        Low control drifts more pitches outside; drift is one-directional (strikes
+        can become balls, but intended balls always stay outside).
+
+        Calibration targets:
+          blended=0   → ~35% strikes (floor)
+          blended=50  → ~52% strikes
+          blended=100 → ~70% strikes (ceiling, clamped)
         """
-        control_score = (self.pitcher.pgencontrol + self.eff_pcntrl) / 2
-        control_score = max(control_score, 20)  # Floor at 20
-        control_normalized = (control_score - 20) / 90  # 0.0 to 1.0
+        w = self.PGENCONTROL_LOCATION_WEIGHT
+        blended_control = self.pitcher.pgencontrol * w + self.eff_pcntrl * (1 - w)
+        control_norm = clamp(blended_control / 100.0, 0.0, 1.0)
+
+        floor = self.game.baselines.control_strike_floor
+        ceiling = self.game.baselines.control_strike_ceiling
+        hold_prob = floor + (ceiling - floor) * control_norm
+
+        # Store for snapshot
+        self.blended_control = blended_control
+        self.hold_prob = hold_prob
 
         # HBP: base rate 0.003, scales from 0.006 (low control) to 0.0015 (high control)
-        hbp_rate = self.HBP_BASE_RATE * (2 - control_normalized)
+        control_score = max(blended_control, 20)
+        control_normalized_hbp = (control_score - 20) / 90
+        hbp_rate = self.HBP_BASE_RATE * (2 - control_normalized_hbp)
 
         if random.random() < hbp_rate:
             return "HBP"
 
-        # For now, location stays as intended (drift can be added later)
-        return self.intended_location
+        # Location execution: intended strike stays inside if control holds, else drifts outside
+        if random.random() < hold_prob:
+            return "Inside"
+        else:
+            return "Outside"
 
     def phase2_recognition(self):
         """
@@ -234,34 +444,52 @@ class PitchEvent:
 
     def phase3_swing_decision(self):
         """
-        Determine if batter swings or takes using discipline advantage.
+        Determine if batter swings or takes.
 
-        Discipline advantage (batter.discipline vs pitcher.pcntrl) determines:
-        - On strikes (Inside): Higher discipline → more swings (recognizes hittable pitches)
-        - On balls (Outside): Higher discipline → fewer swings (avoids chasing)
+        Modifiers applied:
+        - Discipline advantage (discipline vs pcntrl) — zone-dependent
+        - Velocity suppression (pthrowpower) — both zones equally
+        - Plate approach (aggressive/patient) — both zones equally
 
-        Recognition score also modifies the effective advantage.
         Returns "Swing" or "Take".
         """
         # Get discipline advantage from matchup advantages
         discipline_adv = self.advantages['discipline']
 
         # Recognition affects the effective discipline advantage
-        # Good recognition amplifies discipline, poor recognition mutes it
         effective_discipline_adv = discipline_adv * self.recognition_score
 
-        # Calculate swing probability modifier
-        # +0.6 advantage (30-point batter edge) → +12% modifier
+        # Discipline modifier (zone-dependent: helps on strikes, hurts on balls)
         discipline_modifier = effective_discipline_adv * self.DISCIPLINE_SWING_MODIFIER
+
+        # Velocity swing suppression (both zones equally)
+        pthrowpower = getattr(self.pitcher, 'pthrowpower', 50)
+        max_suppression = self.game.baselines.velocity_swing_suppression_max
+        self.velocity_swing_modifier = ((pthrowpower - 50) / 49.0) * max_suppression
+
+        # Plate approach swing modifier (both zones equally)
+        approach = self.plate_approach
+        if approach == "aggressive":
+            self.approach_swing_modifier = self.APPROACH_SWING_MOD
+        elif approach == "patient":
+            self.approach_swing_modifier = -self.APPROACH_SWING_MOD
+        else:
+            self.approach_swing_modifier = 0.0
 
         if self.final_location == "Inside":
             # On strikes: high discipline → MORE likely to swing
             base_rate = self.BASE_SWING_ON_STRIKE
-            self.swing_prob = clamp(base_rate + discipline_modifier, 0.05, 0.95)
+            self.swing_prob = clamp(
+                base_rate + discipline_modifier - self.velocity_swing_modifier + self.approach_swing_modifier,
+                0.05, 0.95
+            )
         else:  # Outside (balls)
             # On balls: high discipline → LESS likely to chase
             base_rate = self.BASE_SWING_ON_BALL
-            self.swing_prob = clamp(base_rate - discipline_modifier, 0.05, 0.95)
+            self.swing_prob = clamp(
+                base_rate - discipline_modifier - self.velocity_swing_modifier + self.approach_swing_modifier,
+                0.05, 0.95
+            )
 
         if random.random() < self.swing_prob:
             return "Swing"
@@ -334,17 +562,30 @@ class PitchEvent:
     def get_phase_snapshot(self):
         """Return a snapshot of all interaction phase data for logging/export."""
         return {
-            # Pitch info
+            # Phase 0: Pitch Selection (battery IQ)
             "pitch_name": self.pitch.name if hasattr(self, 'pitch') else None,
             "pitch_ovr": round(self.pitch.ovr, 1) if hasattr(self, 'pitch') else None,
             "intended_location": getattr(self, 'intended_location', None),
             "final_location": getattr(self, 'final_location', None),
+            "battery_iq": self.battery_iq,
+            "pitch_selection_weights": self.pitch_selection_weights,
 
             # Phase 0.5: Consistency
             "pitch_consist": round(self.pitch.consist, 1) if hasattr(self, 'pitch') else None,
             "consist_degrade_pct": round(self.consist_degrade * 100, 2) if self.consist_degrade else 0,
 
-            # Effective pitch attributes (after consistency roll)
+            # Phase 0.55: Consecutive Pitch Debuff
+            "consecutive_repeat_count": self.consecutive_repeat_count,
+            "consecutive_debuff_pct": round(
+                min(self.game.baselines.consecutive_pitch_debuff_scale * (self.consecutive_repeat_count ** 2) / 100.0, 0.30) * 100, 2
+            ) if self.consecutive_repeat_count > 0 else 0,
+
+            # Phase 0.6: Arm Angle Familiarity
+            "arm_angle": getattr(self.pitcher, 'armangle', None),
+            "arm_angle_times_seen": self.arm_angle_times_seen,
+            "arm_angle_modifier": self.arm_angle_modifier,
+
+            # Effective pitch attributes (after all pitch modifier phases)
             "eff_pcntrl": round(self.eff_pcntrl, 1) if hasattr(self, 'eff_pcntrl') else None,
             "eff_pbrk": round(self.eff_pbrk, 1) if hasattr(self, 'eff_pbrk') else None,
             "eff_pacc": round(self.eff_pacc, 1) if hasattr(self, 'eff_pacc') else None,
@@ -353,7 +594,10 @@ class PitchEvent:
             "batter_hand": self.batter.handedness[0] if hasattr(self, 'batter') else None,
             "pitcher_hand": self.pitcher.handedness[1] if hasattr(self, 'pitcher') else None,
 
-            # Effective batter stats (after handedness adjustment)
+            # Phase 0.8: Plate Approach
+            "plate_approach": self.plate_approach,
+
+            # Effective batter stats (after handedness + plate approach)
             "eff_contact": round(self.eff_contact, 1),
             "eff_power": round(self.eff_power, 1),
             "eff_eye": round(self.eff_eye, 1),
@@ -361,6 +605,9 @@ class PitchEvent:
 
             # Pitcher general control
             "pgencontrol": round(self.pitcher.pgencontrol, 1) if hasattr(self, 'pitcher') else None,
+            # Phase 1: Control-driven location
+            "blended_control": round(self.blended_control, 1) if self.blended_control is not None else None,
+            "hold_prob": round(self.hold_prob, 3) if self.hold_prob is not None else None,
 
             # Matchup advantages (batter vs pitcher)
             "adv_discipline": round(self.advantages['discipline'], 3) if self.advantages else None,
@@ -374,6 +621,8 @@ class PitchEvent:
             # Phase 3: Swing Decision
             "swing_prob": round(self.swing_prob, 3) if self.swing_prob else None,
             "swing_decision": self.swing_decision,
+            "velocity_swing_modifier": round(self.velocity_swing_modifier, 4),
+            "approach_swing_modifier": round(self.approach_swing_modifier, 4),
 
             # Phase 4: Contact (if swing)
             "contact_prob": round(self.contact_prob, 3) if self.contact_prob else None,
@@ -394,15 +643,26 @@ class BattedBallEvent:
     - All base rates come from config data
 
     Tier Structure:
-    - Quality: Barrel, Solid (~13% base)
-    - Neutral: Flare, Burner (~25% base)
-    - Poor: Topped, Under, Weak (~62% base)
+    - Quality: Barrel + Solid (contact expands, power splits)
+    - Neutral: Flare, Burner (fixed config ratio)
+    - Poor: Topped, Under, Weak (fixed config ratio)
+
+    Both contact and power use exponential curves:
+    - Contact (exponent=2): controls quality tier size
+    - Power (exponent=3): controls barrel vs solid within quality
     """
 
-    # Tier redistribution constants
-    CONTACT_TIER_SHIFT_FACTOR = 0.40  # 40% shift per 30-point advantage
-    POWER_BARREL_SHIFT = 0.30  # ±18% barrel share per 30-point edge
-    MIN_PROBABILITY = 0.001  # Minimum probability floor
+    # Contact → Quality tier size (exponential, batter side only)
+    CONTACT_TIER_SHIFT_FACTOR = 0.45
+    CONTACT_TIER_EXPONENT = 2.0
+
+    # Power → Barrel share within quality (exponential)
+    POWER_BARREL_SHIFT = 0.40
+    POWER_BARREL_EXPONENT = 3.0
+    POWER_BARREL_MAX = 0.50
+    POWER_BARREL_MIN = 0.00001
+
+    MIN_PROBABILITY = 0.001
 
     def __init__(self, pitchevent):
         self.pitchevent = pitchevent
@@ -444,51 +704,46 @@ class BattedBallEvent:
         if total <= 0:
             total = 1
 
-        # Normalize odds
         odds = {k: v / total for k, v in self.base_odds.items()}
 
-        # Calculate tier base probabilities
+        # Tier base probabilities
         self.quality_base = odds["barrel"] + odds["solid"]
         self.neutral_base = odds["flare"] + odds["burner"]
         self.poor_base = odds["topped"] + odds["under"] + odds["weak"]
 
-        # Store within-tier shares from config
+        # Within quality: barrel share (power shifts this at runtime)
         if self.quality_base > 0:
             self.barrel_share_of_quality = odds["barrel"] / self.quality_base
         else:
             self.barrel_share_of_quality = 0.5
 
+        # Within neutral: flare share
         if self.neutral_base > 0:
             self.flare_share_of_neutral = odds["flare"] / self.neutral_base
         else:
             self.flare_share_of_neutral = 0.5
 
+        # Within poor: topped/under/weak shares
         if self.poor_base > 0:
             self.topped_share_of_poor = odds["topped"] / self.poor_base
             self.under_share_of_poor = odds["under"] / self.poor_base
-            # weak is the remainder
         else:
             self.topped_share_of_poor = 0.33
             self.under_share_of_poor = 0.33
 
     def phase5_contact_type(self):
         """
-        Determine batted ball contact type using tier system.
+        Determine batted ball contact type using tier system with exponential curves.
 
         Pipeline:
-        1. Get contact advantage (batter.contact vs pitch.pcntrl)
-        2. Redistribute tier probabilities based on contact advantage
-        3. Roll for tier (Quality/Neutral/Poor)
-        4. Roll for type within tier:
-           - Quality: Power advantage determines Barrel vs Solid split
-           - Neutral: Config ratio determines Flare vs Burner
-           - Poor: Config ratio determines Topped vs Under vs Weak
+        1. Contact advantage redistributes tiers (exponential, batter side only)
+        2. Roll for tier (Quality/Neutral/Poor)
+        3. Power advantage determines barrel vs solid within Quality (exponential)
         """
-        # Get advantages
         contact_adv = self.advantages['contact']
         power_adv = self.advantages['power']
 
-        # Step 1: Redistribute tiers based on contact advantage
+        # Step 1: Redistribute tiers based on contact advantage (exponential)
         quality_prob, neutral_prob, poor_prob = self._redistribute_tiers(contact_adv)
 
         # Store tier probabilities for tuning export
@@ -517,28 +772,31 @@ class BattedBallEvent:
         else:
             contact_type = self._roll_poor_tier()
 
-        # Store final odds for tuning export (reconstructed from tier system)
+        # Store final odds for tuning export
         self.final_odds = self._reconstruct_final_odds(quality_prob, neutral_prob, poor_prob, power_adv)
 
         return contact_type
 
     def _redistribute_tiers(self, contact_adv):
         """
-        Apply contact advantage to shift tier probabilities.
+        Apply contact advantage to shift tier probabilities (exponential on batter side).
 
         Positive contact advantage (batter edge):
-        - Shifts probability from Poor → Neutral and Quality
+        - Exponential curve (exponent=2): moderate advantage barely shifts,
+          elite advantage significantly expands quality tier
+        - Shifts from Poor → Quality and Neutral
 
         Negative contact advantage (pitcher edge):
-        - Shifts probability from Quality and Neutral → Poor
+        - Linear shift from Quality/Neutral → Poor
         """
         quality = self.quality_base
         neutral = self.neutral_base
         poor = self.poor_base
 
         if contact_adv > 0:
-            # Batter advantage: shift from Poor to Neutral/Quality
-            shift = contact_adv * self.CONTACT_TIER_SHIFT_FACTOR
+            # Batter advantage: exponential curve
+            exp_adv = abs(contact_adv) ** self.CONTACT_TIER_EXPONENT
+            shift = exp_adv * self.CONTACT_TIER_SHIFT_FACTOR
             poor_reduction = poor * shift
 
             # 40% of shifted probability goes to Quality, 60% to Neutral
@@ -549,7 +807,7 @@ class BattedBallEvent:
             neutral = neutral + neutral_gain
             poor = poor - poor_reduction
         else:
-            # Pitcher advantage: shift from Quality/Neutral to Poor
+            # Pitcher advantage: linear (unchanged)
             shift = abs(contact_adv) * self.CONTACT_TIER_SHIFT_FACTOR
 
             quality_reduction = quality * shift
@@ -570,21 +828,14 @@ class BattedBallEvent:
 
     def _roll_quality_tier(self, power_adv):
         """
-        Roll within Quality tier, applying power advantage.
-
-        Power advantage affects Barrel vs Solid split:
-        - Positive power advantage → more Barrel
-        - Negative power advantage → more Solid
+        Roll within Quality tier (barrel vs solid) using exponential power curve.
         """
-        # Base barrel share from config
         base_barrel = self.barrel_share_of_quality
+        signed_exp = math.copysign(abs(power_adv) ** self.POWER_BARREL_EXPONENT, power_adv)
+        barrel_share = base_barrel + signed_exp * self.POWER_BARREL_SHIFT
+        barrel_share = clamp(barrel_share, self.POWER_BARREL_MIN, self.POWER_BARREL_MAX)
 
-        # Power shifts barrel/solid split
-        # +0.6 advantage (30-point edge) → +18% barrel share
-        barrel_share = base_barrel + (power_adv * self.POWER_BARREL_SHIFT)
-        barrel_share = clamp(barrel_share, 0.05, 0.95)
-
-        self.barrel_share = barrel_share  # Store for tuning export
+        self.barrel_share = barrel_share
 
         if random.random() < barrel_share:
             return 'barrel'
@@ -592,7 +843,7 @@ class BattedBallEvent:
             return 'solid'
 
     def _roll_neutral_tier(self):
-        """Roll within Neutral tier using config ratios."""
+        """Roll within Neutral tier using config ratios (flare vs burner)."""
         if random.random() < self.flare_share_of_neutral:
             return 'flare'
         else:
@@ -610,9 +861,9 @@ class BattedBallEvent:
 
     def _reconstruct_final_odds(self, quality_prob, neutral_prob, poor_prob, power_adv):
         """Reconstruct individual type odds for tuning export."""
-        # Calculate barrel share based on power advantage
-        barrel_share = self.barrel_share_of_quality + (power_adv * self.POWER_BARREL_SHIFT)
-        barrel_share = clamp(barrel_share, 0.05, 0.95)
+        signed_exp = math.copysign(abs(power_adv) ** self.POWER_BARREL_EXPONENT, power_adv)
+        barrel_share = self.barrel_share_of_quality + signed_exp * self.POWER_BARREL_SHIFT
+        barrel_share = clamp(barrel_share, self.POWER_BARREL_MIN, self.POWER_BARREL_MAX)
 
         return {
             'barrel': round(quality_prob * barrel_share, 4),

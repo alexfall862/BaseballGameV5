@@ -24,7 +24,8 @@ class Baselines():
         self.weakodds = float(baselines["c_weakodds"])
         self.modexp = float(baselines["modexp"])    
         self.steal_success = float(baselines["steal_success"])
-        self.pickoff_success = float(baselines["pickoff_success"])	
+        self.pickoff_success = float(baselines["pickoff_success"])
+        self.stealawareness_max = float(baselines["stealawareness_max"])
         self.error_rate = float(baselines["error_rate"])
 
         spread = load["spread"]
@@ -58,6 +59,14 @@ class Baselines():
         self.normalleash = load["normalleash"]
         self.longleash = load["longleash"]
 
+        # Feature tunables
+        self.consecutive_pitch_debuff_scale = float(load.get("consecutive_pitch_debuff_scale", 1.5))
+        self.battery_iq_weight = float(load.get("battery_iq_weight", 0.5))
+        self.arm_angle_familiarity_increment = float(load.get("arm_angle_familiarity_increment", 1.0))
+        self.velocity_swing_suppression_max = float(load.get("velocity_swing_suppression_max", 0.05))
+        self.control_strike_floor = float(load.get("control_strike_floor", 0.35))
+        self.control_strike_ceiling = float(load.get("control_strike_ceiling", 0.70))
+
     def __repr__(self):
         return f"{self.leaguetype}"
 
@@ -83,16 +92,17 @@ class Baselines():
         instance.insideswing = float(baselines.get("InsideSwing", 0.65))
         instance.insidelook = float(1 - instance.insideswing)
         instance.insidecontact = float(baselines.get("InsideContact", 0.87))
-        instance.barrelodds = float(baselines.get("c_barrelodds", 7))
-        instance.solidodds = float(baselines.get("c_solidodds", 12))
-        instance.flareodds = float(baselines.get("c_flareodds", 36))
-        instance.burnerodds = float(baselines.get("c_burnerodds", 39))
-        instance.underodds = float(baselines.get("c_underodds", 2.4))
-        instance.toppedodds = float(baselines.get("c_toppedodds", 3.2))
-        instance.weakodds = float(baselines.get("c_weakodds", 0.4))
+        instance.barrelodds = float(baselines.get("c_barrelodds", 6))
+        instance.solidodds = float(baselines.get("c_solidodds", 10))
+        instance.flareodds = float(baselines.get("c_flareodds", 13))
+        instance.burnerodds = float(baselines.get("c_burnerodds", 15))
+        instance.underodds = float(baselines.get("c_underodds", 20))
+        instance.toppedodds = float(baselines.get("c_toppedodds", 33))
+        instance.weakodds = float(baselines.get("c_weakodds", 4))
         instance.modexp = float(baselines.get("modexp", 2))
         instance.steal_success = float(baselines.get("steal_success", 0.65))
         instance.pickoff_success = float(baselines.get("pickoff_success", 0.1))
+        instance.stealawareness_max = float(baselines.get("stealawareness_max", 0.45))
         instance.error_rate = float(baselines.get("error_rate", 0.05))
 
         spread = data.get("spread", {})
@@ -125,6 +135,14 @@ class Baselines():
         instance.shortleash = data.get("shortleash", 0.85)
         instance.normalleash = data.get("normalleash", 0.8)
         instance.longleash = data.get("longleash", 0.7)
+
+        # Feature tunables
+        instance.consecutive_pitch_debuff_scale = float(data.get("consecutive_pitch_debuff_scale", 1.5))
+        instance.battery_iq_weight = float(data.get("battery_iq_weight", 0.5))
+        instance.arm_angle_familiarity_increment = float(data.get("arm_angle_familiarity_increment", 1.0))
+        instance.velocity_swing_suppression_max = float(data.get("velocity_swing_suppression_max", 0.05))
+        instance.control_strike_floor = float(data.get("control_strike_floor", 0.35))
+        instance.control_strike_ceiling = float(data.get("control_strike_ceiling", 0.70))
 
         return instance
 
