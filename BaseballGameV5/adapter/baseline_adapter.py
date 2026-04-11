@@ -170,6 +170,11 @@ class BaselineAdapter:
             "velocity_swing_suppression_max": game_settings.get("velocity_swing_suppression_max", 0.05),
             "control_strike_floor": game_settings.get("control_strike_floor", 0.35),
             "control_strike_ceiling": game_settings.get("control_strike_ceiling", 0.70),
+            "consist_degrade_max": game_settings.get("consist_degrade_max", 0.45),
+            "consist_degrade_min": game_settings.get("consist_degrade_min", 0.05),
+            "consist_exponent_low": game_settings.get("consist_exponent_low", 1.2),
+            "consist_exponent_high": game_settings.get("consist_exponent_high", 3.0),
+            "steal_awareness_exponent": game_settings.get("steal_awareness_exponent", 1.4),
         }
 
     @classmethod
@@ -191,7 +196,7 @@ class BaselineAdapter:
             "modexp": batting.get("modexp", 2),
             "steal_success": game_settings.get("steal_success", 0.65),
             "pickoff_success": game_settings.get("pickoff_success", 0.1),
-            "stealawareness_max": game_settings.get("stealawareness_max", 0.45),
+            "stealawareness_max": game_settings.get("stealawareness_max", 0.80),
             "error_rate": game_settings.get("error_rate", 0.05),
         }
 

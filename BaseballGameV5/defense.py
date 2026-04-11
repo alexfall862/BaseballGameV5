@@ -1,7 +1,6 @@
 from ast import Pass
 import random
 import Stats as stats
-import numpy as np
 from operator import attrgetter
 from dataclasses import dataclass, field
 from typing import Optional, List, Set, Tuple
@@ -1805,8 +1804,8 @@ class fielding():
     #   +0.6 advantage (30-pt edge) barrel: 0.15 + 0.6*0.15 = 0.24 → 24% HR
     #    0.0 advantage (even matchup) barrel: 0.15 → 15% HR (unchanged)
     #   -0.6 advantage (30-pt deficit) barrel: 0.15 - 0.6*0.15 = 0.06 → 6% HR (floor)
-    POWER_HR_SHIFT = 0.4
-    POWER_HR_MIN = 0.00001  # Floor so even weak matchups can luck into one
+    POWER_HR_SHIFT = 0.52
+    POWER_HR_MIN = 0.04  # Floor so even weak matchups can luck into one
 
     def _get_distweights(self, contacttype: str) -> list:
         """
@@ -1974,16 +1973,15 @@ def Error_Catch(self, thrower, catcher):
         else:
             depth = 'infield'
 
-    diceroll = np.random.rand()
+    diceroll = random.random()
     cfs = (catcher.fieldspot - 50)/50
     cfr = (catcher.fieldreact - 50)/50
     cfc = (catcher.fieldcatch - 50)/50
-    cscores = [cfs, cfr, cfc]
     if depth == 'outfield':
-        cweights = [4, 2, 3]
+        wavg = (cfs*4 + cfr*2 + cfc*3) / 9
     elif depth == 'infield':
-        cweights = [1, 2, 3]
-    error_rate = (1-np.average(cscores, weights=cweights))*baselines.error_rate
+        wavg = (cfs*1 + cfr*2 + cfc*3) / 6
+    error_rate = (1 - wavg) * baselines.error_rate
     if error_rate > diceroll:
         # Error occurred - runner advancement handled by caller
         self.errorlist.append(f"{catcher} catching error!")
@@ -2010,16 +2008,14 @@ def Error_Throw(self, thrower, catcher):
         # Default to infield if no thrower
         depth = 'infield'
 
-    diceroll = np.random.rand()
+    diceroll = random.random()
     tta = (thrower.throwacc - 50)/50
     ttp = (thrower.throwpower - 50)/50
-    cscores = [tta, ttp]
     if depth == 'outfield':
-        cweights = [2, 1]
+        wavg = (tta*2 + ttp*1) / 3
     elif depth == 'infield':
-        cweights = [1, 0]
-
-    error_rate = (1-np.average(cscores, weights=cweights))*baselines.error_rate
+        wavg = tta
+    error_rate = (1 - wavg) * baselines.error_rate
     if error_rate > diceroll:
         # Error occurred - runner advancement handled by caller
         self.errorlist.append(f"{thrower} throws it wide!")

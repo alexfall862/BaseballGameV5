@@ -1,5 +1,5 @@
 import math
-import numpy as np
+import random
 from defense import fielding as f
 from defense import BasePaths as b
 from defense import Error_Throw_Catch
@@ -37,7 +37,7 @@ class Steals():
             return False
         else:
             pickofffreqrating = Steals.pull_pickofffreq(self.gamestate.game.pitchingteam.currentpitcher, self.defensestrategy.playerstrategy)
-            diceroll = np.random.rand() * 100
+            diceroll = random.random() * 100
             if pickofffreqrating > diceroll:
                 if firstbase != None:
                     self.gamestate.game.is_pickoff = True
@@ -72,7 +72,7 @@ class Steals():
             else:
                 pass
 
-            diceroll = np.random.rand() * 100
+            diceroll = random.random() * 100
             if pickofffreqrating > diceroll:
                 if secondbase != None:
                     self.gamestate.game.is_pickoff = True
@@ -107,7 +107,7 @@ class Steals():
             else:
                 pass
 
-            diceroll = np.random.rand() * 100
+            diceroll = random.random() * 100
             if pickofffreqrating > diceroll:
                 if thirdbase != None:
                     self.gamestate.game.is_pickoff = True
@@ -144,7 +144,7 @@ class Steals():
             if self.gamestate.game.is_pickoff != True:
                 if thirdbase != None:
                     stealfreqrating = Steals.pull_stealfreq(self.thirdbase, self.runnerstrategy.playerstrategy)
-                    diceroll = np.random.rand() * 100
+                    diceroll = random.random() * 100
                     if (stealfreqrating > diceroll):
                         self.gamestate.game.is_stealattempt = True
                         thirdbase.energy = max(0, thirdbase.energy - 0.5)
@@ -189,7 +189,7 @@ class Steals():
 
                 if secondbase != None:
                     stealfreqrating = Steals.pull_stealfreq(self.secondbase, self.runnerstrategy.playerstrategy)
-                    diceroll = np.random.rand() * 100
+                    diceroll = random.random() * 100
                     if (stealfreqrating > diceroll):
                         self.gamestate.game.is_stealattempt = True
                         secondbase.energy = max(0, secondbase.energy - 0.5)
@@ -233,7 +233,7 @@ class Steals():
 
                 if firstbase != None:
                     stealfreqrating = Steals.pull_stealfreq(self.firstbase, self.runnerstrategy.playerstrategy)
-                    diceroll = np.random.rand() * 100
+                    diceroll = random.random() * 100
                     if (stealfreqrating > diceroll):
                         self.gamestate.game.is_stealattempt = True
                         firstbase.energy = max(0, firstbase.energy - 0.5)
@@ -277,7 +277,7 @@ class Steals():
         return False
             
     def pickoff_math(self, pickoffsuccess, baserunner, pitcher, baseman):
-        diceroll = np.random.rand() * 100
+        diceroll = random.random() * 100
 
         pickoffmod = (pitcher.pickoff - 50)/50
         pickoffchances = (1+pickoffmod)*50
@@ -285,10 +285,8 @@ class Steals():
         bsp = (baserunner.speed - 50)/50
         bbr = (baserunner.baserunning - 50)/50
         brr = (baserunner.basereaction - 50)/50
-        baserunner_scores = [brr, bbr, bsp]
-        baserunner_weights = [4, 2, 4]
-        baserunner  = ((1+np.average(baserunner_scores, weights=baserunner_weights))*50)
-        
+        baserunner  = ((1 + (brr*4 + bbr*2 + bsp*4) / 10) * 50)
+
         error_check_t, error_check_c, d_action = Error_Throw_Catch(self, pitcher, baseman)     #self.gamestate.game.baselines.Throw_Catch(pitcher, baseman)
         error_check = [error_check_t, error_check_c]
         self.defensiveactions.append(d_action)
@@ -298,8 +296,8 @@ class Steals():
             self.gamestate.defensiveoutcome = (None, None, None, "error on pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
             return False, baserunner, error_check[0], error_check[1]
 
-        pickoffscore = (pickoffchances / baserunner) * pickoffsuccess
-        diceroll = np.random.rand()
+        pickoffscore = (pickoffchances / baserunner) * pickoffsuccess if baserunner > 0 else 1.0
+        diceroll = random.random()
         if pickoffscore > diceroll:
             self.gamestate.defensiveoutcome = (None, None, None, "pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
             return True, None, error_check[0], error_check[1]
@@ -311,33 +309,36 @@ class Steals():
         bsp = (baserunner.speed - 50)/50
         bbr = (baserunner.baserunning - 50)/50
         brr = (baserunner.basereaction - 50)/50
-        baserunner_scores = [brr, bbr, bsp]
-        baserunner_weights = [3, 2, 5]
-        baserunner  = ((1+np.average(baserunner_scores, weights=baserunner_weights))*50)
+        baserunner  = ((1 + (brr*3 + bbr*2 + bsp*5) / 10) * 50)
 
         ctp = (catcher.throwpower - 50)/50
         cta = (catcher.throwacc - 50)/50
         ccs = (catcher.catchsequence - 50)/50
         pps = (pitcher.psequencing - 50)/50
         cfr = (catcher.fieldreact - 50)/5
-        battery_scores = [ctp, cta, ccs, pps]
-        battery_weights = [15, 3, 1, 1]
-        battery = ((1+np.average(battery_scores, weights=battery_weights))*50)+cfr
-        comp_score = baserunner/battery
+        battery = ((1 + (ctp*15 + cta*3 + ccs*1 + pps*1) / 20) * 50) + cfr
+        comp_score = baserunner / battery if battery > 0 else 1.0
 
         SOFT_THRESHOLD = 2.0
         HARD_THRESHOLD = 5.0
+        STEEP_THRESHOLD = 10.0
+        awareness_exponent = self.gamestate.game.baselines.steal_awareness_exponent
         if stealfreq <= SOFT_THRESHOLD:
             awareness_penalty = 0.0
         elif stealfreq <= HARD_THRESHOLD:
             awareness_penalty = 0.03 * (stealfreq - SOFT_THRESHOLD) / (HARD_THRESHOLD - SOFT_THRESHOLD)
+        elif stealfreq <= STEEP_THRESHOLD:
+            # Steep initial ramp: 3% → 20% over just 5 frequency units
+            t = (stealfreq - HARD_THRESHOLD) / (STEEP_THRESHOLD - HARD_THRESHOLD)
+            awareness_penalty = 0.03 + 0.17 * t
         else:
-            t = (stealfreq - HARD_THRESHOLD) / (100.0 - HARD_THRESHOLD)
-            awareness_penalty = 0.03 + (stealawareness_max - 0.03) * (t ** 0.5)
+            # Slightly convex ramp from 20% to ceiling across remaining range
+            t = (stealfreq - STEEP_THRESHOLD) / (100.0 - STEEP_THRESHOLD)
+            awareness_penalty = 0.20 + (stealawareness_max - 0.20) * (t ** awareness_exponent)
 
         steal_outcome_odds = comp_score * stealsuccess * (1 - awareness_penalty)
 
-        diceroll = np.random.rand()
+        diceroll = random.random()
         
         
         error_check_t, error_check_c,  d_action = Error_Throw_Catch(self, catcher, baseman) #self.gamestate.game.baselines.Throw_Catch(pitcher, baseman) 

@@ -6,9 +6,7 @@ import Baselines
 import json
 import csv
 import random
-import numpy as np
 import Stats as stats
-import pandas as pd
 
 # Import adapters
 import sys
@@ -101,13 +99,10 @@ class Game():
             Game instance ready to run
         """
         # Seed random for deterministic simulation
-        # Both Python's random and numpy's random must be seeded for full determinism
         random_seed = payload.get("random_seed")
         if random_seed:
             seed_int = int(random_seed)
             random.seed(seed_int)
-            # numpy requires seed between 0 and 2^32-1, so use modulo for large seeds
-            np.random.seed(seed_int % (2**32))
 
         # Create instance without calling __init__
         instance = object.__new__(cls)
@@ -118,6 +113,7 @@ class Game():
         # Adapt baselines from level_config and game_constants
         baseline_data = BaselineAdapter.adapt(level_config, game_constants)
         instance.baselines = Baselines.Baselines.from_dict(baseline_data)
+        instance.ingame_injury_base_rate = level_config.get("game", {}).get("ingame_injury_base_rate", 0.001)
 
         # Adapt rules (now passed in from top-level, not from payload)
         rules_data = RulesAdapter.adapt(rules)
@@ -237,9 +233,12 @@ class Game():
 
         return instance
 
-    def run_simulation(self):
+    def run_simulation(self, detail_level="full"):
         """
         Run the game simulation and return results.
+
+        Args:
+            detail_level: "full" (all data), "standard" (no debug), "minimal" (no debug/tuning)
 
         Returns:
             Dict with game results, boxscore, play-by-play, injuries, tuning data
@@ -253,7 +252,7 @@ class Game():
         self._apply_pitching_decisions()
 
         # Build results
-        return {
+        result = {
             "game_id": self.gname,
             "home_team_id": getattr(self, 'home_team_id', None),
             "away_team_id": getattr(self, 'away_team_id', None),
@@ -270,9 +269,15 @@ class Game():
             "play_by_play": self.actions,
             "substitutions": self.substitutions,
             "injuries": self.pregame_injury_reports + getattr(self, 'ingame_injury_reports', []),
-            "tuning_data": self._build_tuning_data(),
-            "debug": self._build_debug_data()
         }
+
+        if detail_level in ("full", "standard"):
+            result["tuning_data"] = self._build_tuning_data()
+
+        if detail_level == "full":
+            result["debug"] = self._build_debug_data()
+
+        return result
 
     def _build_tuning_data(self):
         """Build tuning data for analysis and debugging."""
@@ -573,7 +578,10 @@ class Game():
 
                 # FIELDERS: every player who played in the field
                 if fs.outs_played > 0:
-                    position_code = POSITION_CODE_MAP.get(player.lineup, player.lineup)
+                    if player.lineup == "designatedhitter" and ps.pitches_thrown > 0:
+                        position_code = "p"
+                    else:
+                        position_code = POSITION_CODE_MAP.get(player.lineup, player.lineup)
                     fielder_key = f"{pid_str}_{position_code}"
                     fielders[fielder_key] = {
                         "team_id": team_id,
@@ -1699,6 +1707,7 @@ class Game():
 
         for action in self.actions:
             listofactions.append(action)    
+        import pandas as pd
         export_dataframe = pd.DataFrame(listofactions)
         export_dataframe.replace({"None": ""}, inplace=True)
         export_dataframe.to_csv(f"{self.gname}.csv", na_rep="", index=False)

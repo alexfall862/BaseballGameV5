@@ -56,7 +56,18 @@ class PlayerAdapter:
         bench = team_side.get("bench", [])
         starting_pitcher_id = team_side.get("starting_pitcher_id") or defense.get("startingpitcher")
 
+        # Eligibility shortlist: a player in `players` is only usable in a game
+        # if they appear in one of the API's role-assignment lists. Anyone else
+        # (e.g. rotation pitchers who aren't today's starter) is data-pool only
+        # and must be excluded — otherwise they fall through as "bench" and
+        # become eligible for emergency-pitcher selection. See engine audit.
+        eligible_pids = set(available_pitcher_ids) | set(bench) | set(lineup) | set(defense.values())
+        if starting_pitcher_id is not None:
+            eligible_pids.add(starting_pitcher_id)
+
         for player_data in team_side.get("players", []):
+            if player_data["id"] not in eligible_pids:
+                continue
             player = cls.adapt(
                 player_data=player_data,
                 defense=defense,
@@ -194,6 +205,7 @@ class PlayerAdapter:
             stealfreq=float(player_data.get("stealfreq", 10.0)),
             pickofffreq=float(player_data.get("pickofffreq", 10.0)),
             plate_approach=player_data.get("plate_approach", "normal"),
+            pitching_approach=player_data.get("pitching_approach", "normal"),
             pitchchoices=player_data.get("pitchchoices", []),
 
             # Spray chart splits (sum to 1.0)
@@ -206,6 +218,16 @@ class PlayerAdapter:
             usage_preference=player_data.get("usage_preference", "normal"),
             pulltend=player_data.get("pulltend", "normal")
         )
+
+        # Apply pitching approach pendurance modifier at construction
+        # (Fatigue.py reads pendurance directly, so must be applied here)
+        approach = player_data.get("pitching_approach", "normal")
+        if approach == "power":
+            player.pendurance = max(1, player.pendurance - 5)
+        elif approach == "location":
+            player.pendurance = min(99, player.pendurance + 5)
+
+        return player
 
     @classmethod
     def _build_pitches(cls, player_data: dict) -> list:
@@ -228,8 +250,12 @@ class PlayerAdapter:
                                    available_pitchers: list, bench: list,
                                    starting_pitcher_id: int) -> str:
         """Determine lineup position string for player."""
-        # Check if starting pitcher
+        # Check if starting pitcher — but if they're also the DH, resolve as
+        # designatedhitter so they appear in the batting list correctly.
+        # _grab_starting_pitcher_from_list falls back to pitchingorder == 1.
         if pid == starting_pitcher_id:
+            if defense.get("dh") == pid:
+                return "designatedhitter"
             return "starter"
 
         # Check if in defensive lineup
@@ -245,7 +271,15 @@ class PlayerAdapter:
         if pid in bench:
             return "bench"
 
-        return "bench"
+        # Player is in `players` but not in any role-assignment list. The
+        # contract says presence in `players` does not imply eligibility, so
+        # the caller should have filtered them out before reaching here. Fail
+        # loudly rather than silently bucketing them as "bench".
+        raise ValueError(
+            f"Player {pid} is not eligible for any role: not the starting "
+            f"pitcher, not in defense, not in available_pitchers, and not on "
+            f"bench. Filter ineligible players out of `players` before adapting."
+        )
 
     @classmethod
     def _determine_batting_order(cls, pid: int, lineup: list) -> int:

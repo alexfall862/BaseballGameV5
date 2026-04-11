@@ -12,7 +12,7 @@ class Player():
                  battingorder, pitchingorder, lineup,
                  injurystate, energy, teamname,
                  # Strategy attributes (from endpoint)
-                 stealfreq=10.0, pickofffreq=10.0, plate_approach="normal", pitchchoices=None,
+                 stealfreq=10.0, pickofffreq=10.0, plate_approach="normal", pitching_approach="normal", pitchchoices=None,
                  # Spray chart splits (sum to 1.0)
                  left_split=0.33, center_split=0.34, right_split=0.33,
                  # Pitcher management
@@ -86,6 +86,7 @@ class Player():
         self.stealfreq = stealfreq
         self.pickofffreq = pickofffreq
         self.plate_approach = plate_approach
+        self.pitching_approach = pitching_approach
         self.pitchchoices = pitchchoices if pitchchoices is not None else []
 
         # Pitcher management

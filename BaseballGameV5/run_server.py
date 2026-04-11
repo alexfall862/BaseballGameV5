@@ -30,5 +30,5 @@ if __name__ == "__main__":
         host=host,
         port=port,
         reload=False,
-        workers=1,  # Single worker for deterministic results
+        workers=1,
     )

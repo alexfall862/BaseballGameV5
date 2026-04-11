@@ -1,7 +1,6 @@
-import csv 
-import os 
-import numpy as np
-import json 
+import csv
+import os
+import json
 
 class Baselines():
     def __init__(self, leaguetype):
@@ -66,6 +65,11 @@ class Baselines():
         self.velocity_swing_suppression_max = float(load.get("velocity_swing_suppression_max", 0.05))
         self.control_strike_floor = float(load.get("control_strike_floor", 0.35))
         self.control_strike_ceiling = float(load.get("control_strike_ceiling", 0.70))
+        self.consist_degrade_max = float(load.get("consist_degrade_max", 0.45))
+        self.consist_degrade_min = float(load.get("consist_degrade_min", 0.05))
+        self.consist_exponent_low = float(load.get("consist_exponent_low", 1.2))
+        self.consist_exponent_high = float(load.get("consist_exponent_high", 3.0))
+        self.steal_awareness_exponent = float(load.get("steal_awareness_exponent", 2.0))
 
     def __repr__(self):
         return f"{self.leaguetype}"
@@ -102,7 +106,7 @@ class Baselines():
         instance.modexp = float(baselines.get("modexp", 2))
         instance.steal_success = float(baselines.get("steal_success", 0.65))
         instance.pickoff_success = float(baselines.get("pickoff_success", 0.1))
-        instance.stealawareness_max = float(baselines.get("stealawareness_max", 0.45))
+        instance.stealawareness_max = float(baselines.get("stealawareness_max", 0.80))
         instance.error_rate = float(baselines.get("error_rate", 0.05))
 
         spread = data.get("spread", {})
@@ -143,6 +147,11 @@ class Baselines():
         instance.velocity_swing_suppression_max = float(data.get("velocity_swing_suppression_max", 0.05))
         instance.control_strike_floor = float(data.get("control_strike_floor", 0.35))
         instance.control_strike_ceiling = float(data.get("control_strike_ceiling", 0.70))
+        instance.consist_degrade_max = float(data.get("consist_degrade_max", 0.45))
+        instance.consist_degrade_min = float(data.get("consist_degrade_min", 0.05))
+        instance.consist_exponent_low = float(data.get("consist_exponent_low", 1.2))
+        instance.consist_exponent_high = float(data.get("consist_exponent_high", 3.0))
+        instance.steal_awareness_exponent = float(data.get("steal_awareness_exponent", 1.4))
 
         return instance
 

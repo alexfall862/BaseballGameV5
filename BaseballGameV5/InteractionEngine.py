@@ -44,8 +44,13 @@ class PitchEvent:
     BASE_CONTACT_RATE = 0.75  # Base contact rate at parity
 
     # Plate approach constants
-    APPROACH_STAT_MOD = 2       # ±2 stat trade for contact/power approaches
+    APPROACH_STAT_MOD = 5       # ±5 stat trade for contact/power approaches
     APPROACH_SWING_MOD = 0.05   # ±5% swing rate for aggressive/patient
+
+    # Pitching approach constants
+    PITCHING_APPROACH_CONTROL_MOD = 15   # ±15 pgencontrol for aggressive/finesse
+    PITCHING_APPROACH_HOLD_MOD = 0.05    # ±5% flat strike rate for aggressive/finesse
+    PITCHING_APPROACH_THROWPOWER_MOD = 5 # ±5 throwpower for power/location
 
     # Control-driven location constants
     PGENCONTROL_LOCATION_WEIGHT = 0.70  # pgencontrol share of blended control (pcntrl gets 0.30)
@@ -85,6 +90,10 @@ class PitchEvent:
         self.arm_angle_modifier = 0
         self.arm_angle_times_seen = 0
         self.plate_approach = getattr(self.batter, 'plate_approach', 'normal')
+        self.pitching_approach = getattr(self.pitcher, 'pitching_approach', 'normal')
+        self.eff_pthrowpower = getattr(self.pitcher, 'pthrowpower', 50)
+        self.eff_pgencontrol = getattr(self.pitcher, 'pgencontrol', 50)
+        self.hold_prob_approach_modifier = 0.0
         self.velocity_swing_modifier = 0
         self.approach_swing_modifier = 0
         self.battery_iq = 0
@@ -117,6 +126,9 @@ class PitchEvent:
 
         # Phase 0.8: Plate Approach stat modifiers
         self.phase08_plate_approach()
+
+        # Phase 0.9: Pitching Approach modifiers
+        self.phase09_pitching_approach()
 
         # Calculate matchup advantages (after effective stats are set)
         self.advantages = self.calculate_matchup_advantages()
@@ -224,22 +236,31 @@ class PitchEvent:
     def phase05_consistency_roll(self):
         """
         Per-pitch variance based on pitch.consist.
-        Low consist = left-tail degradation (can crater).
-        High consist = floor near 0% degradation.
+
+        Distribution: right-skewed — mode at 0, tail toward max_degrade.
+        Most pitches execute near full strength; disasters are rare but real.
+
+        Both the tail length (max_degrade) and the skew exponent vary with consist:
+          - Low consist: long tail (large max_degrade) + flat exponent (frequent degradation)
+          - High consist: short tail (small max_degrade) + steep exponent (rare disasters)
+
+        Baseline defaults:
+          consist=20  → max_degrade=0.45, exponent=1.2  (avg ~21%, 90th pct ~36%)
+          consist=50  → max_degrade=0.30, exponent=1.8  (avg ~11%, 90th pct ~25%)
+          consist=80  → max_degrade=0.16, exponent=2.4  (avg ~5%,  90th pct ~13%)
+          consist=110 → max_degrade=0.05, exponent=3.0  (avg ~1%,  90th pct ~4%)
         """
-        consist = max(self.pitch.consist, 20)  # Floor at 20
+        consist = max(self.pitch.consist, 20)
         consist_normalized = (consist - 20) / 90  # 0.0 to 1.0
 
-        # Max possible degradation decreases as consist increases
-        # At consist=20: max_degrade = 0.20 (can lose up to 20%)
-        # At consist=110: max_degrade = 0.02 (almost no variance)
-        max_degrade = 0.20 - (consist_normalized * 0.18)
+        bl = self.game.baselines
+        max_degrade = bl.consist_degrade_max - (consist_normalized * (bl.consist_degrade_max - bl.consist_degrade_min))
+        exponent = bl.consist_exponent_low + (consist_normalized * (bl.consist_exponent_high - bl.consist_exponent_low))
 
-        # Roll for actual degradation (left-tail: 0 to max_degrade)
-        degrade_roll = random.random() * max_degrade
-        self.consist_degrade = degrade_roll  # Store for snapshot
+        # Right-skewed draw: U^exponent clusters near 0, tail reaches max_degrade
+        degrade_roll = (random.random() ** exponent) * max_degrade
+        self.consist_degrade = degrade_roll
 
-        # Apply to pitch attributes for THIS pitch only
         eff_pcntrl = self.pitch.pcntrl * (1 - degrade_roll)
         eff_pbrk = self.pitch.pbrk * (1 - degrade_roll)
         eff_pacc = self.pitch.pacc * (1 - degrade_roll)
@@ -368,6 +389,34 @@ class PitchEvent:
             self.eff_power = min(self.eff_power + mod, 99)
             self.eff_discipline = max(self.eff_discipline - mod, 1)
 
+    def phase09_pitching_approach(self):
+        """
+        Apply pitching approach modifiers.
+
+        Power/Location — throwpower vs pendurance trade (pendurance applied at construction):
+          power:    +5 eff_pthrowpower (more velocity, tires faster)
+          location: -5 eff_pthrowpower (less velocity, lasts longer)
+
+        Aggressive/Finesse — strike rate vs control trade:
+          aggressive: +5% flat hold_prob, -15 eff_pgencontrol
+          finesse:    -5% flat hold_prob, +15 eff_pgencontrol
+        """
+        approach = self.pitching_approach
+        tp_mod = self.PITCHING_APPROACH_THROWPOWER_MOD
+        ctrl_mod = self.PITCHING_APPROACH_CONTROL_MOD
+        hold_mod = self.PITCHING_APPROACH_HOLD_MOD
+
+        if approach == "power":
+            self.eff_pthrowpower = min(self.eff_pthrowpower + tp_mod, 99)
+        elif approach == "location":
+            self.eff_pthrowpower = max(self.eff_pthrowpower - tp_mod, 1)
+        elif approach == "aggressive":
+            self.eff_pgencontrol = max(self.eff_pgencontrol - ctrl_mod, 1)
+            self.hold_prob_approach_modifier = hold_mod
+        elif approach == "finesse":
+            self.eff_pgencontrol = min(self.eff_pgencontrol + ctrl_mod, 99)
+            self.hold_prob_approach_modifier = -hold_mod
+
     def calculate_matchup_advantages(self):
         """
         Calculate relative advantages for all attribute pairings.
@@ -404,12 +453,15 @@ class PitchEvent:
           blended=100 → ~70% strikes (ceiling, clamped)
         """
         w = self.PGENCONTROL_LOCATION_WEIGHT
-        blended_control = self.pitcher.pgencontrol * w + self.eff_pcntrl * (1 - w)
+        blended_control = self.eff_pgencontrol * w + self.eff_pcntrl * (1 - w)
         control_norm = clamp(blended_control / 100.0, 0.0, 1.0)
 
         floor = self.game.baselines.control_strike_floor
         ceiling = self.game.baselines.control_strike_ceiling
-        hold_prob = floor + (ceiling - floor) * control_norm
+        hold_prob = clamp(
+            floor + (ceiling - floor) * control_norm + self.hold_prob_approach_modifier,
+            0.0, 1.0
+        )
 
         # Store for snapshot
         self.blended_control = blended_control
@@ -463,9 +515,8 @@ class PitchEvent:
         discipline_modifier = effective_discipline_adv * self.DISCIPLINE_SWING_MODIFIER
 
         # Velocity swing suppression (both zones equally)
-        pthrowpower = getattr(self.pitcher, 'pthrowpower', 50)
         max_suppression = self.game.baselines.velocity_swing_suppression_max
-        self.velocity_swing_modifier = ((pthrowpower - 50) / 49.0) * max_suppression
+        self.velocity_swing_modifier = ((self.eff_pthrowpower - 50) / 49.0) * max_suppression
 
         # Plate approach swing modifier (both zones equally)
         approach = self.plate_approach
@@ -602,6 +653,12 @@ class PitchEvent:
             "eff_power": round(self.eff_power, 1),
             "eff_eye": round(self.eff_eye, 1),
             "eff_discipline": round(self.eff_discipline, 1),
+
+            # Phase 0.9: Pitching Approach
+            "pitching_approach": self.pitching_approach,
+            "eff_pthrowpower": round(self.eff_pthrowpower, 1),
+            "eff_pgencontrol": round(self.eff_pgencontrol, 1),
+            "hold_prob_approach_modifier": round(self.hold_prob_approach_modifier, 3),
 
             # Pitcher general control
             "pgencontrol": round(self.pitcher.pgencontrol, 1) if hasattr(self, 'pitcher') else None,

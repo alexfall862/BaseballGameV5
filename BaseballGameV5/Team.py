@@ -167,18 +167,21 @@ class Team():
             instance.designatedhitter = starter
 
         # Build batting list
-        batting_players = [
-            instance.catcher,
-            instance.firstbase,
-            instance.secondbase,
-            instance.thirdbase,
-            instance.shortstop,
-            instance.leftfield,
-            instance.centerfield,
-            instance.rightfield,
-            instance.designatedhitter,
-        ]
-        instance.battinglist = sorted(batting_players, key=lambda x: x.battingorder)
+        batting_candidates = {
+            "catcher": instance.catcher,
+            "firstbase": instance.firstbase,
+            "secondbase": instance.secondbase,
+            "thirdbase": instance.thirdbase,
+            "shortstop": instance.shortstop,
+            "leftfield": instance.leftfield,
+            "centerfield": instance.centerfield,
+            "rightfield": instance.rightfield,
+            "designatedhitter": instance.designatedhitter,
+        }
+        missing = [pos for pos, player in batting_candidates.items() if player is None]
+        if missing:
+            raise ValueError(f"Team '{name}': no player found for position(s): {missing}")
+        instance.battinglist = sorted(batting_candidates.values(), key=lambda x: x.battingorder)
 
         instance.currentbatspot = 1
         instance.currentbatter = instance.battinglist[0]

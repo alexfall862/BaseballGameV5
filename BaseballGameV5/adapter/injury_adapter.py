@@ -128,6 +128,7 @@ class InjuryAdapter:
             injury_reports.append({
                 "player_id": player_id,
                 "player_name": f"{player.firstname} {player.lastname}",
+                "injury_type_id": injury.get("injury_type_id"),
                 "code": injury.get("code"),
                 "name": injury.get("name"),
                 "timeframe": "pregame",

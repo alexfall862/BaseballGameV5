@@ -1,6 +1,5 @@
-import pandas as pd
 import csv
-import json 
+import json
 
 def create_score_table(objects):
     data = {}
@@ -13,6 +12,7 @@ def create_score_table(objects):
             data[team_name] = {}
         data[team_name][inning] =  int(score)
 
+    import pandas as pd
     df = pd.DataFrame(data)
     df = df.T
     df = df.sort_index(axis=1)
@@ -269,37 +269,26 @@ def BattingStatPullSave(team, gname):
     StatSaverCombo(export, filename)
 
 def StatJSONConverter(game):
-    game.hometeam
-    game.awayteam
-    game.actions
-    game.meta
-    
     homebat, homepitch, homefield = TeamStatPull(game.hometeam)
     awaybat, awaypitch, awayfield = TeamStatPull(game.awayteam)
-    #actions = ActionSort(game.actions)
-    actions = game.actions
 
-    homebatJSON = json.dumps([obj.__dict__ for obj in homebat])
-    homepitchJSON = json.dumps([obj.to_dict() for obj in homepitch])
-    homefieldJSON = json.dumps([obj.to_dict() for obj in homefield])
-    awaybatJSON = json.dumps([obj.__dict__ for obj in awaybat])
-    awaypitchJSON = json.dumps([obj.to_dict() for obj in awaypitch])
-    awayfieldJSON = json.dumps([obj.to_dict() for obj in awayfield])
-    actionsJSON = json.dumps([object for object in actions])
-    gamemetaJSON = json.dumps( game.meta.to_dict())
-
-    fullexport = {"result": json.loads(gamemetaJSON), "stats": {"batting": json.loads(homebatJSON) + json.loads(awaybatJSON), "pitching": json.loads(homepitchJSON) + json.loads(awaypitchJSON), "fielding": json.loads(homefieldJSON) + json.loads(awayfieldJSON), "playbyplay": json.loads(actionsJSON)}}
-
-
-    #fullexport = [homebatJSON, homepitchJSON, homefieldJSON, awaybatJSON, awaypitchJSON, awayfieldJSON, actionsJSON]
+    fullexport = {
+        "result": game.meta.to_dict(),
+        "stats": {
+            "batting": [obj.__dict__ for obj in homebat] + [obj.__dict__ for obj in awaybat],
+            "pitching": [obj.to_dict() for obj in homepitch] + [obj.to_dict() for obj in awaypitch],
+            "fielding": [obj.to_dict() for obj in homefield] + [obj.to_dict() for obj in awayfield],
+            "playbyplay": list(game.actions)
+        }
+    }
 
     return fullexport
 
 def ActionSort(actions):
+    import pandas as pd
     listofactions = []
     for action in actions:
-        #print(action)
-        listofactions.append(action)    
+        listofactions.append(action)
     export_dataframe = pd.DataFrame(listofactions)
     export_dataframe.replace({"None": ""}, inplace=True)
     return export_dataframe
@@ -345,12 +334,14 @@ def GameJSONCombiner(resultdict):
     fieldingstats = FieldJSONCombiner(resultdict)
     resultsstats = ResultsJSONCombiner(resultdict)
 
-    bsJSON = json.dumps([player.__dict__ for player in battingstats])
-    psJSON = json.dumps([player.__dict__ for player in pitchingstats])
-    fsJSON = json.dumps([player.__dict__ for player in fieldingstats])
-    reJSON = json.dumps([result.__dict__ for result in resultsstats])
-
-    fullexport = {"results": json.loads(reJSON), "stats": {"batting": json.loads(bsJSON), "pitching": json.loads(psJSON), "fielding": json.loads(fsJSON)}}
+    fullexport = {
+        "results": [result.__dict__ for result in resultsstats],
+        "stats": {
+            "batting": [player.__dict__ for player in battingstats],
+            "pitching": [player.__dict__ for player in pitchingstats],
+            "fielding": [player.__dict__ for player in fieldingstats]
+        }
+    }
 
     return fullexport
 

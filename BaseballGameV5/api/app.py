@@ -7,8 +7,10 @@ Both use the same payload structure - single game just has 1 game in subweeks.a.
 
 import sys
 import os
+import asyncio
 from typing import Dict, List, Any
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from contextlib import asynccontextmanager
+from concurrent.futures import ProcessPoolExecutor
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -24,11 +26,27 @@ from api.models import (
 )
 import Game
 
+# Shared process pool for parallel game simulation across all requests
+_process_pool: ProcessPoolExecutor | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage shared process pool lifecycle."""
+    global _process_pool
+    cpus = os.cpu_count() or 4
+    _process_pool = ProcessPoolExecutor(max_workers=cpus)
+    yield
+    _process_pool.shutdown(wait=True)
+    _process_pool = None
+
+
 # Create FastAPI app
 app = FastAPI(
     title="Baseball Game Simulation API",
     description="Simulate baseball games with deterministic results",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware for service-to-service communication
@@ -86,7 +104,8 @@ def simulate_single_game(
     rules: dict,
     level_config: dict,
     game_constants: dict,
-    injury_types: list = None
+    injury_types: list = None,
+    detail_level: str = "full"
 ) -> dict:
     """
     Simulate a single game.
@@ -97,6 +116,7 @@ def simulate_single_game(
         level_config: Level-specific configuration
         game_constants: Shared game constants
         injury_types: List of injury type definitions
+        detail_level: Response verbosity - "full", "standard", or "minimal"
 
     Returns:
         Game result dictionary
@@ -112,7 +132,7 @@ def simulate_single_game(
         )
 
         # Run simulation
-        result = game.run_simulation()
+        result = game.run_simulation(detail_level=detail_level)
         return result
 
     except Exception as e:
@@ -146,6 +166,7 @@ def _worker_simulate(job: dict) -> dict:
             level_config=job["level_config"],
             game_constants=job["game_constants"],
             injury_types=job.get("injury_types"),
+            detail_level=job.get("detail_level", "full"),
         )
         if "error" in result and result.get("result") is None:
             return {
@@ -258,7 +279,8 @@ async def simulate(payload: SimulationPayload):
     """
     try:
         payload_dict = payload.model_dump()
-        result = process_simulation(payload_dict)
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, process_simulation, payload_dict)
         return result
 
     except Exception as e:
@@ -321,25 +343,30 @@ async def simulate_batch(payload: BatchPayload):
                 "game_constants": game_constants,
                 "injury_types": injury_types,
                 "payload_index": i,
+                "detail_level": payload.detail_level,
             })
 
-    # Run games in parallel across CPU cores
+    # Submit all games to the shared process pool (non-blocking)
+    loop = asyncio.get_event_loop()
+    futures = [
+        loop.run_in_executor(_process_pool, _worker_simulate, job)
+        for job in jobs
+    ]
+    outcomes = await asyncio.gather(*futures, return_exceptions=True)
+
     results = []
     errors = []
-    max_workers = min(os.cpu_count() or 4, len(jobs)) if jobs else 1
-
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(_worker_simulate, job): job for job in jobs}
-        for future in as_completed(futures):
-            outcome = future.result()
-            if outcome["ok"]:
-                results.append(outcome["result"])
-            else:
-                errors.append({
-                    "game_id": outcome.get("game_id"),
-                    "payload_index": outcome.get("payload_index"),
-                    "error": outcome.get("error"),
-                })
+    for outcome in outcomes:
+        if isinstance(outcome, Exception):
+            errors.append({"game_id": None, "payload_index": None, "error": str(outcome)})
+        elif outcome["ok"]:
+            results.append(outcome["result"])
+        else:
+            errors.append({
+                "game_id": outcome.get("game_id"),
+                "payload_index": outcome.get("payload_index"),
+                "error": outcome.get("error"),
+            })
 
     return {
         "results": results,

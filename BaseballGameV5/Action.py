@@ -56,7 +56,7 @@ class Action():
         if hasattr(self.game, 'injury_adapter') and self.game.injury_adapter:
             from injury_system import InjurySystem
             if not hasattr(self.game, '_injury_system'):
-                self.game._injury_system = InjurySystem(self.game.injury_adapter)
+                self.game._injury_system = InjurySystem(self.game.injury_adapter, self.game.ingame_injury_base_rate)
 
             # Check batter for injury
             batter = self.game.battingteam.currentbatter

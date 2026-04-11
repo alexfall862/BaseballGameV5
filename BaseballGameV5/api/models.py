@@ -173,6 +173,7 @@ class BatchPayload(BaseModel):
     """
     games: List[Dict[str, Any]]
     subweek: Optional[str] = None
+    detail_level: str = Field(default="full", description="Response detail: 'full', 'standard' (no debug), or 'minimal' (no debug/tuning/verbose actions)")
     game_constants: Optional[Dict[str, Any]] = None
     level_configs: Optional[Dict[str, Any]] = None
     rules: Optional[Dict[str, Any]] = None
