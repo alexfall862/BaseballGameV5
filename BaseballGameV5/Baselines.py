@@ -25,6 +25,7 @@ class Baselines():
         self.steal_success = float(baselines["steal_success"])
         self.pickoff_success = float(baselines["pickoff_success"])
         self.stealawareness_max = float(baselines["stealawareness_max"])
+        self.pickoffawareness_max = float(baselines.get("pickoffawareness_max", 0.85))
         self.error_rate = float(baselines["error_rate"])
 
         spread = load["spread"]
@@ -70,6 +71,7 @@ class Baselines():
         self.consist_exponent_low = float(load.get("consist_exponent_low", 1.2))
         self.consist_exponent_high = float(load.get("consist_exponent_high", 3.0))
         self.steal_awareness_exponent = float(load.get("steal_awareness_exponent", 2.0))
+        self.pickoff_awareness_exponent = float(load.get("pickoff_awareness_exponent", 1.6))
 
     def __repr__(self):
         return f"{self.leaguetype}"
@@ -107,6 +109,7 @@ class Baselines():
         instance.steal_success = float(baselines.get("steal_success", 0.65))
         instance.pickoff_success = float(baselines.get("pickoff_success", 0.1))
         instance.stealawareness_max = float(baselines.get("stealawareness_max", 0.80))
+        instance.pickoffawareness_max = float(baselines.get("pickoffawareness_max", 0.85))
         instance.error_rate = float(baselines.get("error_rate", 0.05))
 
         spread = data.get("spread", {})
@@ -152,6 +155,7 @@ class Baselines():
         instance.consist_exponent_low = float(data.get("consist_exponent_low", 1.2))
         instance.consist_exponent_high = float(data.get("consist_exponent_high", 3.0))
         instance.steal_awareness_exponent = float(data.get("steal_awareness_exponent", 1.4))
+        instance.pickoff_awareness_exponent = float(data.get("pickoff_awareness_exponent", 1.6))
 
         return instance
 

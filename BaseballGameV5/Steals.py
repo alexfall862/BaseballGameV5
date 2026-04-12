@@ -38,10 +38,10 @@ class Steals():
         else:
             pickofffreqrating = Steals.pull_pickofffreq(self.gamestate.game.pitchingteam.currentpitcher, self.defensestrategy.playerstrategy)
             diceroll = random.random() * 100
-            if pickofffreqrating > diceroll:
+            if pickofffreqrating > diceroll and self.gamestate.game.pickoff_attempts_this_pa < 3:
                 if firstbase != None:
                     self.gamestate.game.is_pickoff = True
-                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.firstbase)
+                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, firstbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.firstbase, pickofffreqrating)
                     if pickoff == True:
                         if (throwerror == False and catcherror == False):
                             self.gamestate.defensiveoutcome = (None, None, None, "successful pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
@@ -73,10 +73,10 @@ class Steals():
                 pass
 
             diceroll = random.random() * 100
-            if pickofffreqrating > diceroll:
+            if pickofffreqrating > diceroll and self.gamestate.game.pickoff_attempts_this_pa < 3:
                 if secondbase != None:
                     self.gamestate.game.is_pickoff = True
-                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, secondbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.secondbase)
+                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, secondbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.secondbase, pickofffreqrating)
                     if pickoff == True:
                         if throwerror == False and catcherror == False:
                             self.gamestate.defensiveoutcome = (None, None, None, "successful pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
@@ -108,10 +108,10 @@ class Steals():
                 pass
 
             diceroll = random.random() * 100
-            if pickofffreqrating > diceroll:
+            if pickofffreqrating > diceroll and self.gamestate.game.pickoff_attempts_this_pa < 3:
                 if thirdbase != None:
                     self.gamestate.game.is_pickoff = True
-                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.thirdbase)
+                    pickoff, baserunner, throwerror, catcherror = Steals.pickoff_math(self, self.gamestate.game.baselines.pickoff_success, thirdbase, self.gamestate.game.pitchingteam.currentpitcher, self.gamestate.game.pitchingteam.thirdbase, pickofffreqrating)
                     if pickoff == True:
                         if throwerror == False and catcherror == False:
                             self.gamestate.defensiveoutcome = (None, None, None, "successful pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
@@ -276,8 +276,11 @@ class Steals():
                     pass
         return False
             
-    def pickoff_math(self, pickoffsuccess, baserunner, pitcher, baseman):
+    def pickoff_math(self, pickoffsuccess, baserunner, pitcher, baseman, pickofffreq):
         diceroll = random.random() * 100
+
+        # Count this attempt against the per-PA cap (MLB disengagement rule analogue)
+        self.gamestate.game.pickoff_attempts_this_pa += 1
 
         pickoffmod = (pitcher.pickoff - 50)/50
         pickoffchances = (1+pickoffmod)*50
@@ -296,7 +299,27 @@ class Steals():
             self.gamestate.defensiveoutcome = (None, None, None, "error on pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)
             return False, baserunner, error_check[0], error_check[1]
 
-        pickoffscore = (pickoffchances / baserunner) * pickoffsuccess if baserunner > 0 else 1.0
+        # Diminishing returns based on pickofffreq (runner becomes more aware
+        # the more often the pitcher disengages). Mirrors the steal awareness
+        # penalty model in calc_baserunning_math. Default DB pickofffreq is 1,
+        # so the soft threshold sits at the default — no penalty there.
+        SOFT_THRESHOLD = 1.0
+        HARD_THRESHOLD = 5.0
+        STEEP_THRESHOLD = 10.0
+        pickoff_awareness_max = self.gamestate.game.baselines.pickoffawareness_max
+        awareness_exponent = self.gamestate.game.baselines.pickoff_awareness_exponent
+        if pickofffreq <= SOFT_THRESHOLD:
+            awareness_penalty = 0.0
+        elif pickofffreq <= HARD_THRESHOLD:
+            awareness_penalty = 0.03 * (pickofffreq - SOFT_THRESHOLD) / (HARD_THRESHOLD - SOFT_THRESHOLD)
+        elif pickofffreq <= STEEP_THRESHOLD:
+            t = (pickofffreq - HARD_THRESHOLD) / (STEEP_THRESHOLD - HARD_THRESHOLD)
+            awareness_penalty = 0.03 + 0.22 * t
+        else:
+            t = (pickofffreq - STEEP_THRESHOLD) / (100.0 - STEEP_THRESHOLD)
+            awareness_penalty = 0.25 + (pickoff_awareness_max - 0.25) * (t ** awareness_exponent)
+
+        pickoffscore = (pickoffchances / baserunner) * pickoffsuccess * (1 - awareness_penalty) if baserunner > 0 else 1.0
         diceroll = random.random()
         if pickoffscore > diceroll:
             self.gamestate.defensiveoutcome = (None, None, None, "pickoff", [self.gamestate.game.on_firstbase, self.gamestate.game.on_secondbase, self.gamestate.game.on_thirdbase, self.gamestate.game.current_runners_home], self.errorlist, self.defensiveactions)

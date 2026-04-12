@@ -345,6 +345,7 @@ def NextAtBat(self):
         self.game.is_hbp = False
         self.game.is_strikeout = False
         self.game.ab_over = False
+        self.game.pickoff_attempts_this_pa = 0
         if self.game.on_firstbase != None:
             self.game.on_firstbase.earned_bool = True
         if self.game.on_secondbase != None:

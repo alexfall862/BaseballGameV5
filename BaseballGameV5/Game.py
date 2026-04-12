@@ -49,6 +49,7 @@ class Game():
         self.is_walk = False
         self.is_strikeout = False
         self.is_pickoff = False
+        self.pickoff_attempts_this_pa = 0
         self.is_stealattempt = False
         self.is_stealsuccess = False
         self.is_inplay = False
@@ -189,6 +190,7 @@ class Game():
         instance.is_walk = False
         instance.is_strikeout = False
         instance.is_pickoff = False
+        instance.pickoff_attempts_this_pa = 0
         instance.is_stealattempt = False
         instance.is_stealsuccess = False
         instance.is_inplay = False
