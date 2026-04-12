@@ -593,6 +593,9 @@ class Game():
                         "blown_save": ps.blown_save,
                         "quality_start": ps.quality_start,
                         "stamina_cost": int(round(player.starting_energy - player.energy)),
+                        "pitches_thrown": ps.pitches_thrown,
+                        "balls": ps.balls,
+                        "strikes": ps.strikes,
                         # Expanded stats
                         "batters_faced": ps.batters_faced,
                         "sacrifice_flies_allowed": ps.sacrifice_flies_allowed,
