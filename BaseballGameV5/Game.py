@@ -596,6 +596,7 @@ class Game():
                         "pitches_thrown": ps.pitches_thrown,
                         "balls": ps.balls,
                         "strikes": ps.strikes,
+                        "hbp": ps.hbp,
                         # Expanded stats
                         "batters_faced": ps.batters_faced,
                         "sacrifice_flies_allowed": ps.sacrifice_flies_allowed,
