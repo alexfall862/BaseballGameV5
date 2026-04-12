@@ -1,14 +1,11 @@
 """
-Injury Adapter - Handles pregame injury effects and injury type utilities.
+Injury Adapter - Applies backend-rolled pregame injuries and provides
+injury type utilities for the in-game injury system.
 
-The endpoint provides:
-- pregame_injuries: Array of injuries affecting players before the game
-- injury_types: Array of all possible injury types with their effects and durations
-
-This adapter:
-1. Applies pregame injury effects to player stats
-2. Provides utilities for injury type lookups
-3. Calculates injury risk modifiers based on player injury_risk attribute
+Pregame injuries are rolled and persisted by the backend before the sim is
+called; this adapter only applies their pre-resolved stat effects to Player
+objects. It does NOT generate pregame injuries. In-game injury generation
+lives in injury_system.py.
 """
 
 from typing import Dict, List, Optional
@@ -164,25 +161,6 @@ class InjuryAdapter:
         pool = []
         for injury in self.injury_types.values():
             if injury.get("timeframe") != "ingame":
-                continue
-            if target and injury.get("target") not in [target, "both"]:
-                continue
-            pool.append(injury)
-        return pool
-
-    def get_pregame_injury_pool(self, target: str = None) -> List[dict]:
-        """
-        Get pool of injuries that can occur pregame.
-
-        Args:
-            target: Filter by target ("hitter", "pitcher", "both", or None for all)
-
-        Returns:
-            List of injury types that can occur pregame
-        """
-        pool = []
-        for injury in self.injury_types.values():
-            if injury.get("timeframe") != "pregame":
                 continue
             if target and injury.get("target") not in [target, "both"]:
                 continue

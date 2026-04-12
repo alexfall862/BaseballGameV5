@@ -577,6 +577,7 @@ class Team():
         # Entry-state tracking for save/hold/blown-save determination
         score_diff = self.score - game.battingteam.score
         runners_on = sum(1 for r in [game.on_firstbase, game.on_secondbase, game.on_thirdbase] if r is not None)
+        newpitcher.pitchingstats.Adder("inherited_runners", runners_on)
 
         game.substitutions.append({
             "team": self.name,
@@ -633,6 +634,7 @@ class Team():
         # Entry-state tracking for save/hold/blown-save determination
         score_diff = self.score - game.battingteam.score
         runners_on = sum(1 for r in [game.on_firstbase, game.on_secondbase, game.on_thirdbase] if r is not None)
+        emergency.pitchingstats.Adder("inherited_runners", runners_on)
 
         game.substitutions.append({
             "team": self.name,

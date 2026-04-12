@@ -270,6 +270,10 @@ class Game():
             "stats": self._build_api_stats(),
             "play_by_play": self.actions,
             "substitutions": self.substitutions,
+            # Echo both pregame and ingame injuries back. Backend's persistence is
+            # unified at a single sink that reads timeframe from each entry; duplicate
+            # protection lives at the DB layer (UNIQUE KEY on gamelist_id, player_id,
+            # injury_type_id with ON DUPLICATE KEY UPDATE), so re-emitting pregame is safe.
             "injuries": self.pregame_injury_reports + getattr(self, 'ingame_injury_reports', []),
         }
 
@@ -554,6 +558,19 @@ class Game():
                         "stolen_bases": bs.stolen_bases,
                         "caught_stealing": bs.caught_stealing,
                         "stamina_cost": int(round(player.starting_energy - player.energy)),
+                        # Expanded stats
+                        "sacrifice_flies": bs.sacrifice_flies,
+                        "gidp": bs.gidp,
+                        "ground_balls": bs.ground_balls,
+                        "fly_balls": bs.fly_balls,
+                        "popups": bs.popups,
+                        "contact_barrel": bs.contact_barrel,
+                        "contact_solid": bs.contact_solid,
+                        "contact_flare": bs.contact_flare,
+                        "contact_burner": bs.contact_burner,
+                        "contact_under": bs.contact_under,
+                        "contact_topped": bs.contact_topped,
+                        "contact_weak": bs.contact_weak,
                     }
 
                 # PITCHERS: every player who threw pitches
@@ -576,6 +593,22 @@ class Game():
                         "blown_save": ps.blown_save,
                         "quality_start": ps.quality_start,
                         "stamina_cost": int(round(player.starting_energy - player.energy)),
+                        # Expanded stats
+                        "batters_faced": ps.batters_faced,
+                        "sacrifice_flies_allowed": ps.sacrifice_flies_allowed,
+                        "gidp_induced": ps.gidp_induced,
+                        "ground_balls_allowed": ps.ground_balls_allowed,
+                        "fly_balls_allowed": ps.fly_balls_allowed,
+                        "popups_allowed": ps.popups_allowed,
+                        "inherited_runners": ps.inherited_runners,
+                        "inherited_runners_scored": ps.inherited_runners_scored,
+                        "contact_barrel": ps.contact_barrel,
+                        "contact_solid": ps.contact_solid,
+                        "contact_flare": ps.contact_flare,
+                        "contact_burner": ps.contact_burner,
+                        "contact_under": ps.contact_under,
+                        "contact_topped": ps.contact_topped,
+                        "contact_weak": ps.contact_weak,
                     }
 
                 # FIELDERS: every player who played in the field
@@ -592,6 +625,7 @@ class Game():
                         "putouts": fs.putouts,
                         "assists": fs.assists,
                         "errors": fs.throwing_errors + fs.catching_errors,
+                        "double_plays_turned": fs.double_plays_turned,
                     }
 
         return {

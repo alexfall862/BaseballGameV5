@@ -86,7 +86,7 @@ DEFAULT_LEVEL_CONFIG = {
         "energy_step": 2, "energy_tick_cap": 1.5, "error_rate": 0.05,
         "fielding_multiplier": 0, "ingame_injury_base_rate": 0.001,
         "long_leash": 0.5, "normal_leash": 0.7, "pickoff_success": 0.1,
-        "pregame_injury_base_rate": 0.1, "short_leash": 0.8, "steal_success": 0.65
+        "short_leash": 0.8, "steal_success": 0.65
     }
 }
 

@@ -788,6 +788,7 @@ class fielding():
         )
         self.errorlist = []
         self.defensiveactions = []
+        self.dp_fielders = []  # Fielders involved in outs (for DP attribution)
         self.catch_probability = None  # Set in _is_out_play if applicable
         self.timing_diagnostics = None  # Set if ENABLE_TIMING_DIAGNOSTICS is True
 
@@ -1162,6 +1163,7 @@ class fielding():
                         # Award putout to fielder who caught
                         if hasattr(self.fieldingdefender, 'fieldingstats'):
                             self.fieldingdefender.fieldingstats.Adder("putouts", 1)
+                            self.dp_fielders.append(self.fieldingdefender)
 
                         # Handle tag-up opportunities for runners on base
                         # (sac flies, advancing on deep flies)
@@ -1173,8 +1175,10 @@ class fielding():
                         first_baseman = self.gamestate.game.pitchingteam.firstbase
                         if hasattr(first_baseman, 'fieldingstats'):
                             first_baseman.fieldingstats.Adder("putouts", 1)
+                            self.dp_fielders.append(first_baseman)
                         if hasattr(self.fieldingdefender, 'fieldingstats'):
                             self.fieldingdefender.fieldingstats.Adder("assists", 1)
+                            self.dp_fielders.append(self.fieldingdefender)
 
                     # Update force state
                     DefenseDecisionTree.update_force_state_after_out(
@@ -1419,8 +1423,10 @@ class fielding():
             # Out recorded - award assist to thrower, putout to catcher
             if hasattr(thrower, 'fieldingstats'):
                 thrower.fieldingstats.Adder("assists", 1)
+                self.dp_fielders.append(thrower)
             if hasattr(covering_player, 'fieldingstats'):
                 covering_player.fieldingstats.Adder("putouts", 1)
+                self.dp_fielders.append(covering_player)
             return "out"
         else:
             return "safe"

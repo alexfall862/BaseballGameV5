@@ -230,13 +230,45 @@ class Action():
         self.game.battingteam.score += len(self.game.current_runners_home)
         for runners in self.game.current_runners_home:
             stats.RunScorer(runners)
+            # Track inherited runners scored: runner's responsible pitcher differs
+            # from the current pitcher, meaning the current pitcher inherited them
+            if (runners.on_base_pitcher is not None and
+                    runners.on_base_pitcher != self.game.pitchingteam.currentpitcher):
+                self.game.pitchingteam.currentpitcher.pitchingstats.Adder(
+                    "inherited_runners_scored", 1)
         # Credit RBI to the batter (skip_bool guards against steal/pickoff plays)
         if len(self.game.current_runners_home) > 0 and not self.game.skip_bool:
             self.game.battingteam.currentbatter.battingstats.Adder(
                 "rbi", len(self.game.current_runners_home))
+
+        # Sacrifice fly detection: R3 with <2 outs, outfield fly ball out, R3 scores
+        if (self.pre_r3 is not None and self.pre_outs < 2 and
+                self.defensiveoutcome is not None and
+                self.defensiveoutcome[3] == "out" and
+                self.game.air_or_ground == "air" and
+                getattr(self.game, 'hit_depth', None) in ("deep_of", "middle_of", "shallow_of")):
+            pre_r3_id = getattr(self.pre_r3, 'id', None)
+            scored_ids = [getattr(r, 'id', None) for r in self.game.current_runners_home]
+            if pre_r3_id and pre_r3_id in scored_ids:
+                self.game.battingteam.currentbatter.battingstats.Adder("sacrifice_flies", 1)
+                self.game.pitchingteam.currentpitcher.pitchingstats.Adder("sacrifice_flies_allowed", 1)
+
+        # GIDP detection: R1 with <2 outs, ground ball, 2+ outs on play
+        if (self.pre_r1 is not None and self.pre_outs < 2 and
+                self.game.air_or_ground == "ground" and self.game.outcount >= 2):
+            self.game.battingteam.currentbatter.battingstats.Adder("gidp", 1)
+            self.game.pitchingteam.currentpitcher.pitchingstats.Adder("gidp_induced", 1)
+            # Credit fielders involved in the DP
+            if hasattr(self, 'defensiveoutcome') and self.defensiveoutcome is not None:
+                fielding_obj = getattr(self, '_fielding_obj', None)
+                if fielding_obj and hasattr(fielding_obj, 'dp_fielders'):
+                    for fielder in fielding_obj.dp_fielders:
+                        if hasattr(fielder, 'fieldingstats'):
+                            fielder.fieldingstats.Adder("double_plays_turned", 1)
+
         self.game.actions.append(self.ActionPrint())
         NextAction(self)
-        NextAtBat(self)        
+        NextAtBat(self)
 
         if self.game.outcount > 0:
             OutProcessor(self)
@@ -330,9 +362,10 @@ def NextAction(self):
 def NextAtBat(self):
     #print(self.game.ab_over)
     if self.game.ab_over == True:
+        self.game.pitchingteam.currentpitcher.pitchingstats.Adder("batters_faced", 1)
         if self.game.is_walk  == True or self.game.is_hbp == True:
             pass
-        else: 
+        else:
             self.game.battingteam.currentbatter.battingstats.Adder("at_bats", 1)
         self.game.currentstrikes = 0
         self.game.currentballs = 0
@@ -398,6 +431,7 @@ def AtBatOutcomeParser(self):
 
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
         fielding_result = d.fielding(self)
+        self._fielding_obj = fielding_result  # Preserve for DP fielder tracking
         self.defensiveoutcome = fielding_result.defenseoutcome
 
         # Set game state fields from fielding result
@@ -434,6 +468,31 @@ def AtBatOutcomeParser(self):
         # Track which pitcher is responsible for this batter reaching base
         stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)
         self.game.ab_over = True
+
+        # --- Batted ball type counters ---
+        batter = self.game.battingteam.currentbatter
+        pitcher = self.game.pitchingteam.currentpitcher
+
+        # Contact type (barrel/solid/flare/burner/under/topped/weak)
+        contact_key = f"contact_{fielding_result.contacttype}"
+        if hasattr(batter.battingstats, contact_key):
+            batter.battingstats.Adder(contact_key, 1)
+            pitcher.pitchingstats.Adder(contact_key, 1)
+
+        # Batted ball classification (ground_balls / fly_balls / popups)
+        if fielding_result.depth == "homerun":
+            batter.battingstats.Adder("fly_balls", 1)
+            pitcher.pitchingstats.Adder("fly_balls_allowed", 1)
+        elif fielding_result.airball_bool:
+            if fielding_result.depth in ("deep_of", "middle_of", "shallow_of"):
+                batter.battingstats.Adder("fly_balls", 1)
+                pitcher.pitchingstats.Adder("fly_balls_allowed", 1)
+            else:
+                batter.battingstats.Adder("popups", 1)
+                pitcher.pitchingstats.Adder("popups_allowed", 1)
+        else:
+            batter.battingstats.Adder("ground_balls", 1)
+            pitcher.pitchingstats.Adder("ground_balls_allowed", 1)
 
 
 #GAME STATE

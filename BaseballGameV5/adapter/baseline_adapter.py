@@ -335,19 +335,3 @@ class BaselineAdapter:
 
         return result
 
-    @classmethod
-    def get_injury_rates(cls, level_config: dict) -> dict:
-        """
-        Extract injury rate settings from level config.
-
-        Args:
-            level_config: The level-specific config
-
-        Returns:
-            Dict with pregame and ingame injury base rates
-        """
-        game_settings = level_config.get("game", {})
-        return {
-            "pregame_base_rate": game_settings.get("pregame_injury_base_rate", 0.1),
-            "ingame_base_rate": game_settings.get("ingame_injury_base_rate", 0.1),
-        }

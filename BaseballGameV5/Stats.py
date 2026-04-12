@@ -108,6 +108,23 @@ class PitchingStats():
         self.hold = 0
         self.blown_save = 0
         self.quality_start = 0
+        # Expanded counting stats
+        self.batters_faced = 0
+        self.sacrifice_flies_allowed = 0
+        self.gidp_induced = 0
+        self.ground_balls_allowed = 0
+        self.fly_balls_allowed = 0
+        self.popups_allowed = 0
+        self.inherited_runners = 0
+        self.inherited_runners_scored = 0
+        # Raw contact type counters
+        self.contact_barrel = 0
+        self.contact_solid = 0
+        self.contact_flare = 0
+        self.contact_burner = 0
+        self.contact_under = 0
+        self.contact_topped = 0
+        self.contact_weak = 0
 
     @property
     def innings_pitched(self):
@@ -145,6 +162,7 @@ class FieldingStats():
         self.assists = 0
         self.putouts = 0
         self.outs_played = 0  # Store as integer outs
+        self.double_plays_turned = 0
 
     @property
     def innings_played(self):
@@ -194,6 +212,20 @@ class BattingStats():
         self.ibb = 0
         self.rbi = 0
         self.bases = 0
+        # Batted ball type counters
+        self.sacrifice_flies = 0
+        self.gidp = 0
+        self.ground_balls = 0
+        self.fly_balls = 0
+        self.popups = 0
+        # Raw contact type counters
+        self.contact_barrel = 0
+        self.contact_solid = 0
+        self.contact_flare = 0
+        self.contact_burner = 0
+        self.contact_under = 0
+        self.contact_topped = 0
+        self.contact_weak = 0
         
     def Combiner(self):
         self.hits = self.singles + self.doubles + self.triples + self.homeruns
@@ -424,6 +456,22 @@ def PitchDeDuper(players):
             result[player.pid].balks += player.balks
             result[player.pid].games_started += player.games_started
             result[player.pid].appearances += player.appearances
+            # Expanded stats
+            result[player.pid].batters_faced += getattr(player, 'batters_faced', 0)
+            result[player.pid].sacrifice_flies_allowed += getattr(player, 'sacrifice_flies_allowed', 0)
+            result[player.pid].gidp_induced += getattr(player, 'gidp_induced', 0)
+            result[player.pid].ground_balls_allowed += getattr(player, 'ground_balls_allowed', 0)
+            result[player.pid].fly_balls_allowed += getattr(player, 'fly_balls_allowed', 0)
+            result[player.pid].popups_allowed += getattr(player, 'popups_allowed', 0)
+            result[player.pid].inherited_runners += getattr(player, 'inherited_runners', 0)
+            result[player.pid].inherited_runners_scored += getattr(player, 'inherited_runners_scored', 0)
+            result[player.pid].contact_barrel += getattr(player, 'contact_barrel', 0)
+            result[player.pid].contact_solid += getattr(player, 'contact_solid', 0)
+            result[player.pid].contact_flare += getattr(player, 'contact_flare', 0)
+            result[player.pid].contact_burner += getattr(player, 'contact_burner', 0)
+            result[player.pid].contact_under += getattr(player, 'contact_under', 0)
+            result[player.pid].contact_topped += getattr(player, 'contact_topped', 0)
+            result[player.pid].contact_weak += getattr(player, 'contact_weak', 0)
 
         else:
             result[player.pid] = player
@@ -437,6 +485,7 @@ def FieldDeDuper(players):
             result[player.pid].catching_errors += player.catching_errors
             result[player.pid].assists += player.assists
             result[player.pid].putouts += player.putouts
+            result[player.pid].double_plays_turned += getattr(player, 'double_plays_turned', 0)
             # Convert display innings to outs, add, then back to display
             existing_outs = innings_to_outs(result[player.pid].innings_played)
             new_outs = innings_to_outs(player.innings_played)
@@ -472,6 +521,19 @@ def BatDeDuper(players):
             result[player.pid].triples += player.triples
             result[player.pid].triples += player.triples
             result[player.pid].triples += player.triples
+            # Expanded stats
+            result[player.pid].sacrifice_flies += getattr(player, 'sacrifice_flies', 0)
+            result[player.pid].gidp += getattr(player, 'gidp', 0)
+            result[player.pid].ground_balls += getattr(player, 'ground_balls', 0)
+            result[player.pid].fly_balls += getattr(player, 'fly_balls', 0)
+            result[player.pid].popups += getattr(player, 'popups', 0)
+            result[player.pid].contact_barrel += getattr(player, 'contact_barrel', 0)
+            result[player.pid].contact_solid += getattr(player, 'contact_solid', 0)
+            result[player.pid].contact_flare += getattr(player, 'contact_flare', 0)
+            result[player.pid].contact_burner += getattr(player, 'contact_burner', 0)
+            result[player.pid].contact_under += getattr(player, 'contact_under', 0)
+            result[player.pid].contact_topped += getattr(player, 'contact_topped', 0)
+            result[player.pid].contact_weak += getattr(player, 'contact_weak', 0)
 
         else:
             result[player.pid] = player
