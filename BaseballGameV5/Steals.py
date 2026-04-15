@@ -304,20 +304,20 @@ class Steals():
         # penalty model in calc_baserunning_math. Default DB pickofffreq is 1,
         # so the soft threshold sits at the default — no penalty there.
         SOFT_THRESHOLD = 1.0
-        HARD_THRESHOLD = 5.0
-        STEEP_THRESHOLD = 10.0
+        HARD_THRESHOLD = 3.0
+        STEEP_THRESHOLD = 7.0
         pickoff_awareness_max = self.gamestate.game.baselines.pickoffawareness_max
         awareness_exponent = self.gamestate.game.baselines.pickoff_awareness_exponent
         if pickofffreq <= SOFT_THRESHOLD:
             awareness_penalty = 0.0
         elif pickofffreq <= HARD_THRESHOLD:
-            awareness_penalty = 0.03 * (pickofffreq - SOFT_THRESHOLD) / (HARD_THRESHOLD - SOFT_THRESHOLD)
+            awareness_penalty = 0.05 * (pickofffreq - SOFT_THRESHOLD) / (HARD_THRESHOLD - SOFT_THRESHOLD)
         elif pickofffreq <= STEEP_THRESHOLD:
             t = (pickofffreq - HARD_THRESHOLD) / (STEEP_THRESHOLD - HARD_THRESHOLD)
-            awareness_penalty = 0.03 + 0.22 * t
+            awareness_penalty = 0.05 + 0.25 * t
         else:
             t = (pickofffreq - STEEP_THRESHOLD) / (100.0 - STEEP_THRESHOLD)
-            awareness_penalty = 0.25 + (pickoff_awareness_max - 0.25) * (t ** awareness_exponent)
+            awareness_penalty = 0.30 + (pickoff_awareness_max - 0.30) * (t ** awareness_exponent)
 
         pickoffscore = (pickoffchances / baserunner) * pickoffsuccess * (1 - awareness_penalty) if baserunner > 0 else 1.0
         diceroll = random.random()
@@ -342,22 +342,20 @@ class Steals():
         battery = ((1 + (ctp*15 + cta*3 + ccs*1 + pps*1) / 20) * 50) + cfr
         comp_score = baserunner / battery if battery > 0 else 1.0
 
-        SOFT_THRESHOLD = 2.0
-        HARD_THRESHOLD = 5.0
-        STEEP_THRESHOLD = 10.0
+        SOFT_THRESHOLD = 1.5
+        HARD_THRESHOLD = 3.5
+        STEEP_THRESHOLD = 7.0
         awareness_exponent = self.gamestate.game.baselines.steal_awareness_exponent
         if stealfreq <= SOFT_THRESHOLD:
             awareness_penalty = 0.0
         elif stealfreq <= HARD_THRESHOLD:
-            awareness_penalty = 0.03 * (stealfreq - SOFT_THRESHOLD) / (HARD_THRESHOLD - SOFT_THRESHOLD)
+            awareness_penalty = 0.05 * (stealfreq - SOFT_THRESHOLD) / (HARD_THRESHOLD - SOFT_THRESHOLD)
         elif stealfreq <= STEEP_THRESHOLD:
-            # Steep initial ramp: 3% → 20% over just 5 frequency units
             t = (stealfreq - HARD_THRESHOLD) / (STEEP_THRESHOLD - HARD_THRESHOLD)
-            awareness_penalty = 0.03 + 0.17 * t
+            awareness_penalty = 0.05 + 0.20 * t
         else:
-            # Slightly convex ramp from 20% to ceiling across remaining range
             t = (stealfreq - STEEP_THRESHOLD) / (100.0 - STEEP_THRESHOLD)
-            awareness_penalty = 0.20 + (stealawareness_max - 0.20) * (t ** awareness_exponent)
+            awareness_penalty = 0.25 + (stealawareness_max - 0.25) * (t ** awareness_exponent)
 
         steal_outcome_odds = comp_score * stealsuccess * (1 - awareness_penalty)
 

@@ -185,6 +185,8 @@ class Action():
             "Is_StealSuccess": self.game.is_stealsuccess,
             "Error_Count": self.game.error_count,
             "Is_Liveball": self.game.is_liveball,
+            "Is_WildPitch": getattr(self.game, 'is_wild_pitch', False),
+            "WP_Descriptions": getattr(self.game, 'wp_descriptions', []),
             "Is_Foul": self.outcome is not None and len(self.outcome) > 1 and self.outcome[1] == "Foul",
             "Is_Single": self.game.is_single,
             "Is_Double": self.game.is_double,
@@ -342,7 +344,81 @@ def WalkEval(self):
 
 
     else:
-        pass    
+        pass
+
+def WildPitchAdvancement(self):
+    """
+    Process wild pitch: catcher blocking check, then runner advancement.
+    Returns True if runners advanced (WP/PB), False if catcher blocked.
+    """
+    catcher = self.game.pitchingteam.catcher
+    pitcher = self.game.pitchingteam.currentpitcher
+
+    # Catcher blocking check using catchframe
+    catchframe = max(getattr(catcher, 'catchframe', 50), 20)
+    frame_normalized = (catchframe - 20) / 90  # 0.0 to 1.0
+
+    # Block chance: 70% at low catchframe (20), 95% at high catchframe (110)
+    block_floor = 0.70
+    block_ceiling = 0.95
+    block_chance = block_floor + frame_normalized * (block_ceiling - block_floor)
+
+    if random.random() < block_chance:
+        # Catcher blocked it — no advancement, just a normal pitch
+        return False
+
+    # --- Catcher failed to block — live ball, runners advance ---
+
+    # Determine WP vs PB attribution
+    # If pitcher's blended control < 40, it's a wild pitch (pitcher's fault)
+    # Otherwise it's a passed ball (catcher should have caught it)
+    blended_control = getattr(self.pitch_event, 'blended_control', 50)
+    is_wild_pitch = blended_control < 40
+
+    # Stat tracking
+    if is_wild_pitch:
+        pitcher.pitchingstats.Adder("wildpitches", 1)
+    else:
+        if hasattr(catcher, 'fieldingstats'):
+            catcher.fieldingstats.Adder("passed_balls", 1)
+
+    # Advance runners one base — score runs directly (not via current_runners_home)
+    # to avoid crediting RBI to the batter
+    descriptions = []
+    event_label = "wild pitch" if is_wild_pitch else "passed ball"
+
+    # R3 scores
+    if self.game.on_thirdbase is not None:
+        runner = self.game.on_thirdbase
+        self.game.battingteam.score += 1
+        stats.RunScorer(runner)
+        if (runner.on_base_pitcher is not None and
+                runner.on_base_pitcher != pitcher):
+            pitcher.pitchingstats.Adder("inherited_runners_scored", 1)
+        descriptions.append(f"{runner.name} scores on {event_label}")
+        self.game.on_thirdbase = None
+
+    # R2 → R3
+    if self.game.on_secondbase is not None:
+        runner = self.game.on_secondbase
+        runner.battingstats.Adder("bases", 1)
+        descriptions.append(f"{runner.name} advances to third on {event_label}")
+        self.game.on_thirdbase = runner
+        self.game.on_secondbase = None
+
+    # R1 → R2
+    if self.game.on_firstbase is not None:
+        runner = self.game.on_firstbase
+        runner.battingstats.Adder("bases", 1)
+        descriptions.append(f"{runner.name} advances to second on {event_label}")
+        self.game.on_secondbase = runner
+        self.game.on_firstbase = None
+
+    # Set game state flags for ActionPrint
+    self.game.is_wild_pitch = True
+    self.game.wp_descriptions = descriptions
+
+    return True
 
 def NextAction(self):
     self.game.pitchingteam.TickPitcherStamina()
@@ -358,6 +434,8 @@ def NextAction(self):
     self.game.hit_situation = None
     self.game.catch_probability = None
     self.game.current_runners_home = []
+    self.game.is_wild_pitch = False
+    self.game.wp_descriptions = []
   
 def NextAtBat(self):
     #print(self.game.ab_over)
@@ -418,7 +496,18 @@ def AtBatOutcomeParser(self):
     if self.outcome[0] == 'Ball':
         self.game.pitchingteam.currentpitcher.pitchingstats.Adder("balls", 1)
         self.game.currentballs +=1
-    
+
+    # Wild pitch / passed ball check — after count update, before walk/K resolution.
+    # Fires on non-foul Strike or Ball pitches when runners are on base.
+    if (self.outcome[0] in ('Strike', 'Ball') and self.outcome[1] != 'Foul'
+            and hasattr(self, 'pitch_event') and self.pitch_event is not None
+            and getattr(self.pitch_event, 'wild_pitch_triggered', False)):
+        runners_on = (self.game.on_firstbase is not None or
+                      self.game.on_secondbase is not None or
+                      self.game.on_thirdbase is not None)
+        if runners_on:
+            WildPitchAdvancement(self)
+
     if self.game.currentballs >= self.game.rules.balls:
         stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)
         self.game.ab_over = True

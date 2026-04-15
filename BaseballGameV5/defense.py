@@ -956,13 +956,43 @@ class fielding():
         # Roll against out probability
         return random.random() < out_probability
 
+    # Position-specific skill weights for out probability composite.
+    # Tuple order: (fieldspot, fieldreact, speed, fieldcatch)
+    # Weights reflect which attributes matter most for each position's
+    # defensive range and ball-handling in real baseball.
+    POSITION_SKILL_WEIGHTS = {
+        "catcher":     (0.25, 0.35, 0.15, 0.25),  # reactions + hands on bunts/popups
+        "firstbase":   (0.20, 0.30, 0.15, 0.35),  # sure hands dominant — scoops, picks
+        "secondbase":  (0.30, 0.20, 0.30, 0.20),  # balanced range + DP exchange
+        "shortstop":   (0.25, 0.20, 0.40, 0.15),  # speed/range up the middle
+        "thirdbase":   (0.20, 0.50, 0.15, 0.15),  # hot corner reflexes
+        "leftfield":   (0.35, 0.20, 0.30, 0.15),  # routes + speed to gaps
+        "centerfield": (0.30, 0.10, 0.50, 0.10),  # speed is king — most ground to cover
+        "rightfield":  (0.35, 0.20, 0.25, 0.20),  # routes + speed, slight hands boost
+        "pitcher":     (0.30, 0.30, 0.20, 0.20),  # fallback/default
+    }
+
+    # Situation-based scaling for the skill modifier.
+    # Difficult plays see wider separation between elite and poor defenders;
+    # routine plays compress the spread (everyone makes the easy play).
+    SITUATION_SKILL_SCALE = {
+        "deep_gap":   2.0,   # hardest play — elite range matters enormously
+        "deep_line":  1.8,   # down the line + deep
+        "gap":        1.6,   # gap but not deep — speed still key
+        "deep":       1.5,   # deep straight-away — going back on ball
+        "line":       1.4,   # down the line, not deep
+        "routine_of": 0.6,   # routine fly — everyone catches these
+        "routine_if": 0.3,   # routine grounder — minimal differentiation
+    }
+
     def _fielder_skill_modifier(self) -> float:
         """
         Calculate out probability modifier from individual fielder skill.
 
-        Uses a weighted composite of fieldspot, fieldreact, and speed to shift
-        the base catch probability. An 80-composite fielder gets ~+8% out
-        probability, a 20-composite fielder gets ~-8%.
+        Uses a position-specific weighted composite of fieldspot, fieldreact,
+        speed, and fieldcatch, then scales by situation difficulty.  Difficult
+        plays (deep_gap, gap) amplify the skill spread; routine plays compress
+        it so that everyone converts easy chances at similar rates.
 
         Returns:
             Modifier to add to base out probability (positive = better defense)
@@ -971,17 +1001,22 @@ class fielding():
         if fielder is None:
             return 0.0
 
-        # Composite of the three key range attributes
-        react = getattr(fielder, 'fieldreact', 50)
         spot = getattr(fielder, 'fieldspot', 50)
+        react = getattr(fielder, 'fieldreact', 50)
         spd = getattr(fielder, 'speed', 50)
+        catch = getattr(fielder, 'fieldcatch', 50)
 
-        # Weighted composite: fieldspot matters most for range, then reaction, then speed
-        composite = (spot * 0.4 + react * 0.35 + spd * 0.25)
+        position = getattr(fielder, 'lineup', 'pitcher')
+        w_spot, w_react, w_spd, w_catch = self.POSITION_SKILL_WEIGHTS.get(
+            position, (0.30, 0.30, 0.20, 0.20)
+        )
 
-        # Convert to modifier: ±0.08 max (at 80/20 ratings)
-        # Each point from 50 = 0.27% shift
-        modifier = (composite - 50) * 0.00267
+        composite = (spot * w_spot + react * w_react + spd * w_spd + catch * w_catch)
+
+        # Situation-scaled modifier: ±0.08 base at 80/20 ratings,
+        # amplified on difficult plays, compressed on routine ones.
+        scale = self.SITUATION_SKILL_SCALE.get(self.situation, 1.0)
+        modifier = (composite - 50) * 0.00267 * scale
 
         return modifier
 

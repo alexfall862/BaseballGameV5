@@ -61,6 +61,8 @@ class Game():
         self.is_triple = False
         self.is_homerun = False
         self.is_liveball = False
+        self.is_wild_pitch = False
+        self.wp_descriptions = []
         self.ab_over = False
         self.topofinning = True
         self.gamedone = False
@@ -202,6 +204,8 @@ class Game():
         instance.is_triple = False
         instance.is_homerun = False
         instance.is_liveball = False
+        instance.is_wild_pitch = False
+        instance.wp_descriptions = []
         instance.ab_over = False
         instance.topofinning = True
         instance.gamedone = False

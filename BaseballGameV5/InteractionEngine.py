@@ -55,6 +55,12 @@ class PitchEvent:
     # Control-driven location constants
     PGENCONTROL_LOCATION_WEIGHT = 0.70  # pgencontrol share of blended control (pcntrl gets 0.30)
 
+    # Wild pitch probability parameters
+    WP_CONTROL_WEIGHT = 0.60      # blended control importance in WP score
+    WP_CONSIST_WEIGHT = 0.40      # consistency degrade importance in WP score
+    WP_FLOOR = 0.0005             # elite pitcher minimum (~1 per 2000 pitches)
+    WP_CEILING = 0.025            # worst case (~2.5% per pitch)
+
     def __init__(self, action):
         self.action = action
         self.game = action.game
@@ -97,6 +103,8 @@ class PitchEvent:
         self.velocity_swing_modifier = 0
         self.approach_swing_modifier = 0
         self.battery_iq = 0
+        self.wild_pitch_triggered = False
+        self.wp_probability = 0.0
         self.pitch_selection_weights = None
 
         # Matchup advantages (calculated after consistency roll)
@@ -138,6 +146,9 @@ class PitchEvent:
         if result == "HBP":
             return ["HBP", "Hit By Pitch", self.pitch.name]
         self.final_location = result
+
+        # Phase 1b: Wild Pitch Check (after location determined, uses blended_control + consist_degrade)
+        self.phase1b_wild_pitch_check()
 
         # Phase 2: Recognition
         self.recognition_score = self.phase2_recognition()
@@ -481,6 +492,37 @@ class PitchEvent:
         else:
             return "Outside"
 
+    def phase1b_wild_pitch_check(self):
+        """
+        Determine if this pitch is wild enough to get past the catcher.
+
+        Uses blended control (pgencontrol + eff_pcntrl) and the consistency
+        degrade roll from phase05.  Good pitchers with high control and
+        consistency rarely throw wild pitches.  Fatigued or inconsistent
+        pitchers throw them more often.
+
+        This only determines if the PITCH is wild — catcher blocking
+        is resolved separately in Action.py.
+        """
+        # Control factor: lower control = higher WP chance
+        control_score = max(self.blended_control, 10)
+        control_normalized = (control_score - 10) / 90  # 0.0 (bad) to 1.0 (good)
+        control_factor = 1.0 - control_normalized        # invert: bad control = high factor
+
+        # Consistency factor: larger degrade roll = higher WP chance
+        # consist_degrade is 0.0 (perfect execution) to ~0.45 (disaster)
+        consist_factor = min(self.consist_degrade / 0.45, 1.0)
+
+        # Weighted blend
+        wp_score = (control_factor * self.WP_CONTROL_WEIGHT
+                    + consist_factor * self.WP_CONSIST_WEIGHT)
+
+        # Scale to probability range
+        wp_prob = self.WP_FLOOR + wp_score * (self.WP_CEILING - self.WP_FLOOR)
+
+        self.wp_probability = wp_prob
+        self.wild_pitch_triggered = random.random() < wp_prob
+
     def phase2_recognition(self):
         """
         Batter's ability to read the pitch.
@@ -687,6 +729,10 @@ class PitchEvent:
 
             # Catcher framing
             "catcher_frame": round(self.catcher.catchframe, 1) if hasattr(self, 'catcher') else None,
+
+            # Phase 1b: Wild Pitch
+            "wp_probability": round(self.wp_probability, 5) if self.wp_probability else None,
+            "wild_pitch_triggered": self.wild_pitch_triggered,
         }
 
 

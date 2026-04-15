@@ -163,6 +163,7 @@ class FieldingStats():
         self.putouts = 0
         self.outs_played = 0  # Store as integer outs
         self.double_plays_turned = 0
+        self.passed_balls = 0
 
     @property
     def innings_played(self):
@@ -486,6 +487,7 @@ def FieldDeDuper(players):
             result[player.pid].assists += player.assists
             result[player.pid].putouts += player.putouts
             result[player.pid].double_plays_turned += getattr(player, 'double_plays_turned', 0)
+            result[player.pid].passed_balls += getattr(player, 'passed_balls', 0)
             # Convert display innings to outs, add, then back to display
             existing_outs = innings_to_outs(result[player.pid].innings_played)
             new_outs = innings_to_outs(player.innings_played)
