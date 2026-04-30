@@ -519,6 +519,7 @@ def AtBatOutcomeParser(self):
         stats.SetPitcherStatus(self.game.battingteam.currentbatter, self.game.pitchingteam.currentpitcher, True)
 
     if self.outcome[1] in ('far left', 'left', 'center left', 'dead center', 'center right', 'right', 'far right'):
+        self.game.pitchingteam.currentpitcher.pitchingstats.Adder("strikes", 1)
         fielding_result = d.fielding(self)
         self._fielding_obj = fielding_result  # Preserve for DP fielder tracking
         self.defensiveoutcome = fielding_result.defenseoutcome

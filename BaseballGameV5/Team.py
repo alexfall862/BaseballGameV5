@@ -27,7 +27,7 @@ SITUATION_ROLE_ORDER = {
 # Max outs per reliever role before pull probability kicks in
 ROLE_MAX_OUTS = {
     "closer": 4,      # ~1.1 innings
-    "setup": 6,       # 2 innings
+    "setup": 4,       # ~1.1 innings
     "middle": 6,      # 2 innings
     "long": 9,        # 3 innings
     "mop_up": 9,      # 3 innings
@@ -275,12 +275,12 @@ class Team():
     def GrabReliefPitchers(self):
         return [player for player in self.roster.playerlist if player.lineup=="relief" and player.energy >= 75]
     
-    def ChooseReliefPitcher(self, game):
+    def ChooseReliefPitcher(self, game, situation_override=None):
         if not self.reliefpitchers:
             self._UseEmergencyPitcher(game)
             return
 
-        newpitcher = self._SelectByRole(game)
+        newpitcher = self._SelectByRole(game, situation_override=situation_override)
 
         if newpitcher:
             self._SwapPitcher(newpitcher, game)
@@ -470,6 +470,16 @@ class Team():
         role_order = SITUATION_ROLE_ORDER.get(situation, SITUATION_ROLE_ORDER["middle"])
         current_role = getattr(self.currentpitcher, 'bullpen_role', 'middle')
 
+        # Proactive closer handoff: if entering the 9th+ with a lead and the
+        # current pitcher is NOT the closer, bring in the closer if available.
+        score_diff = self._GetScoreDiff(game)
+        if next_inning >= 9 and score_diff > 0 and current_role != 'closer':
+            closer_available = [rp for rp in self.reliefpitchers
+                                if getattr(rp, 'bullpen_role', 'middle') == 'closer']
+            if closer_available:
+                self.ChooseReliefPitcher(game, situation_override="save")
+                return
+
         # Walk the priority list. If a better-suited available pitcher is found
         # before we reach the current pitcher's role, make the change.
         for role in role_order:
@@ -478,7 +488,7 @@ class Team():
             candidates = [rp for rp in self.reliefpitchers
                           if getattr(rp, 'bullpen_role', 'middle') == role]
             if candidates:
-                self.ChooseReliefPitcher(game)
+                self.ChooseReliefPitcher(game, situation_override=situation)
                 return
 
     def _IsSaveSituation(self, game):
@@ -507,9 +517,13 @@ class Team():
         score_diff = self._GetScoreDiff(game)
         is_save = self._IsSaveSituation(game)
 
+        # Closer: traditional save situation in 8th+, OR any lead <=5 in the 9th+
         if is_save and inning >= 8:
             return "save"
-        if 1 <= score_diff <= 5 and inning >= 7:
+        if 1 <= score_diff <= 5 and inning >= 9:
+            return "save"
+        # Setup: close lead in innings 7-8 only (not 9th — that's closer territory)
+        if 1 <= score_diff <= 5 and 7 <= inning <= 8:
             return "setup"
         if score_diff <= -6:
             return "blowout_losing"
@@ -519,9 +533,9 @@ class Team():
             return "early_relief"
         return "middle"
 
-    def _SelectByRole(self, game):
+    def _SelectByRole(self, game, situation_override=None):
         """Select relief pitcher based on game situation and role priority."""
-        situation = self._ClassifyGameSituation(game)
+        situation = situation_override or self._ClassifyGameSituation(game)
         role_order = SITUATION_ROLE_ORDER.get(situation, SITUATION_ROLE_ORDER["middle"])
         priority = self.strategy.teamstrategy.bullpenpriority
 
